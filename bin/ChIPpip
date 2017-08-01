@@ -1,0 +1,165 @@
+#!/bin/bash
+
+## ChIP Research Pipeline
+## Copyleft 2017 Institut Curie
+## Author(s):  Aurélie Teissandier
+## Contact: aurelie.teissandier@curie.fr
+## This software is distributed without any guarantee under the terms of the GNU General
+## Public License, either Version 2, June 1991 or Version 3, June 2007.
+
+                                                                   
+SOFT="ChIPpip"
+VERSION="0.0.1_devel"
+
+function usage {
+    echo -e "usage : $SOFT -f FORWARD -o OUTPUT -c CONFIG [-r REVERSE][-s SAMPLE_ID] [-d] [-h] [-v]"
+    echo -e "Use option -h|--help for more information"
+}
+
+function help {
+    usage;
+    echo 
+    echo "$SOFT $VERSION"
+    echo "---------------"
+    echo "OPTIONS"
+    echo
+    echo "   -f|--forward INPUT: input forward fastq file"
+    echo "   -o|--output OUTPUT: output folder"
+    echo "   -c|--conf CONFIG: configuration file for ChIP processing"
+    echo "   [-r|--reverse INPUT]: input reverse fastq file"
+    echo "   [-s|--sample ID]: sample ID"
+    echo "   [-d|--dryrun]: dry run mode"
+    echo "   [-h|--help]: help"
+    echo "   [-v|--version]: version"
+    exit;
+}
+
+function version {
+    echo -e "$SOFT version $VERSION"
+    exit
+}
+
+function set_dry_run {
+    DRY_RUN=1
+}
+
+function opts_error {
+    echo -e "Error : invalid parameters !" >&2
+    echo -e "Use $SOFT -h for help"
+    exit
+}
+
+if [ $# -lt 1 ]
+then
+    usage
+    exit
+fi
+
+# Transform long options to short ones
+for arg in "$@"; do
+  shift
+  case "$arg" in
+      "--reverse") set -- "$@" "-r" ;;
+      "--forward") set -- "$@" "-f" ;;
+      "--output") set -- "$@" "-o" ;;
+      "--conf")   set -- "$@" "-c" ;;
+      "--sample")   set -- "$@" "-s" ;;
+      "--dryrun")   set -- "$@" "-d" ;;
+      "--help")   set -- "$@" "-h" ;;
+      "--version")   set -- "$@" "-v" ;;
+      *)        set -- "$@" "$arg"
+  esac
+done
+
+while getopts "f:r:o:c:s:hvd" OPT
+do
+    case $OPT in
+        f) FORWARD=$OPTARG;;
+		r) REVERSE=$OPTARG;;
+		o) ODIR=$OPTARG;;
+		c) CONF=$OPTARG;;
+		s) SAMPLE_ID=$OPTARG;;
+		d) set_dry_run ;;
+		v) version ;;
+		h) help ;;
+		\?)
+			echo "Invalid option: -$OPTARG" >&2
+			usage
+			 exit 1
+			 ;;
+		:)
+			echo "Option -$OPTARG requires an argument." >&2
+			usage
+			exit 1
+			;;
+	esac
+done
+
+
+if [[ -z $FORWARD || -z $ODIR || -z $CONF ]]; then
+    usage
+    exit
+fi
+
+## Set PATHS
+BIN_PATH=`dirname $0`
+ABS_BIN_PATH=`cd "$BIN_PATH"; pwd`
+SCRIPTS_PATH="$ABS_BIN_PATH/../scripts/"
+
+## Load functions file
+. $SCRIPTS_PATH/utils.inc.sh
+. $SCRIPTS_PATH/chip.inc.sh
+
+#####################
+## Check Config file
+#####################
+    
+if [ ! -z "$CONF" ]; then
+    CONF=`abspath $CONF`
+    if [ -e "$CONF" ]; then
+        read_config $CONF
+    else
+        echo "Error - config file '$CONF' not found"
+        exit
+    fi
+fi
+
+## TODO - check all paths before starting
+
+
+###################
+## WORFLOW
+###################
+
+mkdir -p ${ODIR}/logs
+
+## 1- MAPPING
+
+bowtie2_func "${FORWARD} ${REVERSE}" ${ODIR}
+
+BAM=${ODIR}/mapping/$(basename $FORWARD | sed -e 's/.fastq\(.gz\)*/.bam/')
+
+## 2- RM DUP
+
+rmDup_func $BAM ${ODIR}
+
+BAMnoDUP=${ODIR}/mapping/$(basename $BAM | sed -e 's/.bam/_noDup.bam/')
+
+## 3- Fragment size
+
+if [ ! -z "$REVERSE" ]; then
+	if [ -z "${SAMPLE_ID}" ]; then
+		fragSize_func $BAMnoDUP ${ODIR} $(basename $BAM .bam)
+	else
+		fragSize_func $BAMnoDUP ${ODIR} ${SAMPLE_ID}
+	fi
+		
+fi
+
+## 4- BigWig
+
+bw_func $BAMnoDUP ${ODIR} ${BEDGRAPH_TO_BW}
+
+## 5- Stats
+mapping_stat "${FORWARD} ${REVERSE}" ${CONF} ${BAM} ${ODIR}
+

@@ -1,0 +1,133 @@
+#!/bin/bash
+
+## RNA Research Pipeline
+## Copyleft 2017 Institut Curie
+## Author(s): Aurélie Teissandier
+## Contact: aurelie.teissandier@curie.fr
+## This software is distributed without any guarantee under the terms of the GNU General
+## Public License, either Version 2, June 1991 or Version 3, June 2007.
+
+                                                                   
+SOFT="makeChIPreport"
+VERSION="0.0.1_devel"
+
+function usage {
+    echo -e "usage : $SOFT -i INPUT_DIRECTORY -c CONFIG [-h] [-v]"
+    echo -e "Use option -h|--help for more information"
+}
+
+function help {
+    usage;
+    echo 
+    echo "$SOFT $VERSION"
+    echo "---------------"
+    echo "OPTIONS"
+    echo
+    echo "   -i|--idir INPUT_DIRECTORY: input directory"
+    echo "   -c|--conf CONFIG: configuration file for RNA processing"
+    echo "   [-h|--help]: help"
+    echo "   [-v|--version]: version"
+    exit;
+}
+
+function version {
+    echo -e "$SOFT version $VERSION"
+    exit
+}
+
+function set_dry_run {
+    DRY_RUN=1
+}
+
+function opts_error {
+    echo -e "Error : invalid parameters !" >&2
+    echo -e "Use $SOFT -h for help"
+    exit
+}
+
+if [ $# -lt 1 ]
+then
+    usage
+    exit
+fi
+
+# Transform long options to short ones
+for arg in "$@"; do
+  shift
+  case "$arg" in
+      "--idir") set -- "$@" "-i" ;;
+      "--conf")   set -- "$@" "-c" ;;
+      "--help")   set -- "$@" "-h" ;;
+      "--version")   set -- "$@" "-v" ;;
+      *)        set -- "$@" "$arg"
+  esac
+done
+
+while getopts "i:c:hv" OPT
+do
+    case $OPT in
+        i) IDIR=$OPTARG;;
+		c) CONF=$OPTARG;;
+		v) version ;;
+		h) help ;;
+		\?)
+			echo "Invalid option: -$OPTARG" >&2
+			usage
+			 exit 1
+			 ;;
+		:)
+			echo "Option -$OPTARG requires an argument." >&2
+			usage
+			exit 1
+			;;
+    esac
+done
+
+
+if [[ -z $IDIR || -z $CONF ]]; then
+    usage
+    exit
+fi
+
+## Set PATHS
+BIN_PATH=`dirname $0`
+ABS_BIN_PATH=`cd "$BIN_PATH"; pwd`
+SCRIPTS_PATH="$ABS_BIN_PATH/../scripts/"
+
+## Load functions file
+. $SCRIPTS_PATH/utils.inc.sh
+. $SCRIPTS_PATH/chip.inc.sh
+
+#####################
+## Check Config file
+#####################
+    
+if [ ! -z "$CONF" ]; then
+    CONF=`abspath $CONF`
+    if [ -e "$CONF" ]; then
+        read_config $CONF
+    else
+        echo "Error - config file '$CONF' not found"
+        exit
+    fi
+fi
+
+
+output_path=${IDIR}/export
+mkdir -p $output_path
+
+## Combine all statistics
+statfiles=$(find ${IDIR} -maxdepth 3 -name '*stats' -type f)
+cmd="${PYTHON_PATH}/python ${SCRIPTS_PATH}/fullStats.py -i $statfiles -o ${output_path} -r TEST"
+echo $cmd
+eval $cmd
+
+## Generate merged table count
+cmd="${R_PATH}/R --no-save --no-restore -e \"input_path='${IDIR}'; gtf='${TRANSCRIPTS_GTF}'; count_tool='${COUNT_TOOL}'; stranded='${STRANDED}'; odir='${output_path}'; source('${SCRIPTS_PATH}/makeCountTable.R', chdir=TRUE)\"" 
+echo $cmd
+eval $cmd
+
+## Run RNA sequencing report
+cmd="${R_PATH}/R --no-save --no-restore -e \"input_path='${IDIR}'; output_path='${output_path}'; species='${ORG}'; build='${BUILD}'; gtf='${TRANSCRIPTS_GTF}'; rmarkdown::render('${SCRIPTS_PATH}/report.Rmd', intermediates_dir='${output_path}', output_file='${output_path}/report.html')\"" 
+echo $cmd
+eval $cmd

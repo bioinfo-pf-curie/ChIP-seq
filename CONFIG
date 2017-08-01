@@ -1,3 +1,14 @@
-## This is an example of CONFIGURATION file
+## TOOLS PATH 
 
-VARIABLE = myvariable
+BOWTIE2_PATH = /bioinfo/local/build/Centos/bowtie2/bowtie2-2.2.9
+SAMTOOLS_PATH = /bioinfo/local/build/Centos/samtools/samtools-1.3/bin
+DEEPTOOLS_PATH = /bioinfo/local/build/Centos/python/python-2.7.12/bin/
+PICARD_PATH = /bioinfo/local/build/Centos/picard/1.97
+JAVA_PATH = /bioinfo/local/build/Centos/java/jre1.8.0_101/bin
+BEDGRAPH_TO_BW = /bioinfo/local/build/UCSC_tools_2017.05.03
+PYTHON_PATH = /bioinfo/local/build/Centos/python/python-2.7.12/bin/
+
+## PARAMETER
+
+BOWTIE2_IDX_PATH = /data/annotations/Mouse/mm10/complete/bowtie2_indexes/mm10
+BOWTIE2_OPTS = 
