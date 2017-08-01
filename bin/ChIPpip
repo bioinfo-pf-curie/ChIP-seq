@@ -7,7 +7,6 @@
 ## This software is distributed without any guarantee under the terms of the GNU General
 ## Public License, either Version 2, June 1991 or Version 3, June 2007.
 
-                                                                   
 SOFT="ChIPpip"
 VERSION="0.0.1_devel"
 
@@ -18,7 +17,7 @@ function usage {
 
 function help {
     usage;
-    echo 
+    echo
     echo "$SOFT $VERSION"
     echo "---------------"
     echo "OPTIONS"
@@ -102,7 +101,7 @@ if [[ -z $FORWARD || -z $ODIR || -z $CONF ]]; then
 fi
 
 ## Set PATHS
-BIN_PATH=`dirname $0`
+BIN_PATH=`dirname "$0"`
 ABS_BIN_PATH=`cd "$BIN_PATH"; pwd`
 SCRIPTS_PATH="$ABS_BIN_PATH/../scripts/"
 
@@ -113,7 +112,7 @@ SCRIPTS_PATH="$ABS_BIN_PATH/../scripts/"
 #####################
 ## Check Config file
 #####################
-    
+
 if [ ! -z "$CONF" ]; then
     CONF=`abspath $CONF`
     if [ -e "$CONF" ]; then
@@ -128,7 +127,7 @@ fi
 
 
 ###################
-## WORFLOW
+## WORKFLOW
 ###################
 
 mkdir -p ${ODIR}/logs

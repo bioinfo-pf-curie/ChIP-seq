@@ -1,6 +1,6 @@
 ## chip.inc.sh
 ##
-## Copyright (c) 2017 Institut Curie                               
+## Copyright (c) 2017 Institut Curie
 ## Author(s): Aurélie Teissandier
 ## Contact: aurelie.teissandier@curie.fr
 ## This software is distributed without any guarantee under the terms of the BSD-3 licence.
@@ -15,19 +15,19 @@ bowtie2_func()
     if [[ -z ${BOWTIE2_IDX_PATH} ]]; then
 		die "indexes file not set. Exit"
     fi
-    
+
     local out=$2/mapping
     mkdir -p ${out}
-        
+
     #need to figure out --sam output ${bowtie_sam}
     bowtie2_sam=${out}/$(basename $1 | sed -e 's/.fastq\(.gz\)*/.sam/')
     bowtie2_bam=${out}/$(basename $1 | sed -e 's/.fastq\(.gz\)*/.bam/')
 
     inputs=($1)
     if [[ ${#inputs[@]} -eq 1 ]]; then
-        cmd_in="${inputs[0]}"
+	cmd_in="<(gzip -cd ${inputs[0]})"
     elif [[ ${#inputs[@]} -eq 2 ]]; then
-        cmd_in="-1 ${inputs[0]} -2 ${inputs[1]}"
+	cmd_in="-1 <(gzip -cd ${inputs[0]}) -2 <(gzip -cd ${inputs[1]})"
     else
 		die "Bowtie2 -  found more than two input files !"
     fi
@@ -37,7 +37,7 @@ bowtie2_func()
 
     local cmd="${SAMTOOLS_PATH}/samtools view -bS ${bowtie2_sam} | ${SAMTOOLS_PATH}/samtools sort -@4 -o ${bowtie2_bam} -  "
     exec_cmd ${cmd}
-    
+
 	local cmd="rm $bowtie2_sam"
     exec_cmd ${cmd}
 }
