@@ -1,6 +1,6 @@
 ## getStatFile.sh
 ##
-## Copyright (c) 2017 Institut Curie                               
+## Copyright (c) 2017 Institut Curie
 ## Author(s):  Aurélie Teissandier
 ## Contact: aurelie.teissandier@curie.fr
 ## This software is distributed without any guarantee under the terms of the BSD-3 licence.
@@ -80,7 +80,7 @@ fi
 
 ## #cluster
 file_type=$(file ${FORWARD})
-if [[ "$file_type" =~ "gzip" ]];then
+if [[ "$file_type" =~ "gz" ]];then
     nb_cluster=$(($(zcat ${FORWARD} | wc -l)/4))
 elif [[ "$file_type" =~ "ASCII" ]];then
     nb_cluster=$(($(wc -l < ${FORWARD})/4))
@@ -90,13 +90,13 @@ fi
 ## #reads
 if [ ! -z ${REVERSE} ]; then
     file_type=$(file ${REVERSE})
-    if [[ "$file_type" =~ "gzip" ]];then
+    if [[ "$file_type" =~ "gz" ]];then
         nb_reverse=$(($(zcat ${REVERSE} | wc -l)/4))
 	elif [[ "$file_type" =~ "ASCII" ]];then
 		nb_reverse=$(($(wc -l < ${REVERSE})/4))
 	else
-		die "ERROR : Wrong file type in input for fastq file; file: ${REVERSE}"  
-    fi 
+		die "ERROR : Wrong file type in input for fastq file; file: ${REVERSE}"
+    fi
 else
     nb_reverse=0
 fi
@@ -104,21 +104,19 @@ fi
 nb_reads=$((${nb_cluster} + ${nb_reverse}))
 
 #################
-##
 ## Mapping Stats
-##
 #################
 
-    
+
 #https://sequencing.qcfail.com/articles/mapq-values-are-really-useful-but-their-implementation-is-a-mess/
 aligned=$(${SAMTOOLS_PATH}/samtools view -F 4 -c ${BAM})
-  
+
 
 ubam=$(${SAMTOOLS_PATH}/samtools view ${BAM} | awk '{if($0 ~! /^@/){if($0 ~ /XS:i:/){split($12,a,":");split($13,b,":");if(a[3] > b[3]){print}}else{print} }}' | wc -l )
 
 
 mbam=$(($aligned - $ubam))
-  
+
 
 
 ## verbose
