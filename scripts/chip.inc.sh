@@ -13,7 +13,7 @@ bowtie2_func()
 {
 
     if [[ -z ${BOWTIE2_IDX_PATH} ]]; then
-	die "indexes file not set. Exit"
+		die "indexes file not set. Exit"
     fi
 
     local out=$2/mapping
@@ -29,19 +29,16 @@ bowtie2_func()
     elif [[ ${#inputs[@]} -eq 2 ]]; then
 	cmd_in="-1 <(gzip -cd ${inputs[0]}) -2 <(gzip -cd ${inputs[1]})"
     else
-	die "Bowtie2 -  found more than two input files !"
+		die "Bowtie2 -  found more than two input files !"
     fi
 
     local cmd="${BOWTIE2_PATH}/bowtie2 ${BOWTIE2_OPTS} -p 4 -x ${BOWTIE2_IDX_PATH} ${cmd_in} -S ${bowtie2_sam}"
     exec_cmd ${cmd}
 
-    local cmd="${SAMTOOLS_PATH}/samtools view -b -u ${bowtie2_sam} | ${SAMTOOLS_PATH}/samtools sort -@ 8 -m 4G -T ${out}/$(basename $1).tmp -o ${bowtie2_bam} -"
+    local cmd="${SAMTOOLS_PATH}/samtools view -bS ${bowtie2_sam} | ${SAMTOOLS_PATH}/samtools sort -@4 -o ${bowtie2_bam} -  "
     exec_cmd ${cmd}
 
-    local cmd="${SAMTOOLS_PATH}/samtools index ${bowtie2_bam}"
-    exec_cmd ${cmd}
-
-    local cmd="rm $bowtie2_sam"
+	local cmd="rm $bowtie2_sam"
     exec_cmd ${cmd}
 }
 
@@ -51,15 +48,15 @@ bowtie2_func()
 rmDup_func()
 {
 
-	local out=$2/mapping
+	local out=$2/mapping 
 	rmdup_bam=$(basename $1 ".bam")
-
+	
 	local cmd="${JAVA_PATH}/java -jar $PICARD_PATH/MarkDuplicates.jar I=$1 O=$out/${rmdup_bam}_noDup.bam VALIDATION_STRINGENCY=SILENT REMOVE_DUPLICATES=true M=$out/${rmdup_bam}_metric"
 	exec_cmd ${cmd}
-
+	
 	local cmd="${SAMTOOLS_PATH}/samtools index $out/${rmdup_bam}_noDup.bam"
-	exec_cmd ${cmd}
-
+    exec_cmd ${cmd}
+   
 }
 
 ## $1 = input files
@@ -68,7 +65,7 @@ rmDup_func()
 fragSize_func()
 {
 
-	local out=$2/export
+	local out=$2/export 
 	mkdir -p ${out}
 	local cmd="${DEEPTOOLS_PATH}/bamPEFragmentSize --bamfiles $1 --histogram $out/bamPEFragmentSize.png --numberOfProcessors 4 --samplesLabel $3 > $2/logs/reportPEsize.log"
 	exec_cmd ${cmd}
@@ -80,7 +77,7 @@ fragSize_func()
 bw_func()
 {
 
-	local out=$2/export
+	local out=$2/export 
 	name=$(basename $1 "_noDup.bam")
 	mkdir -p ${out}
 	PATH=$3:$PATH
