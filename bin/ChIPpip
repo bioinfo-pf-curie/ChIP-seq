@@ -11,7 +11,7 @@ SOFT="ChIPpip"
 VERSION="0.0.2"
 
 function usage {
-    echo -e "usage : $SOFT -f FORWARD -o OUTPUT -c CONFIG [-r REVERSE][-s SAMPLE_ID] [-d] [-h] [-v]"
+    echo -e "usage : $SOFT -f FORWARD -o OUTPUT -c CONFIG [-r REVERSE][-b BAM][-F CONTROL_FORWARD][-R CONTROL_REVERSE][-B CONTROL_BAM][-s SAMPLE_ID] [-d] [-h] [-v]"
     echo -e "Use option -h|--help for more information"
 }
 
@@ -22,10 +22,14 @@ function help {
     echo "---------------"
     echo "OPTIONS"
     echo
-    echo "   -f|--forward INPUT: input forward fastq file"
+    echo "   -f|--forward TREATMENT_FORWARD: forward fastq file for ChIP"
     echo "   -o|--output OUTPUT: output folder"
     echo "   -c|--conf CONFIG: configuration file for ChIP processing"
-    echo "   [-r|--reverse INPUT]: input reverse fastq file"
+    echo "   [-r|--reverse TREATMENT_REVERSE]: reverse fastq file for ChIP"
+    echo "   [-b|--bam TREATMENT_BAM]: aligned BAM file for ChIP"
+    echo "   [-F|--controlforward CONTROL_FORWARD]: forward fastq file for Control"
+    echo "   [-R|--controlreverse CONTROL_REVERSE]: reverse fastq file for Control"
+    echo "   [-B|--controlbam CONTROL_BAM]: BAM file for Control"
     echo "   [-s|--sample ID]: sample ID"
     echo "   [-d|--dryrun]: dry run mode"
     echo "   [-h|--help]: help"
@@ -60,6 +64,10 @@ for arg in "$@"; do
   case "$arg" in
       "--reverse") set -- "$@" "-r" ;;
       "--forward") set -- "$@" "-f" ;;
+      "--bam") set -- "$@" "-b" ;;
+      "--controlreverse") set -- "$@" "-R" ;;
+      "--controlforward") set -- "$@" "-F" ;;
+      "--controlbam") set -- "$@" "-B" ;;
       "--output") set -- "$@" "-o" ;;
       "--conf")   set -- "$@" "-c" ;;
       "--sample")   set -- "$@" "-s" ;;
@@ -74,28 +82,32 @@ while getopts "f:r:o:c:s:hvd" OPT
 do
     case $OPT in
         f) FORWARD=$OPTARG;;
-		r) REVERSE=$OPTARG;;
-		o) ODIR=$OPTARG;;
-		c) CONF=$OPTARG;;
-		s) SAMPLE_ID=$OPTARG;;
-		d) set_dry_run ;;
-		v) version ;;
-		h) help ;;
-		\?)
-			echo "Invalid option: -$OPTARG" >&2
-			usage
-			 exit 1
-			 ;;
-		:)
-			echo "Option -$OPTARG requires an argument." >&2
-			usage
-			exit 1
-			;;
+	r) REVERSE=$OPTARG;;
+        b) BAM=$OPTARG;;
+        F) CONTROL_FORWARD=$OPTARG;;
+        R) CONTROL_REVERSE=$OPTARG;;
+	B) CONTROL_BAM=$OPTARG;;
+	o) ODIR=$OPTARG;;
+	c) CONF=$OPTARG;;
+	s) SAMPLE_ID=$OPTARG;;
+	d) set_dry_run ;;
+	v) version ;;
+	h) help ;;
+	\?)
+		echo "Invalid option: -$OPTARG" >&2
+		usage
+		 exit 1
+		 ;;
+	:)
+		echo "Option -$OPTARG requires an argument." >&2
+		usage
+		exit 1
+		;;
 	esac
 done
 
 
-if [[ -z $FORWARD || -z $ODIR || -z $CONF ]]; then
+if [[ (-z $FORWARD && -z $BAM) || -z $ODIR || -z $CONF ]]; then
     usage
     exit
 fi
@@ -123,9 +135,6 @@ if [ ! -z "$CONF" ]; then
     fi
 fi
 
-## TODO - check all paths before starting
-
-
 ###################
 ## WORKFLOW
 ###################
@@ -134,15 +143,26 @@ mkdir -p ${ODIR}/logs
 
 ## 1- MAPPING
 
-bowtie2_func "${FORWARD} ${REVERSE}" ${ODIR}
+if [ -z $BAM ]; then
+    bowtie2_func "${FORWARD} ${REVERSE}" ${ODIR}
+    BAM=${ODIR}/mapping/$(basename $FORWARD | sed -e 's/.fastq\(.gz\)*/.bam/')
+fi
 
-BAM=${ODIR}/mapping/$(basename $FORWARD | sed -e 's/.fastq\(.gz\)*/.bam/')
+if [ -z $CONTROL_BAM && ! -z $CONTROL_FORWARD ]; then
+    bowtie2_func "${CONTROL_FORWARD} ${CONTROL_REVERSE}" ${ODIR}
+    CONTROL_BAM=${ODIR}/mapping/$(basename $CONTROL_FORWARD | sed -e 's/.fastq\(.gz\)*/.bam/')
+fi
 
 ## 2- RM DUP
+if [ ! -z $BAM ]; then
+    rmDup_func $BAM ${ODIR}
+    BAMnoDUP=${ODIR}/mapping/$(basename $BAM | sed -e 's/.bam/_noDup.bam/')
+fi
 
-rmDup_func $BAM ${ODIR}
-
-BAMnoDUP=${ODIR}/mapping/$(basename $BAM | sed -e 's/.bam/_noDup.bam/')
+if [! -z $CONTROL_BAM]; then
+    rmDup_func $CONTROL_BAM ${ODIR}
+    CONTROL_BAMnoDUP=${ODIR}/mapping/$(basename $CONTROL_BAM | sed -e 's/.bam/_noDup.bam/')
+fi
 
 ## 3- Fragment size
 

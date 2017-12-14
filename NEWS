@@ -3,6 +3,8 @@ CHANGES IN VERSION 0.0.2
 
 NEW FEATURES
 
+   o Add option for input in main standalone script
+
    o Add script for multi-samples processing - ChIPpip_cluster
 
 
