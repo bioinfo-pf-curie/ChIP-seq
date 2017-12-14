@@ -1,43 +1,17 @@
 ***********************************
-CHANGES IN VERSION 1.0.1
+CHANGES IN VERSION 0.0.2
 
 NEW FEATURES
 
-   o 
+   o Add script for multi-samples processing - ChIPpip_cluster
 
-   o 
-
-SIGNIFICANT USER-VISIBLE CHANGES
-
-   o
-
-   o 
-
-BUG FIXES
-
-   o
-
-   o
 
 ***********************************
-CHANGES IN VERSION 1.0.0
+CHANGES IN VERSION 0.0.1
 
 NEW FEATURES
 
-   o
+   o First version of the pipeline (A. Teissandier) - mapping + bigwig + insert size + report
 
-   o
-
-SIGNIFICANT USER-VISIBLE CHANGES
-
-   o
-
-   o
-
-BUG FIXES
-
-   o
-
-   o
 
 

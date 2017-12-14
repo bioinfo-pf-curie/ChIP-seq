@@ -8,7 +8,7 @@
 ## Public License, either Version 2, June 1991 or Version 3, June 2007.
 
 SOFT="ChIPpip"
-VERSION="0.0.1_devel"
+VERSION="0.0.2"
 
 function usage {
     echo -e "usage : $SOFT -f FORWARD -o OUTPUT -c CONFIG [-r REVERSE][-s SAMPLE_ID] [-d] [-h] [-v]"
@@ -160,5 +160,6 @@ fi
 bw_func $BAMnoDUP ${ODIR} ${BEDGRAPH_TO_BW}
 
 ## 5- Stats
+
 mapping_stat "${FORWARD} ${REVERSE}" ${CONF} ${BAM} ${ODIR}
 
