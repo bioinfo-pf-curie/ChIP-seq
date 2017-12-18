@@ -20,6 +20,7 @@ bowtie2_func()
     mkdir -p ${out}
 
     #need to figure out --sam output ${bowtie_sam}
+    prefix=$(basename $1 | sed -e 's/.fastq\(.gz\)*//')
     bowtie2_sam=${out}/$(basename $1 | sed -e 's/.fastq\(.gz\)*/.sam/')
     bowtie2_bam=${out}/$(basename $1 | sed -e 's/.fastq\(.gz\)*/.bam/')
 
@@ -35,10 +36,10 @@ bowtie2_func()
     local cmd="${BOWTIE2_PATH}/bowtie2 ${BOWTIE2_OPTS} -p 4 -x ${BOWTIE2_IDX_PATH} ${cmd_in} -S ${bowtie2_sam}"
     exec_cmd ${cmd}
 
-    local cmd="${SAMTOOLS_PATH}/samtools view -bS ${bowtie2_sam} | ${SAMTOOLS_PATH}/samtools sort -@4 -o ${bowtie2_bam} -  "
+    local cmd="${SAMTOOLS_PATH}/samtools view -bS ${bowtie2_sam} | ${SAMTOOLS_PATH}/samtools sort -@4 -T ${out}/${prefix} -o ${bowtie2_bam} -  "
     exec_cmd ${cmd}
 
-	local cmd="rm $bowtie2_sam"
+    local cmd="rm $bowtie2_sam"
     exec_cmd ${cmd}
 }
 

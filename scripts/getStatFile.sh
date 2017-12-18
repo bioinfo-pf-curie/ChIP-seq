@@ -79,20 +79,18 @@ else
 fi
 
 ## #cluster
-file_type=$(file ${FORWARD})
-if [[ "$file_type" =~ "gzip" ]];then
+if [[ $FORWARD =~ "gz" ]];then
     nb_cluster=$(($(zcat ${FORWARD} | wc -l)/4))
-elif [[ "$file_type" =~ "ASCII" ]];then
+elif [[ $FORWARD =~ "fastq" ]];then
     nb_cluster=$(($(wc -l < ${FORWARD})/4))
 else
     die "ERROR : Wrong file type in input for fastq file; file: ${FORWARD}"
 fi
 ## #reads
 if [ ! -z ${REVERSE} ]; then
-    file_type=$(file ${REVERSE})
-    if [[ "$file_type" =~ "gzip" ]];then
+    if [[ $REVERSE =~ "gz" ]];then
         nb_reverse=$(($(zcat ${REVERSE} | wc -l)/4))
-	elif [[ "$file_type" =~ "ASCII" ]];then
+	elif [[ $REVERSE =~ "fastq" ]];then
 		nb_reverse=$(($(wc -l < ${REVERSE})/4))
 	else
 		die "ERROR : Wrong file type in input for fastq file; file: ${REVERSE}"  

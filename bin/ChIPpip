@@ -148,7 +148,7 @@ if [ -z $BAM ]; then
     BAM=${ODIR}/mapping/$(basename $FORWARD | sed -e 's/.fastq\(.gz\)*/.bam/')
 fi
 
-if [ -z $CONTROL_BAM && ! -z $CONTROL_FORWARD ]; then
+if [[ -z $CONTROL_BAM && ! -z $CONTROL_FORWARD ]]; then
     bowtie2_func "${CONTROL_FORWARD} ${CONTROL_REVERSE}" ${ODIR}
     CONTROL_BAM=${ODIR}/mapping/$(basename $CONTROL_FORWARD | sed -e 's/.fastq\(.gz\)*/.bam/')
 fi
@@ -159,7 +159,7 @@ if [ ! -z $BAM ]; then
     BAMnoDUP=${ODIR}/mapping/$(basename $BAM | sed -e 's/.bam/_noDup.bam/')
 fi
 
-if [! -z $CONTROL_BAM]; then
+if [ ! -z $CONTROL_BAM ]; then
     rmDup_func $CONTROL_BAM ${ODIR}
     CONTROL_BAMnoDUP=${ODIR}/mapping/$(basename $CONTROL_BAM | sed -e 's/.bam/_noDup.bam/')
 fi
@@ -167,12 +167,11 @@ fi
 ## 3- Fragment size
 
 if [ ! -z "$REVERSE" ]; then
-	if [ -z "${SAMPLE_ID}" ]; then
-		fragSize_func $BAMnoDUP ${ODIR} $(basename $BAM .bam)
-	else
-		fragSize_func $BAMnoDUP ${ODIR} ${SAMPLE_ID}
-	fi
-		
+    if [ -z "${SAMPLE_ID}" ]; then
+	fragSize_func $BAMnoDUP ${ODIR} $(basename $BAM .bam)
+    else
+	fragSize_func $BAMnoDUP ${ODIR} ${SAMPLE_ID}
+    fi		
 fi
 
 ## 4- BigWig

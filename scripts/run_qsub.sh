@@ -35,8 +35,8 @@ echo "forward=${forward}"
 if [ ! -z "$reverse" ]; then
     echo "Run ${id} in PE mode ..."
     echo "--$reverse--"
-    ${BIN_PATH}/ChIPpip -f ${forward} -r ${reverse} -o ${ODIR}/${id} -c ${CONFIG} -s ${id} > ${ODIR}/${id}/rnapip.log 
+    ${BIN_PATH}/ChIPpip -f ${forward} -r ${reverse} -o ${ODIR}/${id} -c ${CONFIG} -s ${id} > ${ODIR}/${id}/chippip.log 
 else
     echo "Run ${id} in SE mode ..."
-    ${BIN_PATH}/ChIPpip -f ${forward} -o ${ODIR}/${id} -c ${CONFIG} -s ${id} > ${ODIR}/${id}/rnapip.log
+    ${BIN_PATH}/ChIPpip -f ${forward} -o ${ODIR}/${id} -c ${CONFIG} -s ${id} > ${ODIR}/${id}/chippip.log
 fi
