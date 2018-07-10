@@ -1,13 +1,47 @@
 ## utils.inc.sh
 ##
 ## Copyright (c) 2017 Institut Curie                               
-## Author(s): Nicolas Servant
+## Author(s): Eric Nicolas Servant
 ## Contact: nicolas.servant@curie.fr
 ## This software is distributed without any guarantee under the terms of the BSD-3 licence.
 ## See the LICENCE file for details
 
-set -o pipefail  # trace ERR through pipes                                                                                                                                                                 
-set -o errexit   ## set -e : exit the script if any statement returns a non-true return value
+###########################
+## trap handler
+###########################
+
+function trap_error()
+{
+    exec >&3 2>&4
+    echo -e "Error: $(basename $0) exit with status: $3" >&2
+    echo -e "Command (line $1): $2" >&2
+    echo -e
+    echo -e "Please, look at the logs folder for more details." >&2
+    exit 1
+}
+
+function trap_exit()
+{
+    exec >&3 2>&4
+    ##Since bash-4.0 $LINENO is reset to 1 when the trap is triggered
+    if [ "$?" != "0" ]; then
+	echo "Error: exit status detected." >&2
+    fi
+
+    if [ -e ${ODIR}/mapping/tmp ]; then 
+	echo -e "Cleaning temporary folders ..." >&2
+	/bin/rm -rf ${ODIR}/mapping/tmp; 
+    fi
+}
+
+exec 3>&1 4>&2
+trap 'trap_error "$LINENO" "$BASH_COMMAND" "$?"' ERR
+trap 'trap_exit' 0 1 2 3
+
+set -E ## export trap to functions
+set -o pipefail  ## trace ERR through pipes         
+#set -o errexit   ## set -e : exit the script if any statement returns a non-true return value
+
 
 ###########################
 ## Subroutine for pipelines
@@ -15,23 +49,22 @@ set -o errexit   ## set -e : exit the script if any statement returns a non-true
 
 die() 
 { 
-    echo "Exit: $@" 1>&2 
+    echo "Exit: $@" >&2
     exit 1
 }
-
 
 exec_cmd()
 {
     echo $*
-    if [ -z "$DRY_RUN" ]; then
-	eval "$@" || die 'Error'
+    if [ -z "${DRY_RUN+x}" ]; then
+	eval "$@" #|| die 'Error during exec !'
     fi
 }
 
 exec_ret()
 {
-    if [ -z "$DRY_RUN" ]; then
-	eval "$@" || die 'Error'
+    if [ -z "${DRY_RUN+x}" ]; then
+	eval "$@" #|| die 'Error during exec !'
     fi
 }
 
@@ -42,7 +75,8 @@ abspath()
 
 read_config()
 {
-    eval "$(sed -e '/^$/d' -e '/^#/d' -e 's/ =/=/' -e 's/= /=/' $1 | awk -F"=" '{printf("%s=\"%s\"; export %s;\n", $1, $2, $1)}')"
+    eval "$(sed -e '/^$/d' -e '/^#/d' -e 's/ =/=/' -e 's/= /=/' $1 | \
+awk -F"=" '{printf("%s=\"%s\"; export %s;\n", $1, $2, $1)} $1~"PATH"{printf("export PATH=%s:$PATH;\n", $2)}')"
 }
 
 is_in_path()
@@ -51,3 +85,21 @@ is_in_path()
 }
 
 
+file_exists()
+{
+
+    if [ ! -e $1 ]; then
+ 	echo -e "Error: The file ${1} was not found. Exit" >&2
+ 	echo
+ 	exit 1
+    elif [ ! -s $1 ]; then
+ 	echo -e "Error: The file ${1} was found but is empty. Exit" >&2
+ 	echo
+ 	exit 1
+    fi
+}
+
+get_fastq_prefix()
+{
+    basename $1 | sed -e 's/[\._]*R*[12]*.fastq\(.gz\)*//'
+}
