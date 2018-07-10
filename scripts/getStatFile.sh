@@ -41,10 +41,10 @@ while getopts "f:b:c:r:x:g:s:hv" OPT
 do
     case $OPT in
         f) FORWARD=$OPTARG;;
-		b) BAM=$OPTARG;;
-		c) CONF=$OPTARG;;
-		r) REVERSE=$OPTARG;;
-		s) SAMPLE_ID=$OPTARG;;
+	b) BAM=$OPTARG;;
+	c) CONF=$OPTARG;;
+	r) REVERSE=$OPTARG;;
+	s) SAMPLE_ID=$OPTARG;;
         v) version ;;
         h) help ;;
         \?)
@@ -61,9 +61,9 @@ do
 done
 
 
-if [[ -z $CONF  || -z $FORWARD || -z $BAM ]]; then
+if [[ -z $CONF  || -z $BAM ]]; then
     usage
-    exit
+    exit 1
 fi
 
 ## Load config file
@@ -72,34 +72,39 @@ source ${DIR}/utils.inc.sh
 read_config $CONF
 
 ## sampleID
-if [ ! -z ${REVERSE} ]; then
-    fastqID=$(basename $(printf "%s\n%s\n" "${FORWARD}}" "${REVERSE}" | sed -e 'N;s/^\(.*\).*\n\1.*$/\1/' ))
-else
-    fastqID=$(basename ${FORWARD} | sed -e 's/.fastq\(.gz\)//')
-fi
+if [ ! -z ${FORWARD} ]; then
+    if [ ! -z ${REVERSE} ]; then
+	fastqID=$(basename $(printf "%s\n%s\n" "${FORWARD}}" "${REVERSE}" | sed -e 'N;s/^\(.*\).*\n\1.*$/\1/' ))
+    else
+	fastqID=$(basename ${FORWARD} | sed -e 's/.fastq\(.gz\)//')
+    fi
 
-## #cluster
-if [[ $FORWARD =~ "gz" ]];then
-    nb_cluster=$(($(zcat ${FORWARD} | wc -l)/4))
-elif [[ $FORWARD =~ "fastq" ]];then
-    nb_cluster=$(($(wc -l < ${FORWARD})/4))
-else
-    die "ERROR : Wrong file type in input for fastq file; file: ${FORWARD}"
-fi
-## #reads
-if [ ! -z ${REVERSE} ]; then
-    if [[ $REVERSE =~ "gz" ]];then
-        nb_reverse=$(($(zcat ${REVERSE} | wc -l)/4))
+    #cluster
+    if [[ $FORWARD =~ "gz" ]];then
+	nb_cluster=$(($(zcat ${FORWARD} | wc -l)/4))
+    elif [[ $FORWARD =~ "fastq" ]];then
+	nb_cluster=$(($(wc -l < ${FORWARD})/4))
+    else
+	die "ERROR : Wrong file type in input for fastq file; file: ${FORWARD}"
+    fi
+
+
+    if [ ! -z ${REVERSE} ]; then
+	if [[ $REVERSE =~ "gz" ]];then
+            nb_reverse=$(($(zcat ${REVERSE} | wc -l)/4))
 	elif [[ $REVERSE =~ "fastq" ]];then
-		nb_reverse=$(($(wc -l < ${REVERSE})/4))
+	    nb_reverse=$(($(wc -l < ${REVERSE})/4))
 	else
-		die "ERROR : Wrong file type in input for fastq file; file: ${REVERSE}"  
-    fi 
+	    die "ERROR : Wrong file type in input for fastq file; file: ${REVERSE}"  
+	fi 
+    else
+	nb_reverse=0
+    fi
+    nb_reads=$((${nb_cluster} + ${nb_reverse}))
 else
-    nb_reverse=0
+    nb_reads=NA
+    nb_reads=NA
 fi
-
-nb_reads=$((${nb_cluster} + ${nb_reverse}))
 
 #################
 ##
@@ -110,14 +115,8 @@ nb_reads=$((${nb_cluster} + ${nb_reverse}))
     
 #https://sequencing.qcfail.com/articles/mapq-values-are-really-useful-but-their-implementation-is-a-mess/
 aligned=$(${SAMTOOLS_PATH}/samtools view -F 4 -c ${BAM})
-  
-
 ubam=$(${SAMTOOLS_PATH}/samtools view ${BAM} | awk '{if($0 ~! /^@/){if($0 ~ /XS:i:/){split($12,a,":");split($13,b,":");if(a[3] > b[3]){print}}else{print} }}' | wc -l )
-
-
 mbam=$(($aligned - $ubam))
-  
-
 
 ## verbose
 echo -e "Sample_identifier,Biological_identifier,Number_of_cluster,Number_of_reads,Number_of_aligned_reads,Number_of_uniquely_aligned_reads,Number_of_multiple_aligned_reads"
