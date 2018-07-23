@@ -176,14 +176,19 @@ if [ -z $BAM ]; then
 	BAM=${ODIR}/mapping/$(basename $FORWARD | sed -e 's/.fastq\(.gz\)*/_'${build}'.bam/')
 	
 	## Extract unmapped reads
-	bam2fastq_func ${BAM} ${ODIR} "-F 4"
-	FORWARD=$(echo $BAM | sed -e 's/.bam/_R1.fastq/')
-	gzip $FORWARD
-	FORWARD=${FORWARD}.gz
-	if [ ! -z ${REVERSE} ];then
+	if [ -z ${REVERSE} ]; then 
+	    bam2fastq_func ${BAM} ${ODIR} "-f 0x4"
+	    FORWARD=$(echo $BAM | sed -e 's/.bam/_R1.fastq/')
+	    gzip $FORWARD
+	    FORWARD=${FORWARD}.gz
+	else
+            bam2fastq_func ${BAM} ${ODIR} "-f 0x2"
+            FORWARD=$(echo $BAM | sed -e 's/.bam/_R1.fastq/')
 	    REVERSE=$(echo $BAM | sed -e 's/.bam/_R2.fastq/')
 	    gzip $REVERSE
+	    gzip $FORWARD
 	    REVERSE=${REVERSE}.gz
+	    FORWARD=${FORWARD}.gz
 	fi
     fi
     
