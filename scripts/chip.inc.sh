@@ -41,16 +41,19 @@ bowtie2_func()
     mkdir -p ${out}
     local log=$2/logs
     mkdir -p ${log}
-    log=$log/mapping.log
-
-    echo -e "Running Bowtie2 mapping ..."
-    echo -e "Logs: $log"
-    echo
 
     #need to figure out --sam output ${bowtie_sam}
     prefix=$(basename $1 | sed -e 's/.fastq\(.gz\)*//')
-    bowtie2_sam=${out}/$(basename $1 | sed -e 's/.fastq\(.gz\)*/.sam/')
-    bowtie2_bam=${out}/$(basename $1 | sed -e 's/.fastq\(.gz\)*/.bam/')
+    build=$(basename ${BOWTIE2_IDX_PATH})
+    bowtie2_sam=${out}/$(basename $1 | sed -e 's/.fastq\(.gz\)*/_'${build}'.sam/')
+    bowtie2_bam=${out}/$(basename $1 | sed -e 's/.fastq\(.gz\)*/_'${build}'.bam/')
+
+    log=$log/mapping_${build}.log
+
+    echo -e "Running Bowtie2 mapping on $build ..."
+    echo -e "Logs: $log"
+    echo
+
 
     inputs=($1)
     if [[ ${#inputs[@]} -eq 1 ]]; then
@@ -58,19 +61,55 @@ bowtie2_func()
     elif [[ ${#inputs[@]} -eq 2 ]]; then
 	cmd_in="-1 <(gzip -cd ${inputs[0]}) -2 <(gzip -cd ${inputs[1]})"
     else
-	die "Bowtie2 -  found more than two input files !"
+	die "Bowtie2 - found more than two input files !"
     fi
 
     local cmd="bowtie2 ${BOWTIE2_OPTS} -p ${NB_PROC} -x ${BOWTIE2_IDX_PATH} ${cmd_in} -S ${bowtie2_sam}"
-    exec_cmd ${cmd}
+    exec_cmd ${cmd} > ${log} 2>&1
 
     local cmd="samtools view -bS ${bowtie2_sam} | samtools sort -@${NB_PROC} -T ${out}/${prefix} -o ${bowtie2_bam} -  "
-    exec_cmd ${cmd} > ${log} 2>&1
+    exec_cmd ${cmd} >> ${log} 2>&1
 
     local cmd="rm $bowtie2_sam"
     exec_cmd ${cmd} >> ${log} 2>&1
 }
 
+isPairedBam()
+{
+    nb_paired=$(samtools view -c -f 1 $1)
+    if [[ $nb_paired -gt 0 ]]; then
+	return 1
+    else
+	return 0
+    fi
+}
+
+bam2fastq_func()
+{ 
+    check_env
+    local bam=$1
+    local filters=$3
+
+    local out=$2/mapping
+    mkdir -p ${out}
+    local log=$2/logs
+    mkdir -p ${log}
+    log=$log/bam2fastq.log
+
+    echo -e "Transform Bam to Fastq ..."
+    echo -e "Logs: $log"
+    echo
+
+    prefix=$(basename $bam | sed -e 's/.bam//')
+    if [[ $(isPairedBam $bam) == 1 ]]; then
+	##Extract reads following filtering options
+	local cmd="samtools view -b $filters $bam | bamToFastq -i stdin -fq ${out}/${prefix}_R1.fastq -fq2 ${out}/${prefix}_R2.fastq"
+    else
+	##Extract reads following filtering options
+	local cmd="samtools view -b $filters $bam | bamToFastq -i stdin -fq ${out}/${prefix}_R1.fastq"
+    fi
+    exec_cmd ${cmd} >> ${log} 2>&1
+}
 
 ## $1 = input files
 ## $2 = output dir
@@ -296,7 +335,7 @@ epic_func()
     local control=$2
     local odir=$3
 
-    local output=$3/peaks_epic
+    local output=$3/peaks
     mkdir -p $output
     local log=$3/logs
     mkdir -p ${log}
@@ -309,21 +348,22 @@ epic_func()
     local prefix=$(basename $bam | sed -e 's/.bam//')
     local chipbed=$(echo $bam | sed -e 's/bam/bed/')
     cmd="bamToBed -i $bam > $chipbed"
-    #exec_cmd ${cmd} > ${log} 2>&1
+    exec_cmd ${cmd} > ${log} 2>&1
 
     local controlbed=$(echo $control | sed -e 's/bam/bed/')
     cmd="bamToBed -i $control > $controlbed"
-    #exec_cmd ${cmd} > ${log} 2>&1
+    exec_cmd ${cmd} >> ${log} 2>&1
 
     cmd="epic --treatment ${chipbed} --control ${controlbed} --number-cores ${NB_PROC} ${EPIC_OPTS} \
      --genome ${GENOME} --chromsizes ${CHROMSIZES} \
      --bed ${output}/${prefix}_results.bed --outfile ${output}/${prefix}_results.out "
-    exec_cmd ${cmd} > ${log} 2>&1
+    exec_cmd ${cmd} >> ${log} 2>&1
 
     if [ ! -z ${SAMPLE_ID} ]; then
 	local trackline="track name='${SAMPLE_ID}_EPIC' description='${SAMPLE_ID}_EPIC' useScore=1"
 	cmd="sed -i.bak 1i\"$trackline\" ${output}/${prefix}_results.bed"
-	exec_cmd ${cmd} > ${log} 2>&1
+	exec_cmd ${cmd} >> ${log} 2>&1
+	rm ${output}/${prefix}_results.bed.bak
     fi
 
 }

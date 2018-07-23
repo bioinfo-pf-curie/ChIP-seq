@@ -9,10 +9,10 @@
 
 SOFT="ChIPpip"
 VERSION="0.0.2"
-MODE="TF"
+MODE="narrow"
 
 function usage {
-    echo -e "usage : $SOFT -f FORWARD -o OUTPUT -c CONFIG [-r REVERSE][-b BAM][-F CONTROL_FORWARD][-R CONTROL_REVERSE][-B CONTROL_BAM][-s SAMPLE_ID] [-l] [-d] [-h] [-v]"
+    echo -e "usage : $SOFT -f FORWARD -o OUTPUT -c CONFIG [-r REVERSE][-b BAM][-F CONTROL_FORWARD][-R CONTROL_REVERSE][-B CONTROL_BAM][-s SAMPLE_ID] [-p PEAK_MODE] [-d] [-h] [-v]"
     echo -e "Use option -h|--help for more information"
 }
 
@@ -31,7 +31,7 @@ function help {
     echo "   [-F|--controlforward CONTROL_FORWARD]: forward fastq file for Control"
     echo "   [-R|--controlreverse CONTROL_REVERSE]: reverse fastq file for Control"
     echo "   [-B|--controlbam CONTROL_BAM]: BAM file for Control"
-    echo "   [-l|--broad]: Broad mode for large histone mark"
+    echo "   [-p|--peaks]: Mode for peak calling. Must be 'narrow', 'broad', or 'verybroad'"
     echo "   [-s|--sample ID]: sample ID"
     echo "   [-d|--dryrun]: dry run mode"
     echo "   [-h|--help]: help"
@@ -46,10 +46,6 @@ function version {
 
 function set_dry_run {
     DRY_RUN=1
-}
-
-function set_broad_mode {
-    MODE="BROAD"
 }
 
 function opts_error {
@@ -74,7 +70,7 @@ for arg in "$@"; do
       "--controlreverse") set -- "$@" "-R" ;;
       "--controlforward") set -- "$@" "-F" ;;
       "--controlbam") set -- "$@" "-B" ;;
-      "--broad") set -- "$@" "-l" ;;
+      "--peaks") set -- "$@" "-p" ;;
       "--output") set -- "$@" "-o" ;;
       "--conf")   set -- "$@" "-c" ;;
       "--sample")   set -- "$@" "-s" ;;
@@ -85,7 +81,7 @@ for arg in "$@"; do
   esac
 done
 
-while getopts "f:r:b:F:R:B:o:c:s:dvhl" OPT
+while getopts "f:r:b:F:R:B:o:c:p:s:dvh" OPT
 do
     case $OPT in
         f) FORWARD=$OPTARG;;
@@ -94,7 +90,7 @@ do
         F) CONTROL_FORWARD=$OPTARG;;
         R) CONTROL_REVERSE=$OPTARG;;
 	B) CONTROL_BAM=$OPTARG;;
-	l) set_broad_mode ;;
+	p) MODE=$OPTARG;;
 	o) ODIR=$OPTARG;;
 	c) CONF=$OPTARG;;
 	s) SAMPLE_ID=$OPTARG;;
@@ -128,6 +124,27 @@ SCRIPTS_PATH="$ABS_BIN_PATH/../scripts/"
 . $SCRIPTS_PATH/utils.inc.sh
 . $SCRIPTS_PATH/chip.inc.sh
 
+
+
+echo -e "--------------------"
+echo -e "Running ${SOFT} v${VERSION}"
+when=$(date +%Y-%m-%d)
+echo -e "Date: ${when}"
+where=$(hostname)
+echo -e "Host: ${where}"
+echo -e "ChIP: ${FORWARD} ${REVERSE}"
+echo -e "Input: ${CONTROL_FORWARD} ${CONTROL_REVERSE}"
+echo -e "Bam(s): ${BAM} ${CONTROL_BAM}"
+echo -e "Ouput: ${ODIR}"
+echo -e "Config: ${CONF}"
+if [[ ! -z $SAMPLE_ID ]]; then
+    echo -e "SampleID: ${SAMPLE_ID}"
+fi
+echo -e "--------------------"
+echo
+
+
+
 #####################
 ## Check Config file
 #####################
@@ -150,17 +167,49 @@ mkdir -p ${ODIR}/logs
 
 ## 1- MAPPING + RM_DUP
 if [ -z $BAM ]; then
+    ## Samples with Droso spikes
+    if [ ! -z $SPIKES_BOWTIE2_IDX_PATH ]; then
+	BOWTIE2_OPTS=$SPIKES_BOWTIE2_OPTS
+	BOWTIE2_IDX_PATH=$SPIKES_BOWTIE2_IDX_PATH
+	bowtie2_func "${FORWARD} ${REVERSE}" ${ODIR}
+	build=$(basename $BOWTIE2_IDX_PATH)
+	BAM=${ODIR}/mapping/$(basename $FORWARD | sed -e 's/.fastq\(.gz\)*/_'${build}'.bam/')
+	
+	## Extract unmapped reads
+	bam2fastq_func ${BAM} ${ODIR} "-F 4"
+	FORWARD=$(echo $BAM | sed -e 's/.bam/_R1.fastq/')
+	gzip $FORWARD
+	FORWARD=${FORWARD}.gz
+	if [ ! -z ${REVERSE} ];then
+	    REVERSE=$(echo $BAM | sed -e 's/.bam/_R2.fastq/')
+	    gzip $REVERSE
+	    REVERSE=${REVERSE}.gz
+	fi
+    fi
+    
+    ## Alignment on experimental genome
+    BOWTIE2_OPTS=$EXP_BOWTIE2_OPTS
+    BOWTIE2_IDX_PATH=$EXP_BOWTIE2_IDX_PATH
     bowtie2_func "${FORWARD} ${REVERSE}" ${ODIR}
-    BAM=${ODIR}/mapping/$(basename $FORWARD | sed -e 's/.fastq\(.gz\)*/.bam/')
+    build=$(basename $BOWTIE2_IDX_PATH)
+    BAM=${ODIR}/mapping/$(basename $FORWARD | sed -e 's/.fastq\(.gz\)*/_'${build}'.bam/')
+
+    ## Remove duplicates
     rmDup_func $BAM ${ODIR}
     BAMnoDUP=${ODIR}/mapping/$(basename $BAM | sed -e 's/.bam/_noDup.bam/')
 else
     BAMnoDUP=${BAM}
 fi
 
+## Input
 if [[ -z $CONTROL_BAM && ! -z $CONTROL_FORWARD ]]; then
+    BOWTIE2_OPTS=$EXP_BOWTIE2_OPTS
+    BOWTIE2_IDX_PATH=$EXP_BOWTIE2_IDX_PATH
     bowtie2_func "${CONTROL_FORWARD} ${CONTROL_REVERSE}" ${ODIR}
-    CONTROL_BAM=${ODIR}/mapping/$(basename $CONTROL_FORWARD | sed -e 's/.fastq\(.gz\)*/.bam/')
+    build=${basename $BOWTIE2_IDX_PATH}
+    CONTROL_BAM=${ODIR}/mapping/$(basename $CONTROL_FORWARD | sed -e 's/.fastq\(.gz\)*/_${build}.bam/')
+
+    ## Remove duplicates
     rmDup_func $CONTROL_BAM ${ODIR}
     CONTROL_BAMnoDUP=${ODIR}/mapping/$(basename $CONTROL_BAM | sed -e 's/.bam/_noDup.bam/')
 else
@@ -181,9 +230,11 @@ else
 fi
 
 
-## 4- BigWig - take into account the ENCODE_BLACKLIST region file
+## 4- BigWig
 bw_func ${BAMnoDUP} ${ODIR}
-bw_func ${CONTROL_BAMnoDUP} ${ODIR}
+if [ ! -z $CONTROL_BAM ]; then
+    bw_func ${CONTROL_BAMnoDUP} ${ODIR}
+fi
 BIGWIG=$(basename ${BAMnoDUP} "_noDup.bam").bw
 
 ## 5- Stats
@@ -193,21 +244,29 @@ mapping_stat "${FORWARD} ${REVERSE}" ${CONF} ${BAM} ${ODIR}
 chipenrich_func "${BAMnoDUP} ${CONTROL_BAMnoDUP}" ${ODIR}
 
 ## 7- Peak calling
-macs_func ${BAMnoDUP} ${CONTROL_BAMnoDUP} ${ODIR} ${MODE}
-epic_func ${BAMnoDUP} ${CONTROL_BAMnoDUP} ${ODIR}
-
-if [[ ${MODE} == "BROAD" ]];
-then
-    PEAKS=${ODIR}/peaks/$(basename ${BAMnoDUP} | sed -e 's/.bam//')_peaks.broadPeak
-else
-    PEAKS=${ODIR}/peaks/$(basename ${BAMnoDUP} | sed -e 's/.bam//')_peaks.narrowPeak
+if [ ! -z ${CONTROL_BAMnoDUP} ]; then
+    if [[ ${MODE} == "verybroad" ]]; then
+	epic_func ${BAMnoDUP} ${CONTROL_BAMnoDUP} ${ODIR}
+	PEAKS=${ODIR}/peaks/$(basename ${BAMnoDUP} | sed -e 's/.bam//')_results.bed
+    else
+	macs_func ${BAMnoDUP} ${CONTROL_BAMnoDUP} ${ODIR} ${MODE}
+    	if [[ ${MODE} == "broad" ]]; then
+	    PEAKS=${ODIR}/peaks/$(basename ${BAMnoDUP} | sed -e 's/.bam//')_peaks.broadPeak
+	else
+	    PEAKS=${ODIR}/peaks/$(basename ${BAMnoDUP} | sed -e 's/.bam//')_peaks.narrowPeak
+	fi
+    fi
 fi
 
 #### FRIP = fraction of reads in peaks
-frip ${BAMnoDUP} ${PEAKS} ${ODIR}
+if [ ! -z $PEAKS ]; then
+    frip ${BAMnoDUP} ${PEAKS} ${ODIR}
+fi
 
 ## 8- REGI - Relative Enrichment in Genomics Intervals
-heatmap_func ${ODIR}/tracks/${BIGWIG} "${GENE_BED}" ${ODIR}
+if [ ! -z $PEAKS ]; then
+    heatmap_func ${ODIR}/tracks/${BIGWIG} "${GENE_BED}" ${ODIR}
+fi
 
 #### Samples correlation - require multisamples
 

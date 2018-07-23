@@ -12,11 +12,17 @@ UCSCTOOLS_PATH = /bioinfo/local/build/UCSC_tools_2017.05.03
 
 ## PARAMETERS
 
-BOWTIE2_IDX_PATH = /data/annotations/Mouse/mm10/complete/bowtie2_indexes/mm10
-BOWTIE2_OPTS = --very-sensitive --end-to-end --reorder
+EXP_BOWTIE2_IDX_PATH = /data/annotations/pipelines/Mouse/mm10/indexes/bowtie2/mm10
+EXP_BOWTIE2_OPTS = --very-sensitive --end-to-end --reorder
 EFFECTIVE_GENOME_SIZE = 2897310462
-MACS_OPTS = --SPMR --trackline --bdg
 
+SPIKES_BOWTIE2_IDX_PATH = /data/annotations/pipelines/Drosophila_melanogaster/dmel_r6.21_FB2018_02/indexes/bowtie2/dmel-all-chromosome-r6.21
+SPIKES_BOWTIE2_OPTS = --fast --end-to-end --reorder -N 0
+
+MACS_OPTS = --SPMR --trackline --bdg
+EPIC_OPTS = --window-size 500 --gaps-allowed 5 --false-discovery-rate-cutoff 0.01
+
+NB_PROC=4
 GENOME = hg38
 CHROMSIZES = /data/annotations/pipelines/Human/hg38/genome/chrom_hg38_basechr.sizes
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-## RNA Research Pipeline
+## ChIP-seq Research Pipeline
 ## Copyleft 2017 Institut Curie
 ## Author(s): Nicolas Servant
 ## Contact: nicolas.servant@curie.fr
@@ -108,11 +108,4 @@ N_SAMPLE=$(grep -v "^#" $SPLAN | wc -l)
 pid=$(echo "bash ${SCRIPTS_PATH}/run_qsub.sh" | qsub  -m ae -j oe -q batch -N ChIPpip_cluster -l "nodes=1:ppn=8,mem=50gb,walltime=10:00:00" -t 1-${N_SAMPLE} -v SAMPLE_PLAN="${SPLAN}",ODIR="${ODIR}",CONFIG="${CONF}")
 jobidarray=${pid%%.*}
 
-## Run the report
-if [[ -z $META ]]; then
-    pid=$(echo "${ABS_BIN_PATH}/makeChIPreport -i ${ODIR} -c ${CONF} -n ${RUNID}" | qsub -m ae -j oe -N RNApip_report -l "nodes=1:ppn=1,mem=2gb,walltime=01:00:00" -W depend=afterokarray:${jobidarray})
-else
-    META=$(realpath $META)
-    pid=$(echo "${ABS_BIN_PATH}/makeChIPreport -i ${ODIR} -c ${CONF} -m ${META} -n ${RUNID}" | qsub -m ae -j oe -N RNApip_report -l "nodes=1:ppn=1,mem=2gb,walltime=01:00:00" -W depend=afterokarray:${jobidarray})
-fi
 echo "Job(s) [$pid] submitted to the cluster !"
