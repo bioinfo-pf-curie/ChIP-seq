@@ -74,6 +74,14 @@ bowtie2_func()
     exec_cmd ${cmd} >> ${log} 2>&1
 }
 
+indexBam()
+{
+    check_env
+    local cmd="samtools index $1"
+    exec_cmd ${cmd} 2>&1
+
+}
+
 isPairedBam()
 {
     nb_paired=$(samtools view -c -f 1 $1)
@@ -130,10 +138,7 @@ rmDup_func()
     rmdup_bam=$(basename $1 ".bam")
     local cmd="java -jar ${PICARD_PATH}/MarkDuplicates.jar I=$1 O=$out/${rmdup_bam}_noDup.bam VALIDATION_STRINGENCY=SILENT REMOVE_DUPLICATES=true M=$out/${rmdup_bam}_metric"
     exec_cmd ${cmd} > ${log} 2>&1
-    
-    local cmd="samtools index $out/${rmdup_bam}_noDup.bam"
-    exec_cmd ${cmd} >> ${log} 2>&1
-}
+ }
 
 ## $1 = input files
 ## $2 = output dir
@@ -179,6 +184,29 @@ bw_func()
 	local cmd="bamCoverage --bam $1 --outFileName $out/${name}.bw --effectiveGenomeSize ${EFFECTIVE_GENOME_SIZE} --numberOfProcessors ${NB_PROC} --normalizeUsing RPKM --blackListFileName ${ENCODE_BLACKLIST}"
     else
 	local cmd="bamCoverage --bam $1 --outFileName $out/${name}.bw --effectiveGenomeSize ${EFFECTIVE_GENOME_SIZE} --numberOfProcessors ${NB_PROC} --normalizeUsing RPKM "
+    fi
+    exec_cmd ${cmd} > ${log} 2>&1
+}
+
+bw_over_input_func()
+{
+    check_env
+    local out=$3/tracks
+    mkdir -p ${out}
+    local log=$3/logs
+    mkdir -p ${log}
+    log=$log/bamCompare.log
+
+    echo -e "Generate bigwig file(s) normalized over input sample ..."
+    echo -e "Logs: $log"
+    echo
+
+    name=$(basename $1 "_noDup.bam")
+
+    if [[ ! -z ${ENCODE_BLACKLIST} && -e ${ENCODE_BLACKLIST} ]]; then
+        local cmd="bamCompare --bamfile1 $1 --bamfile2 $2 --outFileName $out/${name}_over_input.bw  --scaleFactorsMethod SES  --operation log2 --pseudocount 1 --numberOfProcessors ${NB_PROC} --blackListFileName ${ENCODE_BLACKLIST}"
+    else
+        local cmd="bamCompare --bamfile1 $1 --bamfile2 $2 --outFileName $out/${name}_over_input.bw  --scaleFactorsMethod SES  --operation log2 --pseudocount 1 --numberOfProcessors ${NB_PROC}"
     fi
     exec_cmd ${cmd} > ${log} 2>&1
 }

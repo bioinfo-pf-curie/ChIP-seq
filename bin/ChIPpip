@@ -174,19 +174,20 @@ if [ -z $BAM ]; then
 	bowtie2_func "${FORWARD} ${REVERSE}" ${ODIR}
 	build=$(basename $BOWTIE2_IDX_PATH)
 	BAM=${ODIR}/mapping/$(basename $FORWARD | sed -e 's/.fastq\(.gz\)*/_'${build}'.bam/')
-	
+	indexBam ${BAM}
+
 	## Extract unmapped reads
 	if [ -z ${REVERSE} ]; then 
 	    bam2fastq_func ${BAM} ${ODIR} "-f 0x4"
 	    FORWARD=$(echo $BAM | sed -e 's/.bam/_R1.fastq/')
-	    gzip $FORWARD
+	    gzip -f $FORWARD
 	    FORWARD=${FORWARD}.gz
 	else
             bam2fastq_func ${BAM} ${ODIR} "-f 0x2"
             FORWARD=$(echo $BAM | sed -e 's/.bam/_R1.fastq/')
 	    REVERSE=$(echo $BAM | sed -e 's/.bam/_R2.fastq/')
-	    gzip $REVERSE
-	    gzip $FORWARD
+	    gzip -f $REVERSE
+	    gzip -f $FORWARD
 	    REVERSE=${REVERSE}.gz
 	    FORWARD=${FORWARD}.gz
 	fi
@@ -202,11 +203,40 @@ if [ -z $BAM ]; then
     ## Remove duplicates
     rmDup_func $BAM ${ODIR}
     BAMnoDUP=${ODIR}/mapping/$(basename $BAM | sed -e 's/.bam/_noDup.bam/')
+    indexBam ${BAMnoDUP}
 else
     BAMnoDUP=${BAM}
 fi
 
-## Input
+## 2- Fragment size for PE data
+if [[ $(isPEexperiment $BAMnoDUP) == "1" ]]; then
+    if [ -z "${SAMPLE_ID}" ]; then
+	fragSize_func $BAMnoDUP ${ODIR} $(basename $BAM .bam)
+    else
+	fragSize_func $BAMnoDUP ${ODIR} ${SAMPLE_ID}
+    fi
+else
+    echo -e
+    echo -e "Warning: SE experiment detected. Cannot infer fragment size"
+    echo -e
+fi
+
+
+## 3- BigWig
+bw_func ${BAMnoDUP} ${ODIR}
+if [ ! -z $CONTROL_BAM ]; then
+    bw_func ${CONTROL_BAMnoDUP} ${ODIR}
+fi
+BIGWIG=$(basename ${BAMnoDUP} "_noDup.bam").bw
+
+## 4- Stats
+mapping_stat "${FORWARD} ${REVERSE}" ${CONF} ${BAM} ${ODIR}
+
+#############################################################
+## Optional part is starting here 
+## Input is REQUIRED
+
+## Input mapping
 if [[ -z $CONTROL_BAM && ! -z $CONTROL_FORWARD ]]; then
     BOWTIE2_OPTS=$EXP_BOWTIE2_OPTS
     BOWTIE2_IDX_PATH=$EXP_BOWTIE2_IDX_PATH
@@ -221,35 +251,15 @@ else
     CONTROL_BAMnoDUP=${CONTROL_BAM}
 fi
 
-## 3- Fragment size for PE data
-if [[ $(isPEexperiment $BAMnoDUP) == "1" ]]; then
-    if [ -z "${SAMPLE_ID}" ]; then
-	fragSize_func $BAMnoDUP ${ODIR} $(basename $BAM .bam)
-    else
-	fragSize_func $BAMnoDUP ${ODIR} ${SAMPLE_ID}
-    fi
-else
-    echo -e
-    echo -e "Warning: SE experiment detected. Cannot infer fragment size"
-    echo -e
-fi
+if [ -e ${CONTROL_BAMnoDUP} ]; then
+ 
+    ## Bigwig over input
+    bw_over_input_func ${BAMnoDUP} ${CONTROL_BAMnoDUP} ${ODIR}
 
+    ## ChIP enrichment
+    chipenrich_func "${BAMnoDUP} ${CONTROL_BAMnoDUP}" ${ODIR}
 
-## 4- BigWig
-bw_func ${BAMnoDUP} ${ODIR}
-if [ ! -z $CONTROL_BAM ]; then
-    bw_func ${CONTROL_BAMnoDUP} ${ODIR}
-fi
-BIGWIG=$(basename ${BAMnoDUP} "_noDup.bam").bw
-
-## 5- Stats
-mapping_stat "${FORWARD} ${REVERSE}" ${CONF} ${BAM} ${ODIR}
-
-## 6- ChIP enrichment
-chipenrich_func "${BAMnoDUP} ${CONTROL_BAMnoDUP}" ${ODIR}
-
-## 7- Peak calling
-if [ ! -z ${CONTROL_BAMnoDUP} ]; then
+    ## Peak calling
     if [[ ${MODE} == "verybroad" ]]; then
 	epic_func ${BAMnoDUP} ${CONTROL_BAMnoDUP} ${ODIR}
 	PEAKS=${ODIR}/peaks/$(basename ${BAMnoDUP} | sed -e 's/.bam//')_results.bed
@@ -261,16 +271,20 @@ if [ ! -z ${CONTROL_BAMnoDUP} ]; then
 	    PEAKS=${ODIR}/peaks/$(basename ${BAMnoDUP} | sed -e 's/.bam//')_peaks.narrowPeak
 	fi
     fi
-fi
 
-#### FRIP = fraction of reads in peaks
-if [ ! -z $PEAKS ]; then
-    frip ${BAMnoDUP} ${PEAKS} ${ODIR}
-fi
+    ## FRIP = fraction of reads in peaks
+    if [  -e $PEAKS ]; then
+	frip ${BAMnoDUP} ${PEAKS} ${ODIR}
+    fi
 
-## 8- REGI - Relative Enrichment in Genomics Intervals
-if [ ! -z $PEAKS ]; then
-    heatmap_func ${ODIR}/tracks/${BIGWIG} "${GENE_BED}" ${ODIR}
+    ## 8- REGI - Relative Enrichment in Genomics Intervals
+    if [ -e $PEAKS ]; then
+	heatmap_func ${ODIR}/tracks/${BIGWIG} "${GENE_BED}" ${ODIR}
+    fi
+else
+    echo -e
+    echo -e "Warning: Control sample is not specified ! skipping all Control-based steps ... "
+    echo -e
 fi
 
 #### Samples correlation - require multisamples
