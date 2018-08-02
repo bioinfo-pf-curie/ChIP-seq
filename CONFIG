@@ -20,7 +20,7 @@ SPIKES_BOWTIE2_IDX_PATH = /data/annotations/pipelines/Drosophila_melanogaster/dm
 SPIKES_BOWTIE2_OPTS = --fast --end-to-end --reorder -N 0
 
 MACS_OPTS = --SPMR --trackline --bdg
-EPIC_OPTS = --window-size 500 --gaps-allowed 5 --false-discovery-rate-cutoff 0.01
+EPIC_OPTS = --window-size 200 --gaps-allowed 3 --false-discovery-rate-cutoff 0.01
 
 NB_PROC=4
 GENOME = hg38
