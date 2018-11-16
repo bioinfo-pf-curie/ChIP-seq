@@ -175,18 +175,21 @@ if [ -z $BAM ]; then
     BAMnoDUP=${ODIR}/mapping/$(basename $BAM | sed -e 's/.bam/_noDup.bam/')
     indexBam ${BAMnoDUP}
 
-    ## Extract Spike reads only in case of spike-in usage
-    OPREFIX=$(basename $FORWARD | sed -e 's/.fastq\(.gz\)*/_noDup_spikes/')
-    extract_chr_from_bam ${BAM} ${SPIKE_CHROMSIZES} ${MIN_MAPQ} ${ODIR} ${OPREFIX}
-    indexBam ${ODIR}/mapping/${OPREFIX}.bam
-    
-    ## Extract Reference reads only
-    OPREFIX=$(basename $FORWARD | sed -e 's/.fastq\(.gz\)*/_noDup_ref_'${GENOME}'/')
-    extract_chr_from_bam ${BAM} ${REFERENCE_CHROMSIZES} ${MIN_MAPQ} ${ODIR} ${OPREFIX}
-    indexBam ${ODIR}/mapping/${OPREFIX}.bam
+    if [ ! -z ${SPIKE_CHROMSIZES} ]; then
+	## Extract Spike reads only in case of spike-in usage
+	OPREFIX=$(basename $FORWARD | sed -e 's/.fastq\(.gz\)*/_noDup_spikes/')
+	extract_chr_from_bam ${BAM} ${SPIKE_CHROMSIZES} ${MIN_MAPQ} ${ODIR} ${OPREFIX}
+	indexBam ${ODIR}/mapping/${OPREFIX}.bam
+    fi
 
-    ## The next steps of the analysis have to be run on the reference bam only
-    BAMnoDUP=${ODIR}/mapping/${OPREFIX}.bam
+    if [ ! -z ${REFERENCE_CHROMSIZES} ]; then
+	## Extract Reference reads only
+	OPREFIX=$(basename $FORWARD | sed -e 's/.fastq\(.gz\)*/_noDup_ref_'${GENOME}'/')
+	extract_chr_from_bam ${BAM} ${REFERENCE_CHROMSIZES} ${MIN_MAPQ} ${ODIR} ${OPREFIX}
+	indexBam ${ODIR}/mapping/${OPREFIX}.bam
+	## The next steps of the analysis have to be run on the reference bam only
+	BAMnoDUP=${ODIR}/mapping/${OPREFIX}.bam
+    fi
 else
     BAMnoDUP=${BAM}
 fi
@@ -225,11 +228,13 @@ if [[ ! -z $CONTROL_FORWARD ]]; then
     build=${basename $BOWTIE2_IDX_PATH}
     CONTROL_BAM=${ODIR}/mapping/$(basename $CONTROL_FORWARD | sed -e 's/.fastq\(.gz\)*/_'${build}'.bam/')
 
-    ## Extract Reference reads only (note that spikes are not expected in control samples)
-    OPREFIX=$(basename $CONTROL_FORWARD | sed -e 's/.fastq\(.gz\)*/_ref_'${GENOME}'/')
-    extract_chr_from_bam ${CONTROL_BAM} ${REFERENCE_CHROMSIZES} ${ODIR} ${OPREFIX}
-    CONTROL_BAM=${ODIR}/mapping/${OPREFIX}.bam
-    indexBam ${CONTROL_BAM}
+    if [ ! -z ${REFERENCE_CHROMSIZES} ]; then
+	## Extract Reference reads only (note that spikes are not expected in control samples)
+	OPREFIX=$(basename $CONTROL_FORWARD | sed -e 's/.fastq\(.gz\)*/_ref_'${GENOME}'/')
+	extract_chr_from_bam ${CONTROL_BAM} ${REFERENCE_CHROMSIZES} ${ODIR} ${OPREFIX}
+	CONTROL_BAM=${ODIR}/mapping/${OPREFIX}.bam
+	indexBam ${CONTROL_BAM}
+    fi
 
     ## Remove duplicates
     rmDup_func $CONTROL_BAM ${ODIR}
