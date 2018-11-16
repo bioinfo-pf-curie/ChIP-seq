@@ -105,7 +105,7 @@ ODIR=$(realpath $ODIR)
 ## Run the pipeline in parallel
 N_SAMPLE=$(grep -v "^#" $SPLAN | wc -l)
 
-pid=$(echo "bash ${SCRIPTS_PATH}/run_qsub.sh" | qsub  -m ae -j oe -q batch -N ChIPpip_cluster -l "nodes=1:ppn=8,mem=50gb,walltime=10:00:00" -t 1-${N_SAMPLE} -v SAMPLE_PLAN="${SPLAN}",ODIR="${ODIR}",CONFIG="${CONF}")
+pid=$(echo "bash ${SCRIPTS_PATH}/run_qsub.sh" | qsub  -m ae -j oe -q batch -N ChIPpip_cluster -l "nodes=1:ppn=4,mem=30gb,walltime=10:00:00" -t 1-${N_SAMPLE} -v SAMPLE_PLAN="${SPLAN}",ODIR="${ODIR}",CONFIG="${CONF}")
 jobidarray=${pid%%.*}
 
 echo "Job(s) [$pid] submitted to the cluster !"

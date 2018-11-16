@@ -306,8 +306,6 @@ chipenrich_func()
 }
 
 
-
-
 ## TODO - extract the fragment size
 ## TODO - and use no model option
 macs_func()
@@ -333,7 +331,7 @@ macs_func()
     if [[ ! -z ${SAMPLE_ID} ]]; then MACS_OPTS="$MACS_OPTS -n ${SAMPLE_ID}_macs2";fi
 
 
-    if [[ ${mode} == "TF" ]]; then
+    if [[ ${mode} == "narrow" ]]; then
 	cmd="${MACS_PATH}/macs2 callpeak \
     -g ${EFFECTIVE_GENOME_SIZE} \
     -t ${bam} \
@@ -342,7 +340,7 @@ macs_func()
     ${MACS_OPTS} \
     --outdir ${odir}/peaks/ --tempdir ${odir}/peaks/"
 
-    elif [[ ${mode} == "BROAD" ]]; then
+    elif [[ ${mode} == "broad" ]]; then
 	cmd="${MACS_PATH}/macs2 callpeak \
     -g ${EFFECTIVE_GENOME_SIZE} \
     -t ${bam} \
@@ -351,6 +349,9 @@ macs_func()
     --broad \
     ${MACS_OPTS} \
     --outdir ${odir}/peaks/ --tempdir ${odir}/peaks/"
+    
+    else
+	die "Unknown mode for MACS2 peak calling !"
     fi
     exec_cmd ${cmd} > ${log} 2>&1
 }
@@ -374,15 +375,15 @@ epic_func()
     echo
 
     local prefix=$(basename $bam | sed -e 's/.bam//')
-    local chipbed=$(echo $bam | sed -e 's/bam/bed/')
-    cmd="bamToBed -i $bam > $chipbed"
+    local chipbed=$(basename $bam | sed -e 's/bam/bed/')
+    cmd="bamToBed -i $bam > ${output}/${chipbed}"
     exec_cmd ${cmd} > ${log} 2>&1
 
-    local controlbed=$(echo $control | sed -e 's/bam/bed/')
-    cmd="bamToBed -i $control > $controlbed"
+    local controlbed=$(basename $control | sed -e 's/bam/bed/')
+    cmd="bamToBed -i $control > ${output}/${controlbed}"
     exec_cmd ${cmd} >> ${log} 2>&1
 
-    cmd="epic --treatment ${chipbed} --control ${controlbed} --number-cores ${NB_PROC} ${EPIC_OPTS} \
+    cmd="epic --treatment ${output}/${chipbed} --control ${output}/${controlbed} --number-cores ${NB_PROC} ${EPIC_OPTS} \
      --genome ${GENOME} --chromsizes ${CHROMSIZES} \
      --bed ${output}/${prefix}_results.bed --outfile ${output}/${prefix}_results.out "
     exec_cmd ${cmd} >> ${log} 2>&1
@@ -393,44 +394,64 @@ epic_func()
 	exec_cmd ${cmd} >> ${log} 2>&1
 	rm ${output}/${prefix}_results.bed.bak
     fi
-
 }
 
 
 heatmap_func()
 {
-check_env
+    check_env
 
-local bigwig=$1
-local bedfiles=$2
-local odir=$3
+    local bigwig=$1
+    local bedfiles=$2
+    local odir=$3
 
-local output=$3/heatmaps
-mkdir -p $output
-local log=$3/logs
-mkdir -p ${log}
-log=$log/heatmaps.log
-
-echo -e "Run Heatmaps on functional annotations ..."
-echo -e "Logs: $log"
+    local output=$3/heatmaps
+    mkdir -p $output
+    local log=$3/logs
+    mkdir -p ${log}
+    log=$log/heatmaps.log
+    
+    echo -e "Run Heatmaps on functional annotations ..."
+    echo -e "Logs: $log"
+    echo 
 
 #for bed in ${bedfiles}
 #do
 #echo "- ${bed}"
 #prefix=$(basename ${bigwig} | sed -e 's/.bw//')_$(basename ${bed} | sed -e 's/.bed//')
-prefix=$(basename ${bigwig} | sed -e 's/.bw//')
+    prefix=$(basename ${bigwig} | sed -e 's/.bw//')
  
-cmd="computeMatrix reference-point -S ${bigwig} -R ${bedfiles} \
---referencePoint TSS --beforeRegionStartLength 2500 --afterRegionStartLength 2500 -skipZeros \
+    cmd="computeMatrix reference-point -S ${bigwig} -R ${bedfiles} \
+--referencePoint TSS --beforeRegionStartLength 2500 --afterRegionStartLength 2500 --skipZeros \
 --outFileName ${odir}/heatmaps/${prefix}.mat.gz -p ${NB_PROC}"
-exec_cmd ${cmd} >> ${log} 2>&1
-
-cmd="plotHeatmap --matrixFile ${odir}/heatmaps/${prefix}.mat.gz --outFileName ${odir}/heatmaps/${prefix}_heatmap.png \
+    exec_cmd ${cmd} >> ${log} 2>&1
+    
+    cmd="plotHeatmap --matrixFile ${odir}/heatmaps/${prefix}.mat.gz --outFileName ${odir}/heatmaps/${prefix}_heatmap.png \
  --colorMap Blues --alpha 0.8 \
 --legendLocation upper-right --heatmapWidth 5 --dpi 300"
-exec_cmd ${cmd} >> $log 2>&1
+    exec_cmd ${cmd} >> $log 2>&1
 #done
-echo
-
+    echo   
 }
 
+
+extract_chr_from_bam()
+{
+local bam=$1
+local list=$2
+local minmapq=$3
+local odir=$4
+local prefix=$5
+
+local log=$3/logs
+mkdir -p ${log}
+log=$log/extractbam.log
+
+echo -e "Subsetting bam file to chromosomes list ..."
+echo -e "Logs: $log"
+echo
+
+chrs=$(awk '{printf $1" "}' $list)
+cmd="samtools view -b ${bam} ${chrs} | samtools sort -@${NB_PROC} -T ${odir}/mapping/${prefix} -o ${odir}/mapping/${prefix}.bam -"
+exec_cmd ${cmd} >> $log 2>&1
+}

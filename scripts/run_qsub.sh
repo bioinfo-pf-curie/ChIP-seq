@@ -47,15 +47,23 @@ peakmode=$(awk -F"," -v i=${PBS_ARRAYID} 'NR==i{print $6}' ${SAMPLE_PLAN})
 
 mkdir -p ${ODIR}/${id}
 
-echo "SAMPLE_PLAN=${SAMPLE_PLAN}"
-echo "ODIR=${ODIR}"
-echo "CONFIG=${CONFIG}"
-echo "id=${id}"
-echo "sampleid=${sampleid}"
-echo "reverse=${reverse}"
-echo "forward=${forward}"
-echo "control=${control}"
-echo "peakcalling=${peakmode}"
+
+echo -e "--------------------"
+echo -e "Running the ChIP-seq pipeline on cluster mode (${VERSION})"
+when=$(date +%Y-%m-%d)
+echo -e "Date: ${when}"
+where=$(hostname)
+echo -e "Host: ${where}"
+echo
+echo -e "Id: ${id}"
+echo -e "Sample_id: ${bioid}"
+echo -e "Forward: ${forward}"
+echo -e "Reverse:  ${reverse}"
+echo -e "Control=${control}"
+echo -e "Peakcalling=${peakmode}"
+echo -e "Ouput: ${ODIR}"
+echo -e "Config: ${CONFIG}"
+echo -e "Log: ${ODIR}/${id}/chippip.log"
 
 if [[ ! -z ${control} && ! -z ${peakmode} ]]; 
 then
@@ -65,9 +73,13 @@ fi
 
 ## Run RNA pipeline per sample
 if [ ! -z "$reverse" ]; then
-    echo "Run ${id} in PE mode ..."
-    ${BIN_PATH}/ChIPpip -f ${forward} -r ${reverse} -o ${ODIR}/${id} -c ${CONFIG} -s ${sampleid} ${opts} > ${ODIR}/${id}/chippip.log 
+    cmd="${BIN_PATH}/ChIPpip -f ${forward} -r ${reverse} -o ${ODIR}/${id} -c ${CONFIG} -s ${sampleid} ${opts} > ${ODIR}/${id}/chippip.log "
 else
-    echo "Run ${id} in SE mode ..."
-    ${BIN_PATH}/ChIPpip -f ${forward} -o ${ODIR}/${id} -c ${CONFIG} -s ${sampleid} ${opts} > ${ODIR}/${id}/chippip.log
+    cmd="${BIN_PATH}/ChIPpip -f ${forward} -o ${ODIR}/${id} -c ${CONFIG} -s ${sampleid} ${opts} > ${ODIR}/${id}/chippip.log"
 fi
+echo -e "Cmd: ${cmd}"
+echo -e "--------------------"
+echo
+eval $cmd
+
+

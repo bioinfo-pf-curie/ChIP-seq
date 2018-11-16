@@ -9,26 +9,24 @@ MACS_PATH = /bioinfo/local/build/Centos/python/python-2.7.13/bin/
 PICARD_PATH = /bioinfo/local/build/Centos/picard/1.97
 JAVA_PATH = /bioinfo/local/build/Centos/java/jre1.8.0_101/bin
 UCSCTOOLS_PATH = /bioinfo/local/build/UCSC_tools_2017.05.03
+PYTHON_PATH = /bioinfo/local/build/Centos/python/python-2.7.13/bin/
 
 ## PARAMETERS
+GENOME = hg38
+BOWTIE2_IDX_PATH = /data/annotations/pipelines/Human/hg38/spike-in/ChIP_dmelr6.21/indexes/bowtie2/hg18_dmelr6.21
+BOWTIE2_OPTS = --very-sensitive --end-to-end --reorder
+EFFECTIVE_GENOME_SIZE = 3049315783
+REFERENCE_CHROMSIZES = /data/annotations/pipelines/Human/hg38/genome/chrom_hg38.sizes
+SPIKE_CHROMSIZES = /data/annotations/pipelines/Human/hg38/spike-in/ChIP_dmelr6.21/genome/chrom_dmel_r6.21.sizes
 
-EXP_BOWTIE2_IDX_PATH = /data/annotations/pipelines/Mouse/mm10/indexes/bowtie2/mm10
-EXP_BOWTIE2_OPTS = --very-sensitive --end-to-end --reorder
-EFFECTIVE_GENOME_SIZE = 2897310462
-
-SPIKES_BOWTIE2_IDX_PATH = /data/annotations/pipelines/Drosophila_melanogaster/dmel_r6.21_FB2018_02/indexes/bowtie2/dmel-all-chromosome-r6.21
-SPIKES_BOWTIE2_OPTS = --fast --end-to-end --reorder -N 0
+MIN_MAPQ = 10
 
 MACS_OPTS = --SPMR --trackline --bdg
 EPIC_OPTS = --window-size 200 --gaps-allowed 3 --false-discovery-rate-cutoff 0.01
-
-NB_PROC=4
-GENOME = hg38
-CHROMSIZES = /data/annotations/pipelines/Human/hg38/genome/chrom_hg38_basechr.sizes
+NB_PROC = 4
 
 ## ANNOTATIONS
-
-ENCODE_BLACKLIST =
+ENCODE_BLACKLIST = 
 GENE_BED = /data/annotations/pipelines/Human/hg38/gtf/parseGencodeAnnotation/gencode.v26.annotation_gene.bed
 PROMOTER_BED = /data/annotations/pipelines/Human/hg38/gtf/parseGencodeAnnotation/gencode.v26.annotation_promoter_2000.bed
 

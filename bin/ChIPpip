@@ -124,8 +124,6 @@ SCRIPTS_PATH="$ABS_BIN_PATH/../scripts/"
 . $SCRIPTS_PATH/utils.inc.sh
 . $SCRIPTS_PATH/chip.inc.sh
 
-
-
 echo -e "--------------------"
 echo -e "Running ${SOFT} v${VERSION}"
 when=$(date +%Y-%m-%d)
@@ -142,7 +140,6 @@ if [[ ! -z $SAMPLE_ID ]]; then
 fi
 echo -e "--------------------"
 echo
-
 
 
 #####################
@@ -167,43 +164,29 @@ mkdir -p ${ODIR}/logs
 
 ## 1- MAPPING + RM_DUP
 if [ -z $BAM ]; then
-    ## Samples with Droso spikes
-    if [ ! -z $SPIKES_BOWTIE2_IDX_PATH ]; then
-	BOWTIE2_OPTS=$SPIKES_BOWTIE2_OPTS
-	BOWTIE2_IDX_PATH=$SPIKES_BOWTIE2_IDX_PATH
-	bowtie2_func "${FORWARD} ${REVERSE}" ${ODIR}
-	build=$(basename $BOWTIE2_IDX_PATH)
-	BAM=${ODIR}/mapping/$(basename $FORWARD | sed -e 's/.fastq\(.gz\)*/_'${build}'.bam/')
-	indexBam ${BAM}
-
-	## Extract unmapped reads
-	if [ -z ${REVERSE} ]; then 
-	    bam2fastq_func ${BAM} ${ODIR} "-f 0x4"
-	    FORWARD=$(echo $BAM | sed -e 's/.bam/_R1.fastq/')
-	    gzip -f $FORWARD
-	    FORWARD=${FORWARD}.gz
-	else
-            bam2fastq_func ${BAM} ${ODIR} "-f 0x2"
-            FORWARD=$(echo $BAM | sed -e 's/.bam/_R1.fastq/')
-	    REVERSE=$(echo $BAM | sed -e 's/.bam/_R2.fastq/')
-	    gzip -f $REVERSE
-	    gzip -f $FORWARD
-	    REVERSE=${REVERSE}.gz
-	    FORWARD=${FORWARD}.gz
-	fi
-    fi
-    
-    ## Alignment on experimental genome
-    BOWTIE2_OPTS=$EXP_BOWTIE2_OPTS
-    BOWTIE2_IDX_PATH=$EXP_BOWTIE2_IDX_PATH
+    ## Alignment on reference (or reference+spikes) genome
     bowtie2_func "${FORWARD} ${REVERSE}" ${ODIR}
     build=$(basename $BOWTIE2_IDX_PATH)
     BAM=${ODIR}/mapping/$(basename $FORWARD | sed -e 's/.fastq\(.gz\)*/_'${build}'.bam/')
+    indexBam ${BAM}
 
     ## Remove duplicates
     rmDup_func $BAM ${ODIR}
     BAMnoDUP=${ODIR}/mapping/$(basename $BAM | sed -e 's/.bam/_noDup.bam/')
     indexBam ${BAMnoDUP}
+
+    ## Extract Spike reads only in case of spike-in usage
+    OPREFIX=$(basename $FORWARD | sed -e 's/.fastq\(.gz\)*/_noDup_spikes/')
+    extract_chr_from_bam ${BAM} ${SPIKE_CHROMSIZES} ${MIN_MAPQ} ${ODIR} ${OPREFIX}
+    indexBam ${ODIR}/mapping/${OPREFIX}.bam
+    
+    ## Extract Reference reads only
+    OPREFIX=$(basename $FORWARD | sed -e 's/.fastq\(.gz\)*/_noDup_ref_'${GENOME}'/')
+    extract_chr_from_bam ${BAM} ${REFERENCE_CHROMSIZES} ${MIN_MAPQ} ${ODIR} ${OPREFIX}
+    indexBam ${ODIR}/mapping/${OPREFIX}.bam
+
+    ## The next steps of the analysis have to be run on the reference bam only
+    BAMnoDUP=${ODIR}/mapping/${OPREFIX}.bam
 else
     BAMnoDUP=${BAM}
 fi
@@ -225,7 +208,7 @@ fi
 ## 3- BigWig
 bw_func ${BAMnoDUP} ${ODIR}
 if [ ! -z $CONTROL_BAM ]; then
-    bw_func ${CONTROL_BAMnoDUP} ${ODIR}
+    bw_func ${CONTROL_BAM} ${ODIR}
 fi
 BIGWIG=$(basename ${BAMnoDUP} "_noDup.bam").bw
 
@@ -237,22 +220,28 @@ mapping_stat "${FORWARD} ${REVERSE}" ${CONF} ${BAM} ${ODIR}
 ## Input is REQUIRED
 
 ## Input mapping
-if [[ -z $CONTROL_BAM && ! -z $CONTROL_FORWARD ]]; then
-    BOWTIE2_OPTS=$EXP_BOWTIE2_OPTS
-    BOWTIE2_IDX_PATH=$EXP_BOWTIE2_IDX_PATH
+if [[ ! -z $CONTROL_FORWARD ]]; then
     bowtie2_func "${CONTROL_FORWARD} ${CONTROL_REVERSE}" ${ODIR}
     build=${basename $BOWTIE2_IDX_PATH}
-    CONTROL_BAM=${ODIR}/mapping/$(basename $CONTROL_FORWARD | sed -e 's/.fastq\(.gz\)*/_${build}.bam/')
+    CONTROL_BAM=${ODIR}/mapping/$(basename $CONTROL_FORWARD | sed -e 's/.fastq\(.gz\)*/_'${build}'.bam/')
+
+    ## Extract Reference reads only (note that spikes are not expected in control samples)
+    OPREFIX=$(basename $CONTROL_FORWARD | sed -e 's/.fastq\(.gz\)*/_ref_'${GENOME}'/')
+    extract_chr_from_bam ${CONTROL_BAM} ${REFERENCE_CHROMSIZES} ${ODIR} ${OPREFIX}
+    CONTROL_BAM=${ODIR}/mapping/${OPREFIX}.bam
+    indexBam ${CONTROL_BAM}
 
     ## Remove duplicates
     rmDup_func $CONTROL_BAM ${ODIR}
     CONTROL_BAMnoDUP=${ODIR}/mapping/$(basename $CONTROL_BAM | sed -e 's/.bam/_noDup.bam/')
-else
+elif [[ ! -z $CONTROL_BAM ]]; then
     CONTROL_BAMnoDUP=${CONTROL_BAM}
 fi
 
-if [ -e ${CONTROL_BAMnoDUP} ]; then
- 
+if [[ ! -z ${CONTROL_BAMnoDUP} ]]; then
+    ## Index bam
+    indexBam ${BAMnoDUP}
+
     ## Bigwig over input
     bw_over_input_func ${BAMnoDUP} ${CONTROL_BAMnoDUP} ${ODIR}
 
@@ -278,9 +267,9 @@ if [ -e ${CONTROL_BAMnoDUP} ]; then
     fi
 
     ## 8- REGI - Relative Enrichment in Genomics Intervals
-    if [ -e $PEAKS ]; then
-	heatmap_func ${ODIR}/tracks/${BIGWIG} "${GENE_BED}" ${ODIR}
-    fi
+    #if [ -e $PEAKS ]; then
+	#heatmap_func ${ODIR}/tracks/${BIGWIG} "${GENE_BED}" ${ODIR}
+    #fi
 else
     echo -e
     echo -e "Warning: Control sample is not specified ! skipping all Control-based steps ... "
