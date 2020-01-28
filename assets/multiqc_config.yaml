@@ -1,0 +1,51 @@
+#
+# MY_PIPELINE config for MultiQC
+#
+#################################################################
+
+skip_generalstats: true
+read_count_multiplier: 0.000001
+read_count_prefix: 'M'
+read_count_desc: 'millions'
+
+###################################
+## Custom content
+
+custom_data:
+    my_stats:
+        file_format: 'csv'
+        section_name: 'General Metrics'
+        description: ' of sequenced data'
+        plot_type: 'table'
+        pconfig:
+            namespace: 'stats'
+            id: 'stats'
+            title: 'General Statistics'
+            save_file: true
+            col1_header: 'Sample ID'
+        headers:
+            Sample_name:
+              title: 'Sample Name'
+              scale: false
+              format: '{:.0f}'
+              placement: 2000
+            Number_of_reads:
+              title: 'Total Reads'
+              scale: 'YlGnBu'
+              format: '{:,.0f}'
+              placement: 4000
+
+sp:
+   my_stats:
+      fn: '*.stats'
+
+###############################
+## Modules 
+
+module_order:
+  - fastqc
+
+#############################
+## Display
+
+plots_force_interactive: True

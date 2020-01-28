@@ -1,0 +1,10 @@
+***********************************
+CHANGES IN VERSION 1.0.0dev
+
+NEW FEATURES
+
+SIGNIFICANT USER-VISIBLE CHANGES
+
+BUG_FIXES
+
+
