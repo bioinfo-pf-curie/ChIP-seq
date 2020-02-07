@@ -643,58 +643,58 @@ if (!params.skip_filtering){
 }
 
 // Remove orphans from PE files
-if (params.singleEnd) {
-    ch_filtered_bams
-        .into { ch_filtered_bams_metrics;
-                ch_filtered_bams_bigwig;
-                ch_filtered_bams_macs_1;
-                ch_filtered_bams_macs_2;
-                ch_filtered_bams_phantompeakqualtools;
-                ch_filtered_bams_counts }
+// if (params.singleEnd) {
+//     ch_filtered_bams
+//         .into { ch_filtered_bams_metrics;
+//                 ch_filtered_bams_bigwig;
+//                 ch_filtered_bams_macs_1;
+//                 ch_filtered_bams_macs_2;
+//                 ch_filtered_bams_phantompeakqualtools;
+//                 ch_filtered_bams_counts }
 
-    ch_filtered_flagstat
-        .into { ch_filtered_flagstat_bigwig;
-                ch_filtered_flagstat_macs;
-                ch_filtered_flagstat_mqc }
+//     ch_filtered_flagstat
+//         .into { ch_filtered_flagstat_bigwig;
+//                 ch_filtered_flagstat_macs;
+//                 ch_filtered_flagstat_mqc }
 
-    ch_filtered_stats
-        .set { ch_filtered_stats_mqc }
-} else {
-    process removeOrphanPEbam {
-        tag "$prefix"
-        publishDir path: "${params.outdir}/rm_orphanPEbam", mode: 'copy',
-					saveAs: {filename ->
-								if (!filename.endsWith(".bam") && (!filename.endsWith(".bam.bai"))) "samtools_stats/$filename"
-								else if (filename.endsWith(".bam") || (filename.endsWith(".bam.bai"))) filename
-								else null 
-							}
+//     ch_filtered_stats
+//         .set { ch_filtered_stats_mqc }
+// } else {
+//     process removeOrphanPEbam {
+//         tag "$prefix"
+//         publishDir path: "${params.outdir}/rm_orphanPEbam", mode: 'copy',
+// 					saveAs: {filename ->
+// 								if (!filename.endsWith(".bam") && (!filename.endsWith(".bam.bai"))) "samtools_stats/$filename"
+// 								else if (filename.endsWith(".bam") || (filename.endsWith(".bam.bai"))) filename
+// 								else null 
+// 							}
 
-        input:
-        set val(prefix), file(filtered_bams) from ch_filtered_bams
+//         input:
+//         set val(prefix), file(filtered_bams) from ch_filtered_bams
 
-        output:
-        set val(prefix), file("*_rm_orphanPEbam.{bam,bam.bai}") into ch_filtered_bams_metrics,
-                                                           ch_filtered_bams_bigwig,
-                                                           ch_filtered_bams_macs_1,
-                                                           ch_filtered_bams_macs_2,
-                                                           ch_filtered_bams_phantompeakqualtools
-        set val(prefix), file("${prefix}.bam") into ch_filtered_bams_counts
-        set val(prefix), file("*.flagstat") into ch_filtered_flagstat_bigwig,
-                                               ch_filtered_flagstat_macs,
-                                               ch_filtered_flagstat_mqc
-        file "*.{idxstats,stats}" into ch_filtered_stats_mqc
+//         output:
+//         set val(prefix), file("*_rm_orphanPEbam.{bam,bam.bai}") into ch_filtered_bams_metrics,
+//                                                            ch_filtered_bams_bigwig,
+//                                                            ch_filtered_bams_macs_1,
+//                                                            ch_filtered_bams_macs_2,
+//                                                            ch_filtered_bams_phantompeakqualtools
+//         set val(prefix), file("${prefix}.bam") into ch_filtered_bams_counts
+//         set val(prefix), file("*.flagstat") into ch_filtered_flagstat_bigwig,
+//                                                ch_filtered_flagstat_macs,
+//                                                ch_filtered_flagstat_mqc
+//         file "*.{idxstats,stats}" into ch_filtered_stats_mqc
 
-        script:
-        """
-        bampe_rm_orphan.py ${filtered_bams[0]} ${prefix}.bam --only_fr_pairs
-        samtools sort -o ${prefix}_rm_orphanPEbam.bam -T $prefix ${prefix}.bam
-        samtools index ${prefix}_rm_orphanPEbam.bam
-        samtools flagstat ${prefix}_rm_orphanPEbam.bam > ${prefix}_rm_orphanPEbam.bam.flagstat
-        samtools idxstats ${prefix}_rm_orphanPEbam.bam > ${prefix}_rm_orphanPEbam.bam.idxstats
-        samtools stats ${prefix}_rm_orphanPEbam.bam > ${prefix}_rm_orphanPEbam.bam.stats
-        """
-    }
-}
+//         script:
+//         """
+//         bampe_rm_orphan.py ${filtered_bams[0]} ${prefix}.bam --only_fr_pairs
+//         samtools sort -o ${prefix}_rm_orphanPEbam.bam -T $prefix ${prefix}.bam
+//         samtools index ${prefix}_rm_orphanPEbam.bam
+//         samtools flagstat ${prefix}_rm_orphanPEbam.bam > ${prefix}_rm_orphanPEbam.bam.flagstat
+//         samtools idxstats ${prefix}_rm_orphanPEbam.bam > ${prefix}_rm_orphanPEbam.bam.idxstats
+//         samtools stats ${prefix}_rm_orphanPEbam.bam > ${prefix}_rm_orphanPEbam.bam.stats
+//         """
+//     }
+// }
 
 /*
  * MultiQC
