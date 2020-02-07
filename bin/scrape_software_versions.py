@@ -5,16 +5,28 @@ import re
 
 # TODO nf-core: Add additional regexes for new tools in process get_software_versions
 regexes = {
-    'nf-core/mypipeline': ['v_pipeline.txt', r"(\S+)"],
-    'Nextflow': ['v_nextflow.txt', r"(\S+)"],
-    'FastQC': ['v_fastqc.txt', r"FastQC v(\S+)"],
-    'MultiQC': ['v_multiqc.txt', r"multiqc, version (\S+)"],
+    'nf-core/chipseq': ['soft_versions.txt', r"(\S+)"],
+    'Nextflow': ['soft_versions.txt', r"(\S+)"],
+    'FastQC': ['soft_versions.txt', r"FastQC v(\S+)"],
+    'MultiQC': ['soft_versions.txt', r"multiqc, version (\S+)"],
+	'BWA': ['soft_versions.txt', r"Version: (\S+)"],
+	'Bowtie2': ['soft_versions.txt', r"version (\S+)"],
+	'STAR': ['soft_versions.txt', r"STAR(\S+)"],
+	'samtools': ['soft_versions.txt', r"samtools (\S+)"],
+	'picard': ['soft_versions.txt', r"(\S+)"],
+	'preseq': ['soft_versions.txt', r"Version: (\S+)"]
 }
 results = OrderedDict()
-results['nf-core/mypipeline'] = '<span style="color:#999999;\">N/A</span>'
+results['nf-core/chipseq'] = '<span style="color:#999999;\">N/A</span>'
 results['Nextflow'] = '<span style="color:#999999;\">N/A</span>'
 results['FastQC'] = '<span style="color:#999999;\">N/A</span>'
 results['MultiQC'] = '<span style="color:#999999;\">N/A</span>'
+results['BWA'] = '<span style="color:#999999;\">N/A</span>'
+results['Bowtie2'] = '<span style="color:#999999;\">N/A</span>'
+results['STAR'] = '<span style="color:#999999;\">N/A</span>'
+results['samtools'] = '<span style="color:#999999;\">N/A</span>'
+results['picard'] = '<span style="color:#999999;\">N/A</span>'
+results['preseq'] = '<span style="color:#999999;\">N/A</span>'
 
 # Search each file using its regex
 for k, v in regexes.items():
@@ -26,9 +38,9 @@ for k, v in regexes.items():
 
 # Dump to YAML
 print ('''
-id: 'nf-core/mypipeline-software-versions'
-section_name: 'nf-core/mypipeline Software Versions'
-section_href: 'https://github.com/nf-core/mypipeline'
+id: 'nf-core/chipseq-software-versions'
+section_name: 'nf-core/chipseq Software Versions'
+section_href: 'https://github.com/nf-core/chipseq'
 plot_type: 'html'
 description: 'are collected at run time from the software output.'
 data: |

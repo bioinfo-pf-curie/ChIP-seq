@@ -1,9 +1,19 @@
-name: MY_PIPELINE-1.0dev
+name: chipseq-p3.7
 channels:
   - conda-forge
   - bioconda
   - defaults
 dependencies:
   # Add required software dependencies here
-  - fastqc=0.11.8
-  - multiqc=1.6
+  - python=3.7
+  - bioconda::fastqc=0.11.8
+  - bioconda::multiqc=1.7
+  - bioconda::bwa=0.7.17
+  - bioconda::samtools=1.9
+  - bioconda::bowtie2=2.3.5
+  - bioconda::star=2.6.1b
+  - bioconda::picard=2.19.0
+  - bioconda::preseq=2.0.3
+  - bioconda::bedtools=2.27.1
+  - bioconda::bamtools=2.5.1
+  - bioconda::pysam=0.15.2
