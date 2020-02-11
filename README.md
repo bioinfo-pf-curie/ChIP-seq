@@ -17,8 +17,15 @@ The current workflow is based on the nf-core best practice. See the nf-core proj
 
 ### Pipeline Summary
 
-1.
-2.
+0. Create indexes if necessary ([`BWA`](http://bio-bwa.sourceforge.net/) / [`Bowtie2`](http://bowtie-bio.sourceforge.net/bowtie2/index.shtml) / [`STAR`](https://github.com/alexdobin/STAR))
+1. Run quality control of raw sequencing reads ([`fastqc`](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/))
+2. Align reads on reference genome ([`BWA`](http://bio-bwa.sourceforge.net/) / [`Bowtie2`](http://bowtie-bio.sourceforge.net/bowtie2/index.shtml) / [`STAR`](https://github.com/alexdobin/STAR))
+3. Sort aligned reads ([`SAMTools`](http://www.htslib.org/))
+4. Mark duplicates ([`Picard`](https://broadinstitute.github.io/picard/))
+5. Library complexity analysis ([`Preseq`](http://smithlabresearch.org/software/preseq/))
+6. Filtering aligned BAM files ([`SAMTools`](http://www.htslib.org/) & [`BAMTools](https://github.com/pezmaster31/bamtools))
+7. Computing Normalized and Relative Strand Cross-correlation (NSC/RSC) ([`phantompeakqualtools`](https://github.com/kundajelab/phantompeakqualtools))
+8. Diverse alignment QCs ([`deepTools`](https://deeptools.readthedocs.io/en/develop/index.html))
 
 ### Quick help
 

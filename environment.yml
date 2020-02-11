@@ -14,6 +14,9 @@ dependencies:
   - bioconda::star=2.6.1b
   - bioconda::picard=2.19.0
   - bioconda::preseq=2.0.3
-  - bioconda::bedtools=2.27.1
   - bioconda::bamtools=2.5.1
   - bioconda::pysam=0.15.2
+  - bioconda::phantompeakqualtools=1.2
+  - bioconda::bedtools=2.27.1
+  - ucsc-bedgraphtobigwig=377
+  - bioconda::deeptools=3.2.1

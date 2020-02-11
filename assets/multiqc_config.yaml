@@ -103,6 +103,9 @@ module_order:
   - fastqc
   - samtools
   - picard
+  - preseq
+  - phantompeakqualtools
+  - deeptools
 
 #############################
 ## Display

@@ -61,8 +61,8 @@ def bampe_rm_orphan(BAMIn,BAMOut,onlyFRPairs=False):
 
     ## ITERATE THROUGH BAM FILE
     EOF = 0
-    SAMFin = pysam.Samfile(BAMIn,"rb")
-    SAMFout = pysam.Samfile(BAMOut, "wb",header=SAMFin.header)
+    SAMFin = pysam.AlignmentFile(BAMIn,"rb")
+    SAMFout = pysam.AlignmentFile(BAMOut, "wb",header=SAMFin.header)
     currRead = SAMFin.next()
     for read in SAMFin:
         totalReads += 1

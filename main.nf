@@ -150,6 +150,11 @@ else {
 	ch_blacklist = Channel.empty() 
 }
 
+//PPQT inputs
+ch_ppqt_cor_header = file("$baseDir/assets/ppqt_cor_header.txt", checkIfExists: true)
+ch_ppqt_nsc_header = file("$baseDir/assets/ppqt_nsc_header.txt", checkIfExists: true)
+ch_ppqt_rsc_header = file("$baseDir/assets/ppqt_rsc_header.txt", checkIfExists: true)
+
 // TODO - Tools option configuration - see tools.conf
 // Add here the list of options that can change from a reference genome to another
 // params.star_options = params.genomes[ params.genome ].star_opts ?: params.star_opts
@@ -161,6 +166,48 @@ custom_runName = params.name
 if( !(workflow.runName ==~ /[a-z]+_[a-z]+/) ){
   custom_runName = workflow.runName
 }
+
+// Header log info
+if ("${workflow.manifest.version}" =~ /dev/ ){
+   dev_mess = file("$baseDir/assets/dev_message.txt")
+   log.info dev_mess.text
+}
+
+log.info """=======================================================
+
+Chip-seq v${workflow.manifest.version}"
+======================================================="""
+def summary = [:]
+summary['Pipeline Name']  = 'Chip-seq'
+summary['Pipeline Version'] = workflow.manifest.version
+summary['Run Name']     = custom_runName ?: workflow.runName
+// TODO : Report custom parameters here
+if (params.samplePlan) {
+   	summary['SamplePlan']   = params.samplePlan
+}
+else{
+   	summary['Reads']        = params.reads
+}
+summary['Fasta Ref']    = params.fasta
+summary['Data Type']    = params.singleEnd ? 'Single-End' : 'Paired-End'
+summary['Max Memory']   = params.max_memory
+summary['Max CPUs']     = params.max_cpus
+summary['Max Time']     = params.max_time
+summary['Output dir']   = params.outdir
+summary['Working dir']  = workflow.workDir
+summary['Container Engine'] = workflow.containerEngine
+if(workflow.containerEngine) summary['Container'] = workflow.container
+summary['Current home']   = "$HOME"
+summary['Current user']   = "$USER"
+summary['Current path']   = "$PWD"
+summary['Working dir']    = workflow.workDir
+summary['Output dir']     = params.outdir
+summary['Script dir']     = workflow.projectDir
+summary['Config Profile'] = workflow.profile
+
+if(params.email) summary['E-mail Address'] = params.email
+log.info summary.collect { k,v -> "${k.padRight(15)}: $v" }.join("\n")
+log.info "========================================="
 
 // Stage config files
 ch_multiqc_config = file(params.multiqc_config, checkIfExists: true)
@@ -182,23 +229,73 @@ if ( params.metadata ){
        	.set { ch_metadata }
 }
 
+
+/*
+ * Make sample plan if not available
+ */
+
+if (params.samplePlan){
+  ch_splan = Channel.fromPath(params.samplePlan)
+  ch_design = Channel.fromPath(params.samplePlan)
+}
+else{
+  	if (params.singleEnd){
+    	Channel
+       		.from(params.readPaths)
+       		.collectFile() {
+         	item -> ["sparams.genome ? sample_plan.csv", item[0] + ',' + item[0] + ',' + item[1][0] + '\n']
+        }
+       	.set{ ch_splan; ch_design }
+  	}
+
+  	else{
+     	Channel
+       		.from(params.readPaths)
+       		.collectFile() {
+         	item -> ["sample_plan.csv", item[0] + ',' + item[0] + ',' + item[1][0] + ',' + item[1][1] + '\n']
+        }
+       	.set{ ch_splan; ch_design }
+  }
+}
+
+
+/*
+ * Prepare design file
+ */
+
+process prepareDesign{
+    tag "$design"
+    publishDir "${params.outdir}/design", mode: 'copy'
+
+    input:
+    file design from ch_design
+
+    output:
+    file "readsToMap.csv" into ch_reads_to_map
+    file "designControl.csv" into ch_design_control
+
+    script:
+    """
+    prepare_design.py $design readsToMap.csv designControl.csv ${params.singleEnd}
+    """
+}
+
+
 /*
  * Create a channel for input read files
  */
 
 if(params.samplePlan){
 	if(params.singleEnd){
-		Channel
-        	.from(file("${params.samplePlan}"))
-        	.splitCsv(header: false)
-        	.map{ row -> [ row[0], [file(row[2])]] }
+		ch_reads_to_map
+        	.splitCsv(header: true, sep:',')
+        	.map{ row -> [ row.SAMPLE_ID, [file(row.FASTQ_R1, checkIfExists: true)]] }
         	.into { raw_reads_fastqc;raw_reads_bwa;raw_reads_bt2;raw_reads_star }
    	} 
    	else{
-      	Channel
-	       	.from(file("${params.samplePlan}"))
-         	.splitCsv(header: false)
-         	.map{ row -> [ row[0], [file(row[2]), file(row[3])]] }
+		ch_reads_to_map
+         	.splitCsv(header: true, sep:',')
+         	.map{ row -> [ row.SAMPLE_ID, [file(row.FASTQ_R1, checkIfExists: true), file(row.FASTQ_R2, checkIfExists: true)]] }
          	.into { raw_reads_fastqc;raw_reads_bwa;raw_reads_bt2;raw_reads_star }
 	}
    	params.reads=false
@@ -224,33 +321,6 @@ else {
         .fromFilePairs( params.reads, size: params.singleEnd ? 1 : 2 )
         .ifEmpty { exit 1, "Cannot find any reads matching: ${params.reads}\nNB: Path needs to be enclosed in quotes!\nNB: Path requires at least one * wildcard!\nIf this is single-end data, please specify --singleEnd on the command line." }
         .into { raw_reads_fastqc;raw_reads_bwa;raw_reads_bt2;raw_reads_star }
-}
-
-/*
- * Make sample plan if not available
- */
-
-if (params.samplePlan){
-  ch_splan = Channel.fromPath(params.samplePlan)
-}
-else{
-  	if (params.singleEnd){
-    	Channel
-       		.from(params.readPaths)
-       		.collectFile() {
-         	item -> ["sparams.genome ? ample_plan.csv", item[0] + ',' + item[0] + ',' + item[1][0] + '\n']
-        }
-       	.set{ ch_splan }
-  	}
-
-  	else{
-     	Channel
-       		.from(params.readPaths)
-       		.collectFile() {
-         	item -> ["sample_plan.csv", item[0] + ',' + item[0] + ',' + item[1][0] + ',' + item[1][1] + '\n']
-        }
-       	.set{ ch_splan }
-  }
 }
 
 /*
@@ -368,49 +438,6 @@ if(!params.skip_filtering){
 		"""
 	}
 }
-
-// Header log info
-if ("${workflow.manifest.version}" =~ /dev/ ){
-   dev_mess = file("$baseDir/assets/dev_message.txt")
-   log.info dev_mess.text
-}
-
-log.info """=======================================================
-
-Chip-seq v${workflow.manifest.version}"
-======================================================="""
-def summary = [:]
-summary['Pipeline Name']  = 'Chip-seq'
-summary['Pipeline Version'] = workflow.manifest.version
-summary['Run Name']     = custom_runName ?: workflow.runName
-// TODO : Report custom parameters here
-if (params.samplePlan) {
-   	summary['SamplePlan']   = params.samplePlan
-}
-else{
-   	summary['Reads']        = params.reads
-}
-summary['Fasta Ref']    = params.fasta
-summary['Data Type']    = params.singleEnd ? 'Single-End' : 'Paired-End'
-summary['Max Memory']   = params.max_memory
-summary['Max CPUs']     = params.max_cpus
-summary['Max Time']     = params.max_time
-summary['Output dir']   = params.outdir
-summary['Working dir']  = workflow.workDir
-summary['Container Engine'] = workflow.containerEngine
-if(workflow.containerEngine) summary['Container'] = workflow.container
-summary['Current home']   = "$HOME"
-summary['Current user']   = "$USER"
-summary['Current path']   = "$PWD"
-summary['Working dir']    = workflow.workDir
-summary['Output dir']     = params.outdir
-summary['Script dir']     = workflow.projectDir
-summary['Config Profile'] = workflow.profile
-
-if(params.email) summary['E-mail Address'] = params.email
-log.info summary.collect { k,v -> "${k.padRight(15)}: $v" }.join("\n")
-log.info "========================================="
-
 
 /*
  * FastQC
@@ -602,8 +629,8 @@ if (!params.skip_filtering){
 		tag "${prefix}"
 		publishDir path: "${params.outdir}/filtered_bams", mode: 'copy',
 					saveAs: {filename ->
-							if (!filename.endsWith(".bam") && (!filename.endsWith(".bam.bai"))) "markstep_stats/$filename"
-							else if (filename.endsWith(".bam") || (filename.endsWith(".bam.bai"))) filename
+							if (!filename.endsWith(".bam") && (!filename.endsWith(".bam.bai"))) "samtools_stats/$filename"
+							else if (filename.endsWith("_filtered.bam") || (filename.endsWith("_filtered.bam.bai"))) filename
 							else null 
 						}
 		
@@ -613,9 +640,9 @@ if (!params.skip_filtering){
 		file bamtools_filter_config from ch_bamtools_filter_config
 
 		output:
-		set val(prefix), file("*.{bam,bam.bai}") into ch_filtered_bams
-		set val(prefix), file("*.flagstat") into ch_filtered_flagstat
-		file "*.{idxstats,stats}" into ch_filtered_stats
+		set val(prefix), file("*_filtered.{bam,bam.bai}") into ch_filtered_bams
+		set val(prefix), file("*_filtered.bam.flagstat") into ch_filtered_flagstat
+		file "*_filtered.bam.{idxstats,stats}" into ch_filtered_stats
 
 		script:
 		filter_params = params.singleEnd ? "-F 0x004" : "-F 0x004 -F 0x0008 -f 0x001"
@@ -644,21 +671,23 @@ if (!params.skip_filtering){
 
 // Remove orphans from PE files
 // if (params.singleEnd) {
-//     ch_filtered_bams
-//         .into { ch_filtered_bams_metrics;
-//                 ch_filtered_bams_bigwig;
-//                 ch_filtered_bams_macs_1;
-//                 ch_filtered_bams_macs_2;
-//                 ch_filtered_bams_phantompeakqualtools;
-//                 ch_filtered_bams_counts }
+ch_filtered_bams
+	.into { ch_filtered_bams_metrics;
+			ch_filtered_bams_bigwig;
+			ch_filtered_bams_macs_1;
+			ch_filtered_bams_macs_2;
+			ch_filtered_bams_phantompeakqualtools;
+			ch_filtered_bams_deeptools_single;
+			ch_filtered_bams_deeptools_correl;
+			ch_filtered_bams_counts }
 
-//     ch_filtered_flagstat
-//         .into { ch_filtered_flagstat_bigwig;
-//                 ch_filtered_flagstat_macs;
-//                 ch_filtered_flagstat_mqc }
+ch_filtered_flagstat
+	.into { ch_filtered_flagstat_bigwig;
+			ch_filtered_flagstat_macs;
+			ch_filtered_flagstat_mqc }
 
-//     ch_filtered_stats
-//         .set { ch_filtered_stats_mqc }
+ch_filtered_stats
+	.set { ch_filtered_stats_mqc }
 // } else {
 //     process removeOrphanPEbam {
 //         tag "$prefix"
@@ -686,8 +715,8 @@ if (!params.skip_filtering){
 
 //         script:
 //         """
-//         bampe_rm_orphan.py ${filtered_bams[0]} ${prefix}.bam --only_fr_pairs
-//         samtools sort -o ${prefix}_rm_orphanPEbam.bam -T $prefix ${prefix}.bam
+//         bampe_rm_orphan.py ${prefix}_filtered.bam ${prefix}_out.bam --only_fr_pairs
+//         samtools sort -o ${prefix}_rm_orphanPEbam.bam -T $prefix ${prefix}_out.bam
 //         samtools index ${prefix}_rm_orphanPEbam.bam
 //         samtools flagstat ${prefix}_rm_orphanPEbam.bam > ${prefix}_rm_orphanPEbam.bam.flagstat
 //         samtools idxstats ${prefix}_rm_orphanPEbam.bam > ${prefix}_rm_orphanPEbam.bam.idxstats
@@ -697,11 +726,126 @@ if (!params.skip_filtering){
 // }
 
 /*
+ * PhantomPeakQualTools QC
+ */
+
+if (!params.skip_ppqt){ch_filtered_bams_macs_1
+	process PPQT{
+		tag "${prefix}"
+		publishDir "${params.outdir}/ppqt", mode: "copy"
+
+		input:
+		set val(prefix), file(filtered_bams) from ch_filtered_bams_phantompeakqualtools
+		file ppqt_cor_header from ch_ppqt_cor_header
+		file ppqt_nsc_header from ch_ppqt_nsc_header
+		file ppqt_rsc_header from ch_ppqt_rsc_header
+
+		output:
+		set val(prefix), file('*.pdf') into ch_ppqt_plot
+		set val(prefix), file('*.ppqt.out') into ch_ppqt_out, ch_ppqt_out_mqc
+		set val(prefix), file('*_mqc.tab') into ch_ppqt_csv_mqc
+
+		script:
+		"""
+		RUN_SPP=`which run_spp.R`
+		Rscript -e "library(caTools); source(\\"\$RUN_SPP\\")" -c="${filtered_bams[0]}" \\
+		-savp="${prefix}.ppqt.pdf" -savd="${prefix}.ppqt.Rdata" -out="${prefix}.ppqt.out"
+		cp $ppqt_cor_header ${prefix}_ppqt_cor_mqc.tab
+		Rscript -e "load('${prefix}.ppqt.Rdata'); write.table(crosscorr\\\$cross.correlation, \\
+		file=\\"${prefix}_ppqt_cor_mqc.tab\\", sep=",", quote=FALSE, row.names=FALSE, col.names=FALSE,append=TRUE)"
+		awk -v OFS='\t' '{print "${prefix}", \$9}' ${prefix}.ppqt.out \\
+		| cat $ppqt_nsc_header - > ${prefix}_ppqt_nsc_mqc.tab
+		awk -v OFS='\t' '{print "${prefix}", \$10}' ${prefix}.ppqt.out  \\
+		| cat $ppqt_rsc_header - > ${prefix}_ppqt_rsc_mqc.tab
+		"""
+	}
+}
+
+/*
+ * DeepTools QC
+ */
+
+// GCbias missing for the moment
+if (!params.skip_deepTools){
+	process deepToolsSingleQC{
+		tag "${prefix}"
+		publishDir "${params.outdir}/deepTools", mode: "copy"
+
+		input:
+		set val(prefix), file(filtered_bams) from ch_filtered_bams_deeptools_single
+		file gene_bed from ch_gene_bed
+
+		output:
+		
+		set val(prefix), file("*.pdf") into ch_deeptools_single
+		set val(prefix), file("*.tab") into ch_deeptools_single_mqc
+		script:
+
+		"""
+		bamCoverage -b ${filtered_bams[0]} -o ${prefix}_bw.bigwig -p ${task.cpus}
+		computeMatrix scale-regions -R $gene_bed -S ${prefix}_bw.bigwig -o ${prefix}_matrix.mat.gz -p ${task.cpus}
+		plotProfile -m ${prefix}_matrix.mat.gz -o ${prefix}_bams_profile.pdf  --outFileNameData ${prefix}.plotProfile.tab
+		sed -e 's/.0\t/\t/g' ${prefix}.plotProfile.tab | sed -e 's/100.0/100/g' > ${prefix}.plotProfile.tab
+		"""
+	}
+
+	process deepToolsCorrelQC{
+		publishDir "${params.outdir}/deepTools", mode: "copy"
+
+		input:
+		val filtered_bams_all from ch_filtered_bams_deeptools_correl.toList()
+
+		output:
+		file "bams_correlation.pdf" into ch_deeptools_correl
+		file "bams_coverage.pdf" into ch_deeptools_coverage
+		file "bams_fingerprint.pdf" into ch_deeptools_fingerprint
+		file "bams_correlation.tab" into ch_deeptools_correl_mqc
+		file "bams_coverage_raw.txt" into ch_deeptools_coverage_mqc
+		file "bams_fingerprint_raw.txt" into ch_deeptools_fingerprint_mqc
+
+		script:
+		all_bams=""
+		all_prefixes=""
+		for (List filtered_bam : filtered_bams_all){
+			all_prefixes+=filtered_bam[0]
+			all_prefixes+= " "
+			all_bams+=filtered_bam[1][0]
+			all_bams+=" "
+		}
+		"""
+		multiBamSummary bins -b $all_bams -o bams_summary.npz  -p ${task.cpus}
+		plotCorrelation -in bams_summary.npz -o bams_correlation.pdf -c spearman -p heatmap -l $all_prefixes --outFileCorMatrix bams_correlation.tab
+		plotCoverage -b $all_bams -o bams_coverage.pdf -p ${task.cpus} -l $all_prefixes  --outRawCounts bams_coverage_raw.txt
+		plotFingerprint -b $all_bams -plot bams_fingerprint.pdf -p ${task.cpus} -l $all_prefixes --outRawCounts bams_fingerprint_raw.txt		
+		"""
+	}
+}
+
+
+/*
+ * Peak calling index build
+ */
+
+// ch_filtered_bams_macs_1
+//     .combine(ch_filtered_bams_macs_2)
+//     .set { ch_filtered_bams_macs_1 }
+
+// ch_design_control
+//     .combine(ch_filtered_bams_macs_1)
+//     .filter { it[0] == it[3] && it[1] == it[5] }
+//     .join(ch_filtered_flagstat_macs)
+//     .map { it ->  it[2..-1] }
+//     .into { ch_group_bam_macs;
+//             ch_group_bam_plotfingerprint;
+//             ch_group_bam_deseq }
+
+/*
  * MultiQC
  */
 
 // Retrieve software from environment
-process getSoftwareVersionsPython3{
+process getSoftwareVersions{
+	publishDir path: "${params.outdir}/software_versions", mode: "copy"
 	when:
   		!params.skip_multiqc
 
@@ -742,9 +886,9 @@ section_name: 'Workflow Summary'
 section_href: 'https://gitlab.curie.fr/chipseq'
 plot_type: 'html'
 data: |
-	<dl class=\"dl-horizontal\">
+    <dl class=\"dl-horizontal\">
 ${summary.collect { k,v -> "            <dt>$k</dt><dd><samp>${v ?: '<span style=\"color:#999999;\">N/A</a>'}</samp></dd>" }.join("\n")}
-	</dl>
+    </dl>
 """.stripIndent()
 }
 
@@ -764,13 +908,20 @@ process multiqc {
 
 		file ('fastQC/*') from ch_fastqc_results.collect().ifEmpty([])
 
-		file ('sorted_bams/samtools_stats/*') from ch_sort_bam_stats.collect().ifEmpty([])
 		file ('marked_bams/samtools_stats/*') from ch_marked_bam_samstats.collect().ifEmpty([])
 		file ('marked_bams/samtools_stats/*') from ch_marked_bam_picstats.collect().ifEmpty([])
-		file ('rm_orphanPEbam/samtools_stats/*') from ch_filtered_flagstat_mqc.collect().ifEmpty([])
-		file ('rm_orphanPEbam/samtools_stats/*') from ch_filtered_stats_mqc.collect().ifEmpty([])
+		file ('filtered_bams/samtools_stats/*') from ch_filtered_flagstat_mqc.collect().ifEmpty([])
+		file ('filtered_bams/samtools_stats/*') from ch_filtered_stats_mqc.collect().ifEmpty([])
 		
 		file ('preseq/*') from ch_preseq_stats.collect().ifEmpty([])
+
+		file ('ppqt/*.ppqt.out') from ch_ppqt_out_mqc.collect().ifEmpty([])
+		file ('ppqt/*_mqc.tab') from ch_ppqt_csv_mqc.collect().ifEmpty([])
+
+		file ('deepTools/*_profile.tab') from ch_deeptools_single_mqc.collect().ifEmpty([])
+		file ("deepTools/bams_correlation.tab") from ch_deeptools_correl_mqc.collect().ifEmpty([])
+		file ("deepTools/bams_coverage_raw.txt") from ch_deeptools_coverage_mqc.collect().ifEmpty([])
+		file ("deepTools/bams_fingerprint_raw.txt") from ch_deeptools_fingerprint_mqc.collect().ifEmpty([])
 
     output:
 		file splan
@@ -782,16 +933,16 @@ process multiqc {
 	rfilename = custom_runName ? "--filename " + custom_runName.replaceAll('\\W','_').replaceAll('_+','_') + "_multiqc_report" : ''
 	metadata_opts = params.metadata ? "--metadata ${metadata}" : ""
 	splan_opts = params.samplePlan ? "--splan ${params.samplePlan}" : ""
-	modules_list = "-m custom_content -m fastqc -m samtools -m picard -m preseq"
+	modules_list = "-m custom_content -m fastqc -m samtools -m picard -m preseq -m phantompeakqualtools -m deeptools"
 
 	"""
 	mqc_header.py --name "Chip-seq" --version ${workflow.manifest.version} ${metadata_opts} > multiqc-config-header.yaml
 	multiqc . -f $rtitle $rfilename -c $multiqc_config -c multiqc-config-header.yaml $modules_list
 	"""
-}
-
+} 
 /* Creates a file at the end of workflow execution */
 workflow.onComplete {
+
     /*pipeline_report.html*/
 
     def report_fields = [:]
@@ -820,7 +971,7 @@ workflow.onComplete {
     def txt_template = engine.createTemplate(tf).make(report_fields)
     def report_txt = txt_template.toString()
 
-    // Render the HTML template
+	// Render the HTML template
     def hf = new File("$baseDir/assets/oncomplete_template.html")
     def html_template = engine.createTemplate(hf).make(report_fields)
     def report_html = html_template.toString()
@@ -835,6 +986,8 @@ workflow.onComplete {
     def output_tf = new File( output_d, "pipeline_report.txt" )
     output_tf.withWriter { w -> w << report_txt }
 
+
+
     /*oncomplete file*/
 
     File woc = new File("${params.outdir}/workflow.oncomplete.txt")
@@ -844,13 +997,12 @@ workflow.onComplete {
     endSummary['Success']      = workflow.success
     endSummary['exit status']  = workflow.exitStatus
     endSummary['Error report'] = workflow.errorReport ?: '-'
-
-    String endWfSummary = endSummary.collect { k,v -> "${k.padRight(30, '.')}: $v" }.join("\n")
-    println endWfSummary
+ 
+    String endWfSummary = endSummary.collect { k,v -> "${k.padRight(30, '.')}: $v" }.join("\n")    println endWfSummary
     String execInfo = "Execution summary\n${logSep}\n${endWfSummary}\n${logSep}\n"
     woc.write(execInfo)
 
-    /*final logs*/
+    /*]      = workflow.success     endSummary['exit status']  = workflow.exitStatus     endSummary['Error report'] = workflow.errorReport ?: '-' final logs*/
     if(workflow.success){
         log.info "[Chip-seq] Pipeline Complete"
     }else{
