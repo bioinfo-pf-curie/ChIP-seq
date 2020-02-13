@@ -11,27 +11,28 @@ read_count_desc: 'millions'
 ###################################
 ## Custom content
 
-custom_data:
-    my_stats:
-        file_format: 'csv'
-        section_name: 'General Metrics'
-        description: ' of sequenced data'
-        plot_type: 'table'
-        pconfig:
-            namespace: 'stats'
-            id: 'stats'
-            title: 'General Statistics'
-            save_file: true
-            col1_header: 'Sample ID'
+# custom_data:
+#     my_stats:
+#         file_format: 'csv'
+#         section_name: 'General Metrics'
+#         description: ' of sequenced data'
+#         plot_type: 'table'
+#         pconfig:
+#             namespace: 'stats'
+#             id: 'stats'
+#             title: 'General Statistics'
+#             save_file: true
+#             col1_header: 'Sample ID'
 
-sp:
-   my_stats:
-      fn: '*.stats'
+# sp:
+#    my_stats:
+#       fn: '*.stats'
 
 ###############################
 ## Modules 
 
 module_order:
+  - custom_content
   - fastqc
   - samtools
   - picard

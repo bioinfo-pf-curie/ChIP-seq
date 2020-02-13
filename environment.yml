@@ -21,3 +21,4 @@ dependencies:
   - bioconda::deeptools=3.2.1
   - bioconda::macs2=2.2.6
   - bioconda::epic2=0.0.40
+  - bioconda::homer=4.10

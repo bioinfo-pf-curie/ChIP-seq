@@ -5,18 +5,21 @@ import re
 
 # TODO nf-core: Add additional regexes for new tools in process get_software_versions
 regexes = {
-    'nf-core/chipseq': ['soft_versions.txt', r"(\S+)"],
-    'Nextflow': ['soft_versions.txt', r"(\S+)"],
-    'FastQC': ['soft_versions.txt', r"FastQC v(\S+)"],
-    'MultiQC': ['soft_versions.txt', r"multiqc, version (\S+)"],
-	'BWA': ['soft_versions.txt', r"Version: (\S+)"],
-	'Bowtie2': ['soft_versions.txt', r"version (\S+)"],
-	'STAR': ['soft_versions.txt', r"STAR(\S+)"],
-	'samtools': ['soft_versions.txt', r"samtools (\S+)"],
-	'picard': ['soft_versions.txt', r"(\S+)"],
-	# 'preseq': ['soft_versions.txt', r"Version: (\S+)"]
-	# 'R': ['soft_versions.txt', r"R version (\S+)"]
-	# 'MACS2': ['soft_versions.txt', r"macs2 (\S+)"]
+    'nf-core/chipseq': ['v_pipeline.txt', r"(\S+)"],
+    'Nextflow': ['v_nextflow.txt', r"(\S+)"],
+    'FastQC': ['v_fastqc.txt', r"FastQC v(\S+)"],
+    'MultiQC': ['v_multiqc.txt', r"multiqc, version (\S+)"],
+	'BWA': ['v_bwa.txt', r"Version: (\S+)"],
+	'Bowtie2': ['v_bowtie2.txt', r"version (\S+)"],
+	'STAR': ['v_star.txt', r"STAR(\S+)"],
+	'samtools': ['v_samtools.txt', r"samtools (\S+)"],
+	'bedtools': ['v_bedtools.txt', r"bedtools v(\S+)"],
+	'bamtools': ['v_bamtools.txt', r"bamtools (\S+)"],
+	'picard': ['v_picard.txt', r"([\d\.]+)-SNAPSHOT"],
+	'preseq': ['v_preseq.txt', r"Version: (\S+)"],
+	'deeptools': ['v_deeptools.txt', r"plotFingerprint (\S+)"],
+	'R': ['v_R.txt', r"R version (\S+)"],
+	'MACS2': ['v_macs2.txt', r"macs2 (\S+)"]
 	# 'epic2': ['soft_versions.txt', r"(\S+)"
 
 }
@@ -29,10 +32,13 @@ results['BWA'] = '<span style="color:#999999;\">N/A</span>'
 results['Bowtie2'] = '<span style="color:#999999;\">N/A</span>'
 results['STAR'] = '<span style="color:#999999;\">N/A</span>'
 results['samtools'] = '<span style="color:#999999;\">N/A</span>'
+results['bedtools'] = '<span style="color:#999999;\">N/A</span>'
+results['bamtools'] = '<span style="color:#999999;\">N/A</span>'
 results['picard'] = '<span style="color:#999999;\">N/A</span>'
-# results['preseq'] = '<span style="color:#999999;\">N/A</span>'
-# results['R'] = '<span style="color:#999999;\">N/A</span>'
-# results['MACS2'] = '<span style="color:#999999;\">N/A</span>'
+results['preseq'] = '<span style="color:#999999;\">N/A</span>'
+results['deeptools'] = '<span style="color:#999999;\">N/A</span>'
+results['R'] = '<span style="color:#999999;\">N/A</span>'
+results['MACS2'] = '<span style="color:#999999;\">N/A</span>'
 # results['epic2'] = '<span style="color:#999999;\">N/A</span>'
 
 
@@ -47,9 +53,9 @@ for k, v in regexes.items():
 
 # Dump to YAML
 print ('''
-id: 'nf-core/chipseq-software-versions'
-section_name: 'nf-core/chipseq Software Versions'
-section_href: 'https://github.com/nf-core/chipseq'
+id: 'Chip-seq pipeline software versions'
+section_name: 'Software Versions'
+section_href: 'https://gitlab.curie.fr/data-analysis/chip-seq/t'
 plot_type: 'html'
 description: 'are collected at run time from the software output.'
 data: |

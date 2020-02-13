@@ -707,7 +707,6 @@ ch_filtered_stats
 /*
  * PhantomPeakQualTools QC
  */
-
 if (!params.skip_ppqt){
 	process PPQT{
 		tag "${prefix}"
@@ -715,27 +714,23 @@ if (!params.skip_ppqt){
 
 		input:
 		set val(prefix), file(filtered_bams) from ch_filtered_bams_phantompeakqualtools
-		file ppqt_cor_header from ch_ppqt_cor_header
-		file ppqt_nsc_header from ch_ppqt_nsc_header
-		file ppqt_rsc_header from ch_ppqt_rsc_header
+		file spp_correlation_header from ch_ppqt_cor_header
+		file spp_nsc_header from ch_ppqt_nsc_header
+		file spp_rsc_header from ch_ppqt_rsc_header
 
 		output:
-		set val(prefix), file('*.pdf') into ch_ppqt_plot
-		set val(prefix), file('*.spp.out') into ch_ppqt_out, ch_ppqt_out_mqc
-		set val(prefix), file('*_mqc.tab') into ch_ppqt_csv_mqc
+		file '*.pdf' into ch_ppqt_plot
+		file '*.spp.out' into ch_ppqt_out, ch_ppqt_out_mqc
+		file '*_mqc.tsv' into ch_ppqt_csv_mqc
 
 		script:
 		"""
 		RUN_SPP=`which run_spp.R`
-		Rscript -e "library(caTools); source(\\"\$RUN_SPP\\")" -c="${filtered_bams[0]}" \\
-		-savp="${prefix}.spp.pdf" -savd="${prefix}.spp.Rdata" -out="${prefix}.spp.out"
-		cp $ppqt_cor_header ${prefix}_ppqt_cor_mqc.tab
-		Rscript -e "load('${prefix}.spp.Rdata'); write.table(crosscorr\\\$cross.correlation, \\
-		file=\\"${prefix}_ppqt_cor_mqc.tab\\", sep=",", quote=FALSE, row.names=FALSE, col.names=FALSE,append=TRUE)"
-		awk -v OFS='\t' '{print "${prefix}", \$9}' ${prefix}.spp.out \\
-		| cat $ppqt_nsc_header - > ${prefix}_ppqt_nsc_mqc.tab
-		awk -v OFS='\t' '{print "${prefix}", \$10}' ${prefix}.spp.out  \\
-		| cat $ppqt_rsc_header - > ${prefix}_ppqt_rsc_mqc.tab
+		Rscript -e "library(caTools); source(\\"\$RUN_SPP\\")" -c="${filtered_bams[0]}" -savp="${prefix}.spp.pdf" -savd="${prefix}.spp.Rdata" -out="${prefix}.spp.out" -p=$task.cpus
+		cp $spp_correlation_header ${prefix}_spp_correlation_mqc.tsv
+		Rscript -e "load('${prefix}.spp.Rdata'); write.table(crosscorr\\\$cross.correlation, file=\\"${prefix}_spp_correlation_mqc.tsv\\", sep=",", quote=FALSE, row.names=FALSE, col.names=FALSE,append=TRUE)"
+		awk -v OFS='\t' '{print "${prefix}", \$9}' ${prefix}.spp.out | cat $spp_nsc_header - > ${prefix}_spp_nsc_mqc.tsv
+		awk -v OFS='\t' '{print "${prefix}", \$10}' ${prefix}.spp.out | cat $spp_rsc_header - > ${prefix}_spp_rsc_mqc.tsv
 		"""
 	}
 }
@@ -747,7 +742,7 @@ if (!params.skip_ppqt){
 if (!params.skip_deepTools){
 	process deepToolsSingleQC{
 		tag "${prefix}"
-		publishDir "${params.outdir}/deepTools", mode: "copy"
+		publishDir "${params.outdir}/deepTools/single_bam", mode: "copy"
 
 		input:
 		set val(prefix), file(filtered_bams) from ch_filtered_bams_deeptools_single
@@ -767,7 +762,7 @@ if (!params.skip_deepTools){
 	}
 
 	process deepToolsCorrelQC{
-		publishDir "${params.outdir}/deepTools", mode: "copy"
+		publishDir "${params.outdir}/deepTools/multiple_bams", mode: "copy"
 
 		input:
 		val filtered_bams_all from ch_filtered_bams_deeptools_correl.toList()
@@ -829,7 +824,6 @@ ch_group_bam_macs_broad
 ch_group_bam_macs_very_broad
 	.filter { it[2] == 'very-broad' }
 	.set {ch_group_bam_macs_very_broad}
-
 /*
  * Peak calling
  */
@@ -957,27 +951,31 @@ process getSoftwareVersions{
   		!params.skip_multiqc
 
 	output:
-		file 'soft_versions.txt' into software_versions_yaml
+		file 'software_versions_mqc.yaml' into software_versions_yaml
 
 	script:
 		"""
-		echo $workflow.manifest.version &> soft_versions.txt
-		echo $workflow.nextflow.version >> soft_versions.txt
-		fastqc --version >> soft_versions.txt
-		multiqc --version >> soft_versions.txt
-		echo \$(bwa 2>&1) >> soft_versions.txt
-		bowtie2 --version >> soft_versions_txt
-		samtools --version >> soft_versions.txt
-		STAR --version >> soft_versioch_filtered_bams_macs_1ns.txt
-		echo \$(picard MarkDuplicates --version 2>&1) >> soft_versions.txt
+		echo $workflow.manifest.version &> v_pipeline.txt
+		echo $workflow.nextflow.version &> v_nextflow.txt
+		fastqc --version &> v_fastqc.txt
+		multiqc --version &> v_multiqc.txt
+		echo \$(bwa 2>&1) &> v_bwa.txt
+		bowtie2 --version &> v_bowtie2.txt
+		STAR --version &> v_star.txt
+		samtools --version &> v_samtools.txt
+		bedtools --version &> v_bedtools.txt
+		echo \$(bamtools --version 2>&1) > v_bamtools.txt
+		echo \$(picard MarkDuplicates --version 2>&1) &> v_picard.txt
+		preseq &> v_preseq.txt
+		echo \$(plotFingerprint --version 2>&1) > v_deeptools.txt || true
+		echo \$(R --version 2>&1) &> v_R.txt
+		echo \$(macs2 --version 2>&1) &> v_macs2.txt
+		scrape_software_versions.py &> software_versions_mqc.yaml
 		"""
+
 }
 
-		// preseq --version >> soft_versions.txt
-		// python -c "import pysam; print(pysam.__version__)" >> soft_versions.txt
-		// echo \$(R --version 2>&1) >> soft_versions.txt
-		// echo \$(macs2 --version 2>&1) >> soft_versions.txt
-		// scrape_software_versions.py &> software_versions_mqc.yaml
+
 
 // Workflow summary
 process workflow_summary_mqc {
@@ -1026,12 +1024,12 @@ process multiqc {
 		file ('preseq/*') from ch_preseq_stats.collect().ifEmpty([])
 
 		file ('ppqt/*.spp.out') from ch_ppqt_out_mqc.collect().ifEmpty([])
-		file ('ppqt/*_mqc.tab') from ch_ppqt_csv_mqc.collect().ifEmpty([])
+		file ('ppqt/*_mqc.tsv') from ch_ppqt_csv_mqc.collect().ifEmpty([])
 
-		file ('deepTools/*_profile.tab') from ch_deeptools_single_mqc.collect().ifEmpty([])
-		file ("deepTools/bams_correlation.tab") from ch_deeptools_correl_mqc.collect().ifEmpty([])
-		file ("deepTools/bams_coverage_raw.txt") from ch_deeptools_coverage_mqc.collect().ifEmpty([])
-		file ("deepTools/bams_fingerprint*") from ch_deeptools_fingerprint_mqc.collect().ifEmpty([])
+		file ('deepTools/single_bam/*plotProfile.tab') from ch_deeptools_single_mqc.collect().ifEmpty([])
+		file ("deepTools/multiple_bams/bams_correlation.tab") from ch_deeptools_correl_mqc.collect().ifEmpty([])
+		file ("deepTools/multiple_bams/bams_coverage_raw.txt") from ch_deeptools_coverage_mqc.collect().ifEmpty([])
+		file ("deepTools/multiple_bams/bams_fingerprint_*") from ch_deeptools_fingerprint_mqc.collect().ifEmpty([])
 
 		file ('macs/*') from ch_macs_counts_sharp.collect().ifEmpty([])
 		file ('macs/*') from ch_macs_counts_broad.collect().ifEmpty([])
@@ -1048,7 +1046,7 @@ process multiqc {
 	rfilename = custom_runName ? "--filename " + custom_runName.replaceAll('\\W','_').replaceAll('_+','_') + "_multiqc_report" : ''
 	metadata_opts = params.metadata ? "--metadata ${metadata}" : ""
 	splan_opts = params.samplePlan ? "--splan ${params.samplePlan}" : ""
-	modules_list = "-m custom_content -m fastqc -m samtools -m picard -m preseq -m phantompeakqualtools -m deeptools"
+	modules_list = "-m custom_content -m fastqc -m samtools -m picard -m preseq -m phantompeakqualtools -m deeptools -m macs2"
 
 	"""
 	mqc_header.py --name "Chip-seq" --version ${workflow.manifest.version} ${metadata_opts} > multiqc-config-header.yaml
