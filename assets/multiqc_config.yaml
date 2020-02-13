@@ -106,6 +106,7 @@ module_order:
   - preseq
   - phantompeakqualtools
   - deeptools
+  - macs2
 
 #############################
 ## Display

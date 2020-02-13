@@ -1,6 +1,6 @@
-# MY_PIPELINE
+# Chip-seq
 
-**Institut Curie - Nextflow MY_PIPELINE analysis pipeline**
+**Institut Curie - Nextflow Chip-seq analysis pipeline**
 
 [![Nextflow](https://img.shields.io/badge/nextflow-%E2%89%A50.32.0-brightgreen.svg)](https://www.nextflow.io/)
 [![MultiQC](https://img.shields.io/badge/MultiQC-1.6-blue.svg)](https://multiqc.info/)
@@ -23,7 +23,7 @@ The current workflow is based on the nf-core best practice. See the nf-core proj
 3. Sort aligned reads ([`SAMTools`](http://www.htslib.org/))
 4. Mark duplicates ([`Picard`](https://broadinstitute.github.io/picard/))
 5. Library complexity analysis ([`Preseq`](http://smithlabresearch.org/software/preseq/))
-6. Filtering aligned BAM files ([`SAMTools`](http://www.htslib.org/) & [`BAMTools](https://github.com/pezmaster31/bamtools))
+6. Filtering aligned BAM files ([`SAMTools`](http://www.htslib.org/) & [`BAMTools`](https://github.com/pezmaster31/bamtools))
 7. Computing Normalized and Relative Strand Cross-correlation (NSC/RSC) ([`phantompeakqualtools`](https://github.com/kundajelab/phantompeakqualtools))
 8. Diverse alignment QCs ([`deepTools`](https://deeptools.readthedocs.io/en/develop/index.html))
 

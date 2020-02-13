@@ -1,2 +1,4 @@
-SRR1106775_1,sample_test1,test-op/data/SRR1106775-1M_1.fastq.gz,test-op/data/SRR1106775-1M_2.fastq.gz
-SRR1106776_1,sample_test2,test-op/data/SRR1106776-1M_1.fastq.gz,test-op/data/SRR1106776-1M_2.fastq.gz
+A949C02,Input_EGF-0,/bioinfo/users/vlaroche/Documents/chip-seq/test-op/data/A949C02_chr22.R1.fq.gz
+A949C08,H3K9me3_EGF-0,/bioinfo/users/vlaroche/Documents/chip-seq/test-op/data/A949C08_chr22.R1.fq.gz
+A949C11,H3K4me3_EGF-0,/bioinfo/users/vlaroche/Documents/chip-seq/test-op/data/A949C11_chr22.R1.fq.gz
+A949C05,H3K27me3_EGF-0,/bioinfo/users/vlaroche/Documents/chip-seq/test-op/data/A949C05_chr22.R1.fq.gz

@@ -14,7 +14,11 @@ regexes = {
 	'STAR': ['soft_versions.txt', r"STAR(\S+)"],
 	'samtools': ['soft_versions.txt', r"samtools (\S+)"],
 	'picard': ['soft_versions.txt', r"(\S+)"],
-	'preseq': ['soft_versions.txt', r"Version: (\S+)"]
+	# 'preseq': ['soft_versions.txt', r"Version: (\S+)"]
+	# 'R': ['soft_versions.txt', r"R version (\S+)"]
+	# 'MACS2': ['soft_versions.txt', r"macs2 (\S+)"]
+	# 'epic2': ['soft_versions.txt', r"(\S+)"
+
 }
 results = OrderedDict()
 results['nf-core/chipseq'] = '<span style="color:#999999;\">N/A</span>'
@@ -26,7 +30,12 @@ results['Bowtie2'] = '<span style="color:#999999;\">N/A</span>'
 results['STAR'] = '<span style="color:#999999;\">N/A</span>'
 results['samtools'] = '<span style="color:#999999;\">N/A</span>'
 results['picard'] = '<span style="color:#999999;\">N/A</span>'
-results['preseq'] = '<span style="color:#999999;\">N/A</span>'
+# results['preseq'] = '<span style="color:#999999;\">N/A</span>'
+# results['R'] = '<span style="color:#999999;\">N/A</span>'
+# results['MACS2'] = '<span style="color:#999999;\">N/A</span>'
+# results['epic2'] = '<span style="color:#999999;\">N/A</span>'
+
+
 
 # Search each file using its regex
 for k, v in regexes.items():
