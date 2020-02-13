@@ -753,7 +753,7 @@ if (!params.skip_deepTools){
 		set val(prefix), file(filtered_bams) from ch_filtered_bams_deeptools_single
 		file gene_bed from ch_gene_bed
 
-		output:
+		output:		
 		set val(prefix), file("*.pdf") into ch_deeptools_single
 		set val(prefix), file("*.tab") into ch_deeptools_single_mqc
 		script:
@@ -801,64 +801,6 @@ if (!params.skip_deepTools){
 
 
 /*
- * Peak calling index build
- */
-
-ch_filtered_bams_macs_1
-    .combine(ch_filtered_bams_macs_2)
-    .set { ch_filtered_bams_macs_1 }
-
-ch_design_control
-    .combine(ch_filtered_bams_macs_1)
-    .filter { it[0] == it[5] && it[1] == it[7] }
-    .join(ch_filtered_flagstat_macs)
-    .map { it ->  it[2..-1] }
-    .into { ch_group_bam_macs_sharp;
-			ch_group_bam_macs_broad;
-			ch_group_bam_macs_very_broad;
-            }
-
-ch_group_bam_macs_sharp
-	.filter { it[2] == 'sharp' }
-	.set {ch_group_bam_macs_sharp}
-
-ch_group_bam_macs_broad
-	.filter { it[2] == 'broad' }
-	.set {ch_group_bam_macs_broad}
-
-ch_group_bam_macs_very_broad
-	.filter { it[2] == 'very-broad' }
-	.set {ch_group_bam_macs_very_broad}
-
-/*
- * Peak calling
- */
-// SHARP PEAKS
-if (!params.skip_peakcalling){
-	process sharpMACS2{
-		tag "${sampleID} - ${controlID}"
-		publishDir path: "${params.outdir}/peak_calling/sharp", mode: 'copy',
-					saveAs: { filename ->
-						if (filename.endsWith(".tsv")) "stats/$filename"
-						else if (filename.endsWith(".igv.txt")) null
-						else filename
-					}
-
-		input:
-		set val(sampleName), val(mark), val(peaktype), val(sampleID), file(sampleBam), val(controlID), file(controlBam), file(sampleFlagstat) from ch_group_bam_macs_sharp
-		file peak_count_header from ch_peak_count_header_sharp
-		file frip_score_header from ch_frip_score_header_sharp
-
-		output:
-		set val(sampleID), file("*.{bed,xls,gappedPeak,bdg}") into ch_macs_output_sharp
-		set val(sampleName), val(mark), val(peaktype), val(sampleID), val(controlID), file("*.narrowPeak") into ch_macs_homer_sharp, ch_macs_qc_sharp, ch_macs_consensus_sharp
-		file "*igv.txt" into ch_macs_igv_sharp
-		file "*_mqc.tsv" into ch_macs_counts_sharp
-
-		script:
-		format = params.singleEnd ? "BAM" : "BAMPE"
-		//pileup = params.save_macs_pileup ? "-B --SPMR" : ""
-		pea/*
  * Peak calling index build
  */
 
