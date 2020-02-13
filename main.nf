@@ -851,7 +851,11 @@ if (!params.skip_peakcalling){
 
 		output:
 		set val(sampleID), file("*.{bed,xls,gappedPeak,bdg}") into ch_macs_output_sharp
-		setktype_macs = "narrowPeak"
+		set val(sampleName), val(mark), val(peaktype), val(sampleID), val(controlID), file("*.narrowPeak") into ch_macs_homer_sharp, ch_macs_qc_sharp, ch_macs_consensus_sharp
+		file "*igv.txt" into ch_macs_igv_sharp
+		file "*_mqc.tsv" into ch_macs_counts_sharp
+
+		script:
 		"""
 		macs2 callpeak \\
 			-t ${sampleBam[0]} \\
