@@ -1050,7 +1050,7 @@ process multiqc {
 
 	"""
 	mqc_header.py --name "Chip-seq" --version ${workflow.manifest.version} ${metadata_opts} > multiqc-config-header.yaml
-	multiqc . -f $rtitle $rfilename -c $multiqc_config -c multiqc-config-header.yaml $modules_list
+	multiqc . -f $rtitle $rfilename -c multiqc-config-header.yaml $modules_list -c $multiqc_config
 	"""
 } 
 /* Creates a file at the end of workflow execution */
