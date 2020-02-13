@@ -26,6 +26,7 @@ The current workflow is based on the nf-core best practice. See the nf-core proj
 6. Filtering aligned BAM files ([`SAMTools`](http://www.htslib.org/) & [`BAMTools`](https://github.com/pezmaster31/bamtools))
 7. Computing Normalized and Relative Strand Cross-correlation (NSC/RSC) ([`phantompeakqualtools`](https://github.com/kundajelab/phantompeakqualtools))
 8. Diverse alignment QCs ([`deepTools`](https://deeptools.readthedocs.io/en/develop/index.html))
+9. Peak calling for sharp & broad peaks ([`MACS2`])(https://github.com/taoliu/MACS)
 
 ### Quick help
 
@@ -42,7 +43,7 @@ The pipeline can be run on any infrastructure from a list of input files or from
 See the conf/test.conf to set your test dataset.
 
 ```
-nextflow run main.nf -profile test,conda
+nextflow run main.nf -profile test,conda --genome 'hg19' --singleEnd
 
 ```
 
@@ -86,7 +87,7 @@ Here are a few examples of how to set the profile option.
 A sample plan is a csv file (comma separated) that list all samples with their biological IDs.
 
 
-Sample ID | Sample Name | Path R1 .fastq file | [Path R2 .fastq file]
+Sample ID | Sample Name | Path R1 .fastq file | [Path R2 .fastq file] | Expected peak type (default : sharp)
 
 ### Full Documentation
 

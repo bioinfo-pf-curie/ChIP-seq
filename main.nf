@@ -749,17 +749,18 @@ if (!params.skip_deepTools){
 		tag "${prefix}"
 		publishDir "${params.outdir}/deepTools", mode: "copy"
 
-		input:bedne_bed
+		input:
+		set val(prefix), file(filtered_bams) from ch_filtered_bams_deeptools_single
+		file gene_bed from ch_gene_bed
 
 		output:
-		
 		set val(prefix), file("*.pdf") into ch_deeptools_single
 		set val(prefix), file("*.tab") into ch_deeptools_single_mqc
 		script:
 
 		"""
 		bamCoverage -b ${filtered_bams[0]} -o ${prefix}_bw.bigwig -p ${task.cpus}
-		computeMatrix scale-regions -R $gene_bed -S ${prefix}_bw.bigwig -o ${prefix}_matrix.mat.gz -p ${task.cpus}
+		computeMatrix scale-regions -R $gene_bed -S ${prefix}_bw.bigwig -o ${prefix}_matrix.mat.gz -p ${task.cpus} -a 1000 -b 1000
 		plotProfile -m ${prefix}_matrix.mat.gz -o ${prefix}_bams_profile.pdf  --outFileNameData ${prefix}.plotProfile.tab
 		sed -e 's/.0\t/\t/g' ${prefix}.plotProfile.tab | sed -e 's/100.0/100/g' > ${prefix}.plotProfile.tab
 		"""
@@ -857,7 +858,58 @@ if (!params.skip_peakcalling){
 		script:
 		format = params.singleEnd ? "BAM" : "BAMPE"
 		//pileup = params.save_macs_pileup ? "-B --SPMR" : ""
-		peaktype_macs = "narrowPeak"
+		pea/*
+ * Peak calling index build
+ */
+
+ch_filtered_bams_macs_1
+    .combine(ch_filtered_bams_macs_2)
+    .set { ch_filtered_bams_macs_1 }
+
+ch_design_control
+    .combine(ch_filtered_bams_macs_1)
+    .filter { it[0] == it[5] && it[1] == it[7] }
+    .join(ch_filtered_flagstat_macs)
+    .map { it ->  it[2..-1] }
+    .into { ch_group_bam_macs_sharp;
+			ch_group_bam_macs_broad;
+			ch_group_bam_macs_very_broad;
+            }
+
+ch_group_bam_macs_sharp
+	.filter { it[2] == 'sharp' }
+	.set {ch_group_bam_macs_sharp}
+
+ch_group_bam_macs_broad
+	.filter { it[2] == 'broad' }
+	.set {ch_group_bam_macs_broad}
+
+ch_group_bam_macs_very_broad
+	.filter { it[2] == 'very-broad' }
+	.set {ch_group_bam_macs_very_broad}
+
+/*
+ * Peak calling
+ */
+// SHARP PEAKS
+if (!params.skip_peakcalling){
+	process sharpMACS2{
+		tag "${sampleID} - ${controlID}"
+		publishDir path: "${params.outdir}/peak_calling/sharp", mode: 'copy',
+					saveAs: { filename ->
+						if (filename.endsWith(".tsv")) "stats/$filename"
+						else if (filename.endsWith(".igv.txt")) null
+						else filename
+					}
+
+		input:
+		set val(sampleName), val(mark), val(peaktype), val(sampleID), file(sampleBam), val(controlID), file(controlBam), file(sampleFlagstat) from ch_group_bam_macs_sharp
+		file peak_count_header from ch_peak_count_header_sharp
+		file frip_score_header from ch_frip_score_header_sharp
+
+		output:
+		set val(sampleID), file("*.{bed,xls,gappedPeak,bdg}") into ch_macs_output_sharp
+		setktype_macs = "narrowPeak"
 		"""
 		macs2 callpeak \\
 			-t ${sampleBam[0]} \\
