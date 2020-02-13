@@ -856,6 +856,8 @@ if (!params.skip_peakcalling){
 		file "*_mqc.tsv" into ch_macs_counts_sharp
 
 		script:
+		format = params.singleEnd ? "BAM" : "BAMPE"
+		peaktype_macs = "narrowPeak"
 		"""
 		macs2 callpeak \\
 			-t ${sampleBam[0]} \\
