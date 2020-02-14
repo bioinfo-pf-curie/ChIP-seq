@@ -39,6 +39,7 @@ module_order:
   - phantompeakqualtools
   - deeptools
   - macs2
+  - homer
 
 #############################
 ## Display

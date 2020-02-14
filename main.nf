@@ -163,6 +163,8 @@ ch_peak_count_header_broad = file("$baseDir/assets/peak_count_header.txt", check
 ch_peak_count_header_sharp = file("$baseDir/assets/peak_count_header.txt", checkIfExists: true)
 ch_frip_score_header_broad = file("$baseDir/assets/frip_score_header.txt", checkIfExists: true)
 ch_frip_score_header_sharp = file("$baseDir/assets/frip_score_header.txt", checkIfExists: true)
+ch_peak_annotation_header_broad = file("$baseDir/assets/peak_annotation_header.txt", checkIfExists: true)
+ch_peak_annotation_header_sharp = file("$baseDir/assets/peak_annotation_header.txt", checkIfExists: true)
 
 // TODO - Tools option configuration - see tools.conf
 // Add here the list of options that can change from a reference genome to another
@@ -269,7 +271,6 @@ else{
 /*
  * Prepare design file
  */
-
 process prepareDesign{
     tag "$design"
     publishDir "${params.outdir}/design", mode: 'copy'
@@ -738,7 +739,6 @@ if (!params.skip_ppqt){
 /*
  * DeepTools QC
  */
-
 if (!params.skip_deepTools){
 	process deepToolsSingleQC{
 		tag "${prefix}"
@@ -755,14 +755,21 @@ if (!params.skip_deepTools){
 
 		"""
 		bamCoverage -b ${filtered_bams[0]} -o ${prefix}_bw.bigwig -p ${task.cpus}
-		computeMatrix scale-regions -R $gene_bed -S ${prefix}_bw.bigwig -o ${prefix}_matrix.mat.gz -p ${task.cpus} -a 1000 -b 1000
-		plotProfile -m ${prefix}_matrix.mat.gz -o ${prefix}_bams_profile.pdf  --outFileNameData ${prefix}.plotProfile.tab
+		computeMatrix scale-regions -R $gene_bed -S ${prefix}_bw.bigwig \\
+									-o ${prefix}_matrix.mat.gz \\
+									--outFileNameMatrix ${prefix}.computeMatrix.vals.mat.gz \\
+									--smartLabels --downstream 1000 --upstream 1000 \\
+									-p ${task.cpus} 
+
+		plotProfile -m ${prefix}_matrix.mat.gz -o ${prefix}_bams_profile.pdf \\
+					--outFileNameData ${prefix}.plotProfile.tab
+
 		sed -e 's/.0\t/\t/g' ${prefix}.plotProfile.tab | sed -e 's/100.0/100/g' > ${prefix}.plotProfile.tab
 		"""
 	}
 
 	process deepToolsCorrelQC{
-		publishDir "${params.outdir}/deepTools/multiple_bams", mode: "copy"
+		publishDir "${params.outdir}/deepTools/multiple_bams"
 
 		input:
 		val filtered_bams_all from ch_filtered_bams_deeptools_correl.toList()
@@ -787,7 +794,10 @@ if (!params.skip_deepTools){
 		}
 		"""
 		multiBamSummary bins -b $all_bams -o bams_summary.npz  -p ${task.cpus}
-		plotCorrelation -in bams_summary.npz -o bams_correlation.pdf -c spearman -p heatmap -l $all_prefixes --outFileCorMatrix bams_correlation.tab
+		plotCorrelation -in bams_summary.npz -o bams_correlation.pdf \\
+						-c spearman -p heatmap -l $all_prefixes \\
+						--outFileCorMatrix bams_correlation.tab
+
 		plotCoverage -b $all_bams -o bams_coverage.pdf -p ${task.cpus} -l $all_prefixes  --outRawCounts bams_coverage_raw.txt
 		plotFingerprint -b $all_bams -plot bams_fingerprint.pdf -p ${task.cpus} -l $all_prefixes --outRawCounts bams_fingerprint_raw.txt --outQualityMetrics bams_fingerprint_qmetrics.tab
 		"""
@@ -798,7 +808,6 @@ if (!params.skip_deepTools){
 /*
  * Peak calling index build
  */
-
 ch_filtered_bams_macs_1
     .combine(ch_filtered_bams_macs_2)
     .set { ch_filtered_bams_macs_1 }
@@ -815,11 +824,13 @@ ch_design_control
 
 ch_group_bam_macs_sharp
 	.filter { it[2] == 'sharp' }
-	.set {ch_group_bam_macs_sharp}
+	.into {ch_group_bam_macs_sharp;
+		  ch_group_bam_peakQC_sharp }
 
 ch_group_bam_macs_broad
 	.filter { it[2] == 'broad' }
-	.set {ch_group_bam_macs_broad}
+	.into {ch_group_bam_macs_broad;
+		  ch_group_bam_peakQC_broad }
 
 ch_group_bam_macs_very_broad
 	.filter { it[2] == 'very-broad' }
@@ -845,7 +856,11 @@ if (!params.skip_peakcalling){
 
 		output:
 		set val(sampleID), file("*.{bed,xls,gappedPeak,bdg}") into ch_macs_output_sharp
-		set val(sampleName), val(mark), val(peaktype), val(sampleID), val(controlID), file("*.narrowPeak") into ch_macs_homer_sharp, ch_macs_qc_sharp, ch_macs_consensus_sharp
+		set val(sampleName), val(mark), val(peaktype), val(sampleID), val(controlID), file("*.narrowPeak") into ch_macs_homer_sharp, 
+																												ch_macs_qc_sharp,
+																												ch_macs_mqc_sharp,
+																												ch_macs_consensus_sharp,
+																												ch_macs_idr_sharp
 		file "*igv.txt" into ch_macs_igv_sharp
 		file "*_mqc.tsv" into ch_macs_counts_sharp
 
@@ -886,7 +901,11 @@ if (!params.skip_peakcalling){
 
 		output:
 		set val(sampleID), file("*.{bed,xls,gappedPeak,bdg}") into ch_macs_output_broad
-		set val(sampleName), val(mark), val(peaktype), val(sampleID), val(controlID), file("*.broadPeak") into ch_macs_homer_broad, ch_macs_qc_broad, ch_macs_consensus_broad
+		set val(sampleName), val(mark), val(peaktype), val(sampleID), val(controlID), file("*.broadPeak") into ch_macs_homer_broad, 
+																											   ch_macs_qc_broad,
+																											   ch_macs_mqc_broad, 
+																											   ch_macs_consensus_broad,
+																											   ch_macs_idr_broad
 		file "*igv.txt" into ch_macs_igv_broad
 		file "*_mqc.tsv" into ch_macs_counts_broad
 
@@ -913,31 +932,181 @@ if (!params.skip_peakcalling){
 	}
 }
 
-
 // VERY BROAD PEAKS
-// if (!params.skip_peakcalling){
-// 	process veryBroadEpic2{
-// 		tag "${sampleID} - ${controlID}"
-// 		publishDir path: "${params.outdir}/peak_calling/very_broad", mode: 'copy'
+if (!params.skip_peakcalling){
+	process veryBroadEpic2{
+		tag "${sampleID} - ${controlID}"
+		publishDir path: "${params.outdir}/peak_calling/very_broad", mode: 'copy'
 
+		input:
+		set val(sampleName), val(mark), val(peaktype), val(sampleID), file(sampleBam), val(controlID), file(controlBam), file(sampleFlagstat) from ch_group_bam_macs_very_broad
+		
+		output:
+		set val(sampleID), file("*.{bed,xls,gappedPeak,bdg}") into ch_macs_output_very_broad
+		set val(sampleName), val(mark), val(peaktype), val(sampleID), val(controlID), file("*.verybroad") into ch_macs_homer, ch_macs_qc, ch_macs_consensus
+
+		script:
+		"""
+		epic2 -t ${sampleBam[0]} \\
+			  -c ${controlbam[0]} \\
+			  -gn ${params.genome} \\
+			  -kd
+		"""
+	}
+}
+
+/*
+ * Irreproducible Discovery Rate
+ */
+
+// if (!params.skip_idr){
+// 	process sharp_IDR{
+// 		tag "${sampleID} - ${controlID}"
+// 		publishDir path: "${params.outdir}/IDR", mode: 'copy'
 
 // 		input:
-// 		set val(sampleName), val(mark), val(peaktype), val(sampleID), file(sampleBam), val(controlID), file(controlBam), file(sampleFlagstat) from ch_group_bam_macs_very_broad
+// 		set val(sampleName), val(mark), val(peaktype), val(sampleID), val(controlID), file(peakfile) from ch_macs_idr_sharp
+
 // 		output:
-// 		set val(sampleID), file("*.{bed,xls,gappedPeak,bdg}") into ch_macs_output_very_broad
-// 		set val(sampleName), val(mark), val(peaktype), val(sampleID), val(controlID), file("*.verybroad") into ch_macs_homer, ch_macs_qc, ch_macs_consensus
+// 		file "*.narrowPeak" into ch_idr_sharp
+
 
 // 		script:
 // 		"""
-// 		epic2 -t ${sampleBam[0]} \\
-// 			  -c ${controlbam[0]} \\
-// 			  -gn ${params.genome} \\
-// 			  -kd
+// 		idr --samples $peakfile > ${sampleID}_peak_IDR.narrowPeak
+// 		"""		cache 'deep'
+
+// 	}
+
+// 	process broad_IDR{
+// 		tag "${sampleID} - ${controlID}"
+// 		publishDir path: "${params.outdir}/IDR", mode: 'copy'
+
+// 		input:
+// 		set val(sampleName), val(mark), val(peaktype), val(sampleID), val(controlID), file(peakfile) from ch_macs_idr_broad
+
+// 		output:
+// 		file "*.broadPeak" into ch_idr_broad
+
+// 		script:
+// 		"""
+// 		idr --samples $peakfile > ${sampleID}_peak_IDR.broadPeak
 // 		"""
 // 	}
 // }
 
+/*
+ * Peak annotation
+ */
+// HOMER
 
+if (!params.skip_peakanno){
+	process peakAnnoHomerSharp{
+		tag "${sampleID} - ${controlID}"
+		publishDir path: "${params.outdir}/peak_annotation", mode: 'copy'
+
+		input:
+		set val(sampleName), val(mark), val(peaktype), val(sampleID), val(controlID), file (peakfile) from ch_macs_homer_sharp
+		file gtf_file from ch_gtf
+		file fasta_file from ch_fasta
+
+		output:
+		file "*.txt" into ch_homer_peak_annotated_sharp
+
+		script:
+		"""
+		annotatePeaks.pl $peakfile \\
+					$fasta_file \\
+					-gtf $gtf_file \\
+					-cpu ${task.cpus} \\
+					> ${sampleID}_annotated_peaks.txt
+		"""
+	}
+	process peakAnnoHomerBroad{
+		tag "${sampleID} - ${controlID}"
+		publishDir path: "${params.outdir}/peak_annotation", mode: 'copy'
+
+		input:
+		set val(sampleName), val(mark), val(peaktype), val(sampleID), val(controlID), file (peakfile) from ch_macs_homer_broad
+		file gtf_file from ch_gtf
+		file fasta_file from ch_fasta
+
+
+		output:
+		file "*.txt" into ch_homer_peak_annotated_broad
+
+		script:
+		"""
+		annotatePeaks.pl $peakfile \\
+					$fasta_file \\
+					-gtf $gtf_file \\
+					-cpu ${task.cpus} \\
+					> ${sampleID}_annotated_peaks.txt
+		"""
+	}
+}
+
+/*
+ * Peak calling & annotation QC
+ */
+
+if (!params.skip_peakQC){
+	process peakQCSharp{
+		publishDir "${params.outdir}/peak_QC/sharp", mode: 'copy'
+
+		input:
+		file peaks from ch_macs_qc_sharp.collect{ it[-1] }
+		file annotations from ch_homer_peak_annotated_sharp.collect()
+		file peak_header from ch_peak_annotation_header_sharp
+
+		output:
+		file "*.{txt,pdf}" into ch_macs_qc_output_sharp
+		file "*.tsv" into ch_peak_mqc_sharp
+
+		script:
+		"""
+		plot_macs_qc.r \\
+			-i ${peaks.join(',')} \\
+			-s ${peaks.join(',').replaceAll("_peaks.narrowPeak","")} \\
+			-o ./ \\
+			-p macs_peak
+		plot_homer_annotatepeaks.r \\
+			-i ${annotations.join(',')} \\
+			-s ${annotations.join(',').replaceAll("_peaks.annotatePeaks.txt","")} \\
+			-o ./ \\
+			-p macs_annotatePeaks
+		cat $peak_header macs_annotatePeaks.summary.txt > macs_annotatedSharpPeaks.summary_mqc.tsv
+		"""
+	}
+
+	process peakQCBroad{
+		publishDir "${params.outdir}/peak_QC/broad", mode: 'copy'
+
+		input:
+		file peaks from ch_macs_qc_broad.collect{ it[-1] }
+		file annotations from ch_homer_peak_annotated_broad.collect()
+		file peak_header from ch_peak_annotation_header_broad
+
+		output:
+		file "*.{txt,pdf}" into ch_macs_qc_output_broad
+		file "*.tsv" into ch_peak_mqc_broad
+
+		script:
+		"""
+		plot_macs_qc.r \\
+			-i ${peaks.join(',')} \\
+			-s ${peaks.join(',').replaceAll("_peaks.broadPeak","")} \\
+			-o ./ \\
+			-p macs_peak
+		plot_homer_annotatepeaks.r \\
+			-i ${annotations.join(',')} \\
+			-s ${annotations.join(',').replaceAll("_peaks.annotatePeaks.txt","")} \\
+			-o ./ \\
+			-p macs_annotatePeaks
+		cat $peak_header macs_annotatePeaks.summary.txt > macs_annotatedBroadPeaks.summary_mqc.tsv
+		"""
+	}
+}
 
 
 /*
@@ -968,7 +1137,7 @@ process getSoftwareVersions{
 		echo \$(picard MarkDuplicates --version 2>&1) &> v_picard.txt
 		preseq &> v_preseq.txt
 		echo \$(plotFingerprint --version 2>&1) > v_deeptools.txt || true
-		echo \$(R --version 2>&1) &> v_R.txt
+		R --version &> v_R.txt
 		echo \$(macs2 --version 2>&1) &> v_macs2.txt
 		scrape_software_versions.py &> software_versions_mqc.yaml
 		"""
@@ -1031,10 +1200,14 @@ process multiqc {
 		file ("deepTools/multiple_bams/bams_coverage_raw.txt") from ch_deeptools_coverage_mqc.collect().ifEmpty([])
 		file ("deepTools/multiple_bams/bams_fingerprint_*") from ch_deeptools_fingerprint_mqc.collect().ifEmpty([])
 
-		file ('macs/*') from ch_macs_counts_sharp.collect().ifEmpty([])
-		file ('macs/*') from ch_macs_counts_broad.collect().ifEmpty([])
-		file ('macs/*') from ch_macs_qc_sharp.collect().ifEmpty([])
-		file ('macs/*') from ch_macs_qc_broad.collect().ifEmpty([])
+		file ('peak_calling/sharp/*') from ch_macs_counts_sharp.collect().ifEmpty([])
+		file ('peak_calling/broad/*') from ch_macs_counts_broad.collect().ifEmpty([])
+		file ('peak_calling/sharp/*') from ch_macs_mqc_sharp.collect().ifEmpty([])
+		file ('peak_calling/broad/*') from ch_macs_mqc_broad.collect().ifEmpty([])
+
+		file('peak_QC/sharp/*') from ch_peak_mqc_sharp.collect().ifEmpty([])
+		file('peak_QC/broad/*') from ch_peak_mqc_broad.collect().ifEmpty([])
+
 
     output:
 		file splan
@@ -1046,7 +1219,7 @@ process multiqc {
 	rfilename = custom_runName ? "--filename " + custom_runName.replaceAll('\\W','_').replaceAll('_+','_') + "_multiqc_report" : ''
 	metadata_opts = params.metadata ? "--metadata ${metadata}" : ""
 	splan_opts = params.samplePlan ? "--splan ${params.samplePlan}" : ""
-	modules_list = "-m custom_content -m fastqc -m samtools -m picard -m preseq -m phantompeakqualtools -m deeptools -m macs2"
+	modules_list = "-m custom_content -m fastqc -m samtools -m picard -m preseq -m phantompeakqualtools -m deeptools -m macs2 -m homer"
 
 	"""
 	mqc_header.py --name "Chip-seq" --version ${workflow.manifest.version} ${metadata_opts} > multiqc-config-header.yaml

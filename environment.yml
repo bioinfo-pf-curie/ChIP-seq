@@ -1,4 +1,4 @@
-name: chipseq-p3.7
+name: chipseq_pipeline
 channels:
   - conda-forge
   - bioconda
@@ -22,3 +22,12 @@ dependencies:
   - bioconda::macs2=2.2.6
   - bioconda::epic2=0.0.40
   - bioconda::homer=4.10
+  - bioconda::idr=2.0.4.2
+  - bioconda::igv=2.5.2
+
+  # R-packages
+  - r-base=3.4.1
+  - r-optparse=1.6.0
+  - r-ggplot2=3.1.0
+  - r-reshape2=1.4.3
+  - r-scales=1.0.0
