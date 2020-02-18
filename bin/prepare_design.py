@@ -27,14 +27,15 @@ def prepareDesign(inputDesign, outputToMap, outputDesign, singleEnd):
         'read1': [],
         'read2': [],
         'isInput': [],
-        'mark': [],
+		'replicate': [],
 		'peaktype': []
     }
     with open(inputDesign, 'r') as inpFile:
         lines = csv.reader(inpFile)
         for line in lines:
             dictDesign['sampleID'].append(line[0])
-            dictDesign['sampleName'].append(line[1].rsplit('_', 1)[1])
+            dictDesign['sampleName'].append(line[1][:-2])
+            dictDesign['replicate'].append(line[1][-1])
             dictDesign['read1'].append(line[2])
             if singleEnd == False:
                 dictDesign['read2'].append(line[3])
@@ -42,12 +43,10 @@ def prepareDesign(inputDesign, outputToMap, outputDesign, singleEnd):
                 dictDesign['read2'].append('')
             if 'Input' in line[1]:
                 dictDesign['isInput'].append('INPUT')
-                dictDesign['mark'].append('')
                 dictDesign['peaktype'].append('')
             else:
                 dictDesign['isInput'].append('')
                 mark = line[1].rsplit('_', 1)[0]
-                dictDesign['mark'].append(mark)
                 if (mark == "H3K4me3"):
                     dictDesign['peaktype'].append('sharp')
                 elif ((mark == "H3K27me3") or (mark == "H3K9me3")):
@@ -57,28 +56,51 @@ def prepareDesign(inputDesign, outputToMap, outputDesign, singleEnd):
     with open(outputToMap, 'w') as toMapFile:
         header = 'SAMPLE_ID,FASTQ_R1,FASTQ_R2\n'
         toMapFile.write(header)
-        for sampleNumber in range(len(dictDesign['sampleID'])):
-            sampleID = dictDesign['sampleID'][sampleNumber]
-            fastqR1 = dictDesign['read1'][sampleNumber]
-            fastqR2 = dictDesign['read2'][sampleNumber]
+        for sNumber in range(len(dictDesign['sampleID'])):
+            sampleID = dictDesign['sampleID'][sNumber]
+            fastqR1 = dictDesign['read1'][sNumber]
+            fastqR2 = dictDesign['read2'][sNumber]
             toMapFile.write(sampleID + ',' + fastqR1 + ',' + fastqR2 + '\n')
-    with open(outputDesign, 'w') as outFile:
-        header = 'SAMPLE_ID,CONTROL_ID,SAMPLENAME,MARK,PEAK_TYPE\n'
-        outFile.write(header)
-        for sampleName in set(dictDesign['sampleName']):
-            for sampleNumber in range(len(dictDesign['sampleID'])):
-                if dictDesign['sampleName'][sampleNumber] == sampleName:
-                    print(dictDesign['sampleName'][sampleNumber])
-                    if dictDesign['isInput'][sampleNumber] == 'INPUT':
-                        ctrlSample = dictDesign['sampleID'][sampleNumber]
-                        continue
-                    else:
-                        inputSample = dictDesign['sampleID'][sampleNumber]
-                        mark = dictDesign['mark'][sampleNumber]
-                        peaktype = dictDesign['peaktype'][sampleNumber]
-                        outFile.write(inputSample + ',' + ctrlSample + \
-                        ',' + sampleName + ',' + mark + ',' + peaktype + '\n')
-
+    
+    list_control = []
+    list_name_control = []
+    list_replicate = []
+    sNumber = 0
+    max_sample = len(dictDesign['sampleID'])-1
+    while sNumber <= max_sample:
+        if dictDesign['isInput'][sNumber] == 'INPUT':
+            list_control.append(dictDesign['sampleID'][sNumber])
+            list_name_control.append(dictDesign['sampleName'][sNumber])
+            list_replicate.append(dictDesign['replicate'][sNumber])
+            dictDesign['sampleID'].pop(sNumber)
+            dictDesign['sampleName'].pop(sNumber)
+            dictDesign['read1'].pop(sNumber)
+            dictDesign['read2'].pop(sNumber)
+            dictDesign['isInput'].pop(sNumber)
+            dictDesign['replicate'].pop(sNumber)
+            dictDesign['peaktype'].pop(sNumber)
+            max_sample -= 1
+        else:
+            sNumber += 1
+    with open(outputDesign, 'w') as designFile:
+        header = 'SAMPLE_ID,CONTROL_ID,SAMPLENAME,REPLICATE,PEAKTYPE\n'
+        designFile.write(header)
+        for replicateNumber in range(len(list_replicate)):
+            for sNumber in range(len(dictDesign['sampleID'])):
+                if (list_replicate[replicateNumber] \
+                    == dictDesign['replicate'][sNumber] \
+                    and dictDesign['sampleName'][sNumber].rsplit('_', 1)[1] \
+                    == list_name_control[replicateNumber].rsplit('_', 1)[1]):
+                    sampleID = dictDesign['sampleID'][sNumber]
+                    ctrl_sample = list_control[replicateNumber]
+                    samplename = dictDesign['sampleName'][sNumber]
+                    replicate = list_replicate[replicateNumber]
+                    peaktype = dictDesign['peaktype'][sNumber]
+                    designFile.write(sampleID + ',' \
+                                     + ctrl_sample + ',' \
+                                     + samplename + ',' \
+                                     + replicate + ',' \
+                                     + peaktype + '\n')
 
 if __name__ == "__main__":
     inputDesign, outputToMap, outputDesign, singleEnd = argsParse()
