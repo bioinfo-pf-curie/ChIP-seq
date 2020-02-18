@@ -3,6 +3,10 @@ import argparse
 import csv
 
 def argsParse():
+    """
+    Parsing input & outputs CSV files. Also takes in a boolean to indicate if
+    the raw reads are single-end or paired-end
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("i", metavar="INPUT_DESIGN", help="Enter a valid "
                                                           "design csv file")
@@ -21,6 +25,11 @@ def argsParse():
 
 
 def prepareDesign(inputDesign, outputToMap, outputDesign, singleEnd):
+    """
+    Generates two distinct files. A file destined to the alignment part, and
+    a design file that will be used later in the pipeline to associate sample
+    and control inputs for peak calling.
+    """
     dictDesign = {
         'sampleID': [],
         'sampleName': [],
@@ -61,7 +70,7 @@ def prepareDesign(inputDesign, outputToMap, outputDesign, singleEnd):
             fastqR1 = dictDesign['read1'][sNumber]
             fastqR2 = dictDesign['read2'][sNumber]
             toMapFile.write(sampleID + ',' + fastqR1 + ',' + fastqR2 + '\n')
-    
+
     list_control = []
     list_name_control = []
     list_replicate = []

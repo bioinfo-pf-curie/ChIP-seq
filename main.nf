@@ -4,8 +4,8 @@
 Copyright Institut Curie 2019
 This software is a computer program whose purpose is to analyze high-throughput sequencing data.
 You can use, modify and/ or redistribute the software under the terms of license (see the LICENSE file for more details).
-The software is distributed in the hope that it will be useful, but "AS IS" WITHOUT ANY WARRANTY OF ANY KIND. 
-Users are therefore encouraged to test the software's suitability as regards their requirements in conditions enabling the security of their systems and/or data. 
+The software is distributed in the hope that it will be useful, but "AS IS" WITHOUT ANY WARRANTY OF ANY KIND.
+Users are therefore encouraged to test the software's suitability as regards their requirements in conditions enabling the security of their systems and/or data.
 The fact that you are presently reading this means that you have had knowledge of the license and that you accept its terms.
 
 This script is based on the nf-core guidelines. See https://nf-co.re/ for more information
@@ -14,62 +14,62 @@ This script is based on the nf-core guidelines. See https://nf-co.re/ for more i
 
 /*
 ========================================================================================
-                         Chip-seq
+						Chip-seq
 ========================================================================================
- Chip-seq Analysis Pipeline.
- #### Homepage / Documentation
- https://gitlab.curie.fr/chipseq
+Chip-seq Analysis Pipeline.
+#### Homepage / Documentation
+https://gitlab.curie.fr/chipseq
 ----------------------------------------------------------------------------------------
 */
 
 // TODO - replace all Chip-seq with the name of your pipeline
 
 def helpMessage() {
-    // TODO: Add to this help message with new command line parameters
+	// TODO: Add to this help message with new command line parameters
 
-    if ("${workflow.manifest.version}" =~ /dev/ ){
-       dev_mess = file("$baseDir/assets/dev_message.txt")
-       log.info dev_mess.text
-    }
+	if ("${workflow.manifest.version}" =~ /dev/ ){
+	dev_mess = file("$baseDir/assets/dev_message.txt")
+	log.info dev_mess.text
+	}
 
-    log.info"""
-    
-    Chip-seq v${workflow.manifest.version}
-    ======================================================================
+	log.info"""
+	
+	Chip-seq v${workflow.manifest.version}
+	======================================================================
 
-    Usage:
+	Usage:
 
-    nextflow run main.nf -profile test,toolsPath --genome 'hg19' --singleEnd
+	nextflow run main.nf -profile test,toolsPath --genome 'hg19' --singleEnd
 
-    Mandatory arguments:
-      --samplePlan                  Path to sample plan file if '--reads' is not specified
-      --genome                      Name of iGenomes reference
-      -profile                      Configuration profile to use. Can use multiple (comma separated)
-                                    Available: conda, docker, singularity, awsbatch, test, toolsPath and more.
-	  --aligner						Alignment tool to use:
-	  								Available : bwa, star, bowtie2
+	Mandatory arguments:
+	--samplePlan                  Path to sample plan file if '--reads' is not specified
+	--genome                      Name of iGenomes reference
+	-profile                      Configuration profile to use. Can use multiple (comma separated)
+									Available: conda, docker, singularity, awsbatch, test, toolsPath and more.
+	--aligner						Alignment tool to use:
+									Available : bwa, star, bowtie2
 
-    Options:
-      --singleEnd                   Specifies that the input is single end reads
-    
+	Options:
+	--singleEnd                   Specifies that the input is single end reads
+	
 	References                      If not specified in the configuration file or you wish to overwrite any of the references given by the --genome field
-      --fasta                       Path to Fasta reference
+	--fasta                       Path to Fasta reference
 	Indexes							Path to the indexes for aligners
-	  --star						Index for STAR aligner
-	  --bwa							Index for BWA MEM aligner
-	  --bowtie2						Index for Bowtie2 aligner
+	--star						Index for STAR aligner
+	--bwa							Index for BWA MEM aligner
+	--bowtie2						Index for Bowtie2 aligner
 	Annotation
-	  --bed							BED annotation file
-	  --gtf							GTF annotation file
+	--bed							BED annotation file
+	--gtf							GTF annotation file
 	Peak calling
-	  --macs_gzise					Reference genome size for MACS2
+	--macs_gzise					Reference genome size for MACS2
 
-    Other options:
-      --outdir                      The output directory where the results will be saved
-      --email                       Set this parameter to your e-mail address to get a summary e-mail with details of the run sent to you when the workflow exits
-      -name                         Name for the pipeline run. If not specified, Nextflow will automatically generate a random mnemonic.
+	Other options:
+	--outdir                      The output directory where the results will be saved
+	--email                       Set this parameter to your e-mail address to get a summary e-mail with details of the run sent to you when the workflow exits
+	-name                         Name for the pipeline run. If not specified, Nextflow will automatically generate a random mnemonic.
 
-    """.stripIndent()
+	""".stripIndent()
 }
 
 /*
@@ -78,15 +78,15 @@ def helpMessage() {
 
 // Show help messsage
 if (params.help){
-    helpMessage()
-    exit 0
+	helpMessage()
+	exit 0
 }
 
 // TODO - Add any reference files that are needed - see igenome.conf
 // Configurable reference genomes
 params.fasta = params.genome ? params.genomes[ params.genome ].fasta ?: false : false
 if ( params.fasta ){
-    ch_fasta = file(params.fasta, checkIfExists: true)
+	ch_fasta = file(params.fasta, checkIfExists: true)
 	lastPath = params.fasta.lastIndexOf(File.separator)
 	bwa_base = params.fasta.substring(lastPath+1)
 }
@@ -137,24 +137,22 @@ if (params.aligner == "star"){
 	}
 }
 
-// Other inputs 
+// Other inputs
 params.gtf = params.genome ? params.genomes[ params.genome ].gtf ?: false : false
-if (params.gtf) { 
-	ch_gtf = file(params.gtf, checkIfExists: true) 
-} 
-else { 
-	exit 1, "GTF annotation file not specified!" 
+if (params.gtf) {
+	ch_gtf = file(params.gtf, checkIfExists: true)
+}
+else {
+	exit 1, "GTF annotation file not specified!"
 }
 
 params.gene_bed = params.genome ? params.genomes[ params.genome ].bed12 ?: false : false
-if (params.gene_bed)  { 
-	ch_gene_bed = file(params.gene_bed, checkIfExists: true) 
+if (params.gene_bed)  {
+	ch_gene_bed = file(params.gene_bed, checkIfExists: true)
 }
 
 params.macs_gsize = params.genome ? params.genomes[ params.genome ].macs_gsize ?: false : false
 params.blacklist = params.genome ? params.genomes[ params.genome ].blacklist ?: false : false
-
-
 
 //PPQT headers
 ch_ppqt_cor_header = file("$baseDir/assets/ppqt_cor_header.txt", checkIfExists: true)
@@ -163,26 +161,29 @@ ch_ppqt_rsc_header = file("$baseDir/assets/ppqt_rsc_header.txt", checkIfExists: 
 
 //Peak Calling headers
 ch_peak_count_header = file("$baseDir/assets/peak_count_header.txt", checkIfExists: true)
-// ch_peak_count_header_sharp = file("$baseDir/assets/peak_count_header.txt", checkIfExists: true)
 ch_frip_score_header = file("$baseDir/assets/frip_score_header.txt", checkIfExists: true)
-// ch_frip_score_header_sharp = file("$baseDir/assets/frip_score_header.txt", checkIfExists: true)
-
-// ch_peak_annotation_header_sharp = file("$baseDir/assets/peak_annotation_header.txt", checkIfExists: true)
-// ch_peak_annotation_header_broad = file("$baseDir/assets/peak_annotation_header.txt", checkIfExists: true)
 ch_peak_annotation_header = file("$baseDir/assets/peak_annotation_header.txt", checkIfExists: true)
 
+// Stage config files
+ch_multiqc_config = file(params.multiqc_config, checkIfExists: true)
+ch_output_docs = file(params.output_doc, checkIfExists: true)
+if (params.singleEnd) {
+	ch_bamtools_filter_config = file(params.bamtools_filter_se_config, checkIfExists: true)
+} else {
+	ch_bamtools_filter_config = file(params.bamtools_filter_pe_config, checkIfExists: true)
+}
 
 // Has the run name been specified by the user?
 //  this has the bonus effect of catching both -name and --name
 custom_runName = params.name
 if( !(workflow.runName ==~ /[a-z]+_[a-z]+/) ){
-  custom_runName = workflow.runName
+custom_runName = workflow.runName
 }
 
 // Header log info
 if ("${workflow.manifest.version}" =~ /dev/ ){
-   dev_mess = file("$baseDir/assets/dev_message.txt")
-   log.info dev_mess.text
+dev_mess = file("$baseDir/assets/dev_message.txt")
+log.info dev_mess.text
 }
 
 log.info """=======================================================
@@ -195,10 +196,10 @@ summary['Pipeline Version'] = workflow.manifest.version
 summary['Run Name']     = custom_runName ?: workflow.runName
 // TODO : Report custom parameters here
 if (params.samplePlan) {
-   	summary['SamplePlan']   = params.samplePlan
+	summary['SamplePlan']   = params.samplePlan
 }
 else{
-   	summary['Reads']        = params.reads
+	summary['Reads']        = params.reads
 }
 summary['Fasta Ref']    = params.fasta
 summary['Data Type']    = params.singleEnd ? 'Single-End' : 'Paired-End'
@@ -221,24 +222,17 @@ if(params.email) summary['E-mail Address'] = params.email
 log.info summary.collect { k,v -> "${k.padRight(15)}: $v" }.join("\n")
 log.info "========================================="
 
-// Stage config files
-ch_multiqc_config = file(params.multiqc_config, checkIfExists: true)
-ch_output_docs = file(params.output_doc, checkIfExists: true)
-if (params.singleEnd) {
-    ch_bamtools_filter_config = file(params.bamtools_filter_se_config, checkIfExists: true)
-} else {
-    ch_bamtools_filter_config = file(params.bamtools_filter_pe_config, checkIfExists: true)
-}
+
 
 /*
  * CHANNELS
  */
 
 if ( params.metadata ){
-   	Channel
-       	.fromPath( params.metadata )
-       	.ifEmpty { exit 1, "Metadata file not found: ${params.metadata}" }
-       	.set { ch_metadata }
+	Channel
+		.fromPath( params.metadata )
+		.ifEmpty { exit 1, "Metadata file not found: ${params.metadata}" }
+		.set { ch_metadata }
 }
 
 
@@ -247,48 +241,49 @@ if ( params.metadata ){
  */
 
 if (params.samplePlan){
-  ch_splan = Channel.fromPath(params.samplePlan)
-  ch_design = Channel.fromPath(params.samplePlan)
+ch_splan = Channel.fromPath(params.samplePlan)
+ch_design = Channel.fromPath(params.samplePlan)
 }
 else{
-  	if (params.singleEnd){
-    	Channel
-       		.from(params.readPaths)
-       		.collectFile() {
-         	item -> ["sparams.genome ? sample_plan.csv", item[0] + ',' + item[0] + ',' + item[1][0] + '\n']
-        }
-       	.set{ ch_splan; ch_design }
-  	}
+	if (params.singleEnd){
+		Channel
+			.from(params.readPaths)
+			.collectFile() {
+			item -> ["sparams.genome ? sample_plan.csv", item[0] + ',' + item[0] + ',' + item[1][0] + '\n']
+		}
+		.set{ ch_splan; ch_design }
+	}
 
-  	else{
-     	Channel
-       		.from(params.readPaths)
-       		.collectFile() {
-         	item -> ["sample_plan.csv", item[0] + ',' + item[0] + ',' + item[1][0] + ',' + item[1][1] + '\n']
-        }
-       	.set{ ch_splan; ch_design }
-  }
+	else{
+		Channel
+			.from(params.readPaths)
+			.collectFile() {
+			item -> ["sample_plan.csv", item[0] + ',' + item[0] + ',' + item[1][0] + ',' + item[1][1] + '\n']
+		}
+		.set{ ch_splan; ch_design }
+	}
 }
 
 
 /*
  * Prepare design file
  */
+
 process prepareDesign{
-    tag "$design"
-    publishDir "${params.outdir}/design", mode: 'copy'
+	tag "$design"
+	publishDir "${params.outdir}/design", mode: 'copy'
 
-    input:
-    file design from ch_design
+	input:
+	file design from ch_design
 
-    output:
-    file "readsToMap.csv" into ch_reads_to_map
-    file "designControl.csv" into ch_design_control
+	output:
+	file "readsToMap.csv" into ch_reads_to_map
+	file "designControl.csv" into ch_design_control
 
-    script:
-    """
-    prepare_design.py $design readsToMap.csv designControl.csv ${params.singleEnd}
-    """
+	script:
+	"""
+	prepare_design.py $design readsToMap.csv designControl.csv ${params.singleEnd}
+	"""
 }
 
 /*
@@ -296,9 +291,9 @@ process prepareDesign{
  */
 
 ch_design_control
-    .splitCsv(header:true, sep:',')
-    .map { row -> [ row.SAMPLE_ID, row.CONTROL_ID, row.SAMPLENAME, row.REPLICATE, row.PEAKTYPE ] }
-    .set { ch_design_control }
+	.splitCsv(header:true, sep:',')
+	.map { row -> [ row.SAMPLE_ID, row.CONTROL_ID, row.SAMPLENAME, row.REPLICATE, row.PEAKTYPE ] }
+	.set { ch_design_control }
 
 /*
  * Create a channel for input read files
@@ -307,44 +302,45 @@ ch_design_control
 if(params.samplePlan){
 	if(params.singleEnd){
 		ch_reads_to_map
-        	.splitCsv(header: true, sep:',')
-        	.map{ row -> [ row.SAMPLE_ID, [file(row.FASTQ_R1, checkIfExists: true)]] }
-        	.into { raw_reads_fastqc;raw_reads_bwa;raw_reads_bt2;raw_reads_star }
-   	} 
-   	else{
-		ch_reads_to_map
-         	.splitCsv(header: true, sep:',')
-         	.map{ row -> [ row.SAMPLE_ID, [file(row.FASTQ_R1, checkIfExists: true), file(row.FASTQ_R2, checkIfExists: true)]] }
-         	.into { raw_reads_fastqc;raw_reads_bwa;raw_reads_bt2;raw_reads_star }
+			.splitCsv(header: true, sep:',')
+			.map{ row -> [ row.SAMPLE_ID, [file(row.FASTQ_R1, checkIfExists: true)]] }
+			.into { raw_reads_fastqc;raw_reads_bwa;raw_reads_bt2;raw_reads_star }
 	}
-   	params.reads=false
+	else{
+		ch_reads_to_map
+			.splitCsv(header: true, sep:',')
+			.map{ row -> [ row.SAMPLE_ID, [file(row.FASTQ_R1, checkIfExists: true), file(row.FASTQ_R2, checkIfExists: true)]] }
+			.into { raw_reads_fastqc;raw_reads_bwa;raw_reads_bt2;raw_reads_star }
+	}
+	params.reads=false
 }
 else if(params.readPaths){
-    if(params.singleEnd){
-        Channel
-            .from(params.readPaths)
-            .map { row -> [ row[0], [file(row[1][0])]] }
-            .ifEmpty { exit 1, "params.readPaths was empty - no input files supplied" }
-            .into { raw_reads_fastqc;raw_reads_bwa;raw_reads_bt2;raw_reads_star } 
-    } 
+	if(params.singleEnd){
+		Channel
+			.from(params.readPaths)
+			.map { row -> [ row[0], [file(row[1][0])]] }
+			.ifEmpty { exit 1, "params.readPaths was empty - no input files supplied" }
+			.into { raw_reads_fastqc;raw_reads_bwa;raw_reads_bt2;raw_reads_star }
+	}
 	else {
-        Channel
-            .from(params.readPaths)
-            .map { row -> [ row[0], [file(row[1][0]), file(row[1][1])]] }
-            .ifEmpty { exit 1, "params.readPaths was empty - no input files supplied" }
-            .into { raw_reads_fastqc;raw_reads_bwa;raw_reads_bt2;raw_reads_star }
-    }
-} 
+		Channel
+			.from(params.readPaths)
+			.map { row -> [ row[0], [file(row[1][0]), file(row[1][1])]] }
+			.ifEmpty { exit 1, "params.readPaths was empty - no input files supplied" }
+			.into { raw_reads_fastqc;raw_reads_bwa;raw_reads_bt2;raw_reads_star }
+	}
+}
 else {
-    Channel
-        .fromFilePairs( params.reads, size: params.singleEnd ? 1 : 2 )
-        .ifEmpty { exit 1, "Cannot find any reads matching: ${params.reads}\nNB: Path needs to be enclosed in quotes!\nNB: Path requires at least one * wildcard!\nIf this is single-end data, please specify --singleEnd on the command line." }
-        .into { raw_reads_fastqc;raw_reads_bwa;raw_reads_bt2;raw_reads_star }
+	Channel
+		.fromFilePairs( params.reads, size: params.singleEnd ? 1 : 2 )
+		.ifEmpty { exit 1, "Cannot find any reads matching: ${params.reads}\nNB: Path needs to be enclosed in quotes!\nNB: Path requires at least one * wildcard!\nIf this is single-end data, please specify --singleEnd on the command line." }
+		.into { raw_reads_fastqc;raw_reads_bwa;raw_reads_bt2;raw_reads_star }
 }
 
 /*
  * Make BWA index if not available
  */
+
 if (!params.bwa_index && params.aligner == "bwa-mem"){
 	process build_BWAindex{
 		tag "$fasta"
@@ -367,6 +363,7 @@ if (!params.bwa_index && params.aligner == "bwa-mem"){
 /*
  * Make Bowtie2 index if not available
  */
+
 if (!params.bt2_index && params.aligner == "bowtie2"){
 	process build_BT2index{
 		tag "$fasta"bt2_index
@@ -389,6 +386,7 @@ if (!params.bt2_index && params.aligner == "bowtie2"){
 /*
  * Make STAR index if not available
  */
+
 if (!params.star_index && params.aligner == "star"){
 	process build_STARindex{
 		tag "$fasta"
@@ -411,27 +409,29 @@ if (!params.star_index && params.aligner == "star"){
 /*
  * Make BED file for blacklisted regions
  */
+
 if (!params.gene_bed) {
-    process makeGeneBED {
-        tag "$gtf"
-        publishDir "${params.outdir}/reference_genome", mode: 'copy'
+	process makeGeneBED {
+		tag "$gtf"
+		publishDir "${params.outdir}/reference_genome", mode: 'copy'
 
-        input:
-        file gtf from ch_gtf
+		input:
+		file gtf from ch_gtf
 
-        output:
-        file "*.bed" into ch_gene_bed
+		output:
+		file "*.bed" into ch_gene_bed
 
-        script: // This script is bundled with the pipeline, in nf-core/chipseq/bin/
-        """
-        gtf2bed $gtf > ${gtf.baseName}.bed
-        """
-    }
+		script: // This script is bundled with the pipeline, in nf-core/chipseq/bin/
+		"""
+		gtf2bed $gtf > ${gtf.baseName}.bed
+		"""
+	}
 }
 
 /*
  * FastQC
  */
+
 if (!params.skip_fastqc){
 	process fastQC{
 		tag "${prefix}"
@@ -532,9 +532,9 @@ if (!params.skip_alignment){
 					saveAs: {filename ->
 								if (!filename.endsWith(".bam") && (!filename.endsWith(".bam.bai"))) "samtools_stats/$filename"
 								else if (filename.endsWith(".bam") || (filename.endsWith(".bam.bai"))) filename
-								else null 
+								else null
 							}
-						  		
+								
 		input:
 			set val(prefix), file(unsorted_bam) from ch_aligned_reads
 
@@ -544,7 +544,7 @@ if (!params.skip_alignment){
 
 		script:
 		"""
-		samtools sort $unsorted_bam -T ${prefix} -o ${prefix}.sorted.bam 
+		samtools sort $unsorted_bam -T ${prefix} -o ${prefix}.sorted.bam
 		samtools index ${prefix}.sorted.bam
 		samtools flagstat ${prefix}.sorted.bam > ${prefix}.sorted.bam.flagstat
 		samtools idxstats ${prefix}.sorted.bam > ${prefix}.sorted.bam.idxstats
@@ -554,17 +554,17 @@ if (!params.skip_alignment){
 }
 
 /*
- * Merging replicates & filtering
+ * Marking duplicates & filtering
  */
 
-// Merging
+// Marking
 process markDuplicates{
 	tag "${prefix}"
 	publishDir path: "${params.outdir}/marked_bams", mode: 'copy',
 				saveAs: {filename ->
 							if (!filename.endsWith(".bam") && (!filename.endsWith(".bam.bai"))) "samtools_stats/$filename"
 							else if (filename.endsWith(".bam") || (filename.endsWith(".bam.bai"))) filename
-							else null 
+							else null
 						}
 	
 	input:
@@ -576,7 +576,7 @@ process markDuplicates{
 		file "*.txt" into ch_marked_bam_picstats
 
 	script:
-    bam_files = sorted_bams.findAll { it.toString().endsWith('.bam') }.sort()
+	bam_files = sorted_bams.findAll { it.toString().endsWith('.bam') }.sort()
 	"""
 	picard -Xmx4g MarkDuplicates \\
 		INPUT=${bam_files[0]} \\
@@ -612,7 +612,7 @@ if(!params.skip_preseq) {
 			defect_mode = ''
 		}
 		"""
-		preseq lc_extrap -v $defect_mode -output ${prefix}.ccurve.txt -bam ${bam[0]} 
+		preseq lc_extrap -v $defect_mode -output ${prefix}.ccurve.txt -bam ${bam[0]}
 		"""
 	}
 }
@@ -626,7 +626,7 @@ if (!params.skip_filtering){
 					saveAs: {filename ->
 							if (!filename.endsWith(".bam") && (!filename.endsWith(".bam.bai"))) "samtools_stats/$filename"
 							else if (filename.endsWith("_filtered.bam") || (filename.endsWith("_filtered.bam.bai"))) filename
-							else null 
+							else null
 						}
 		
 		input:
@@ -665,6 +665,7 @@ if (!params.skip_filtering){
 	}
 }
 
+// Preparing channels for all subsequent processes using filtered bams
 ch_filtered_bams
 	.into { ch_filtered_bams_metrics;
 			ch_filtered_bams_macs_1;
@@ -681,10 +682,10 @@ ch_filtered_flagstat
 ch_filtered_stats
 	.set { ch_filtered_stats_mqc }
 
-
 /*
  * PhantomPeakQualTools QC
  */
+
 if (!params.skip_ppqt){
 	process PPQT{
 		tag "${prefix}"
@@ -715,7 +716,7 @@ if (!params.skip_ppqt){
 }
 
 /*
- * DeepTools QC & BigWig generation
+ * BigWig generation
  */
 
 process bigWigGeneration{
@@ -735,6 +736,9 @@ process bigWigGeneration{
 	"""
 }
 
+/*
+ * DeepTools QC
+ */
 
 if (!params.skip_deepTools){
 	process deepToolsSingleQC{
@@ -756,7 +760,7 @@ if (!params.skip_deepTools){
 									-o ${prefix}_matrix.mat.gz \\
 									--outFileNameMatrix ${prefix}.computeMatrix.vals.mat.gz \\
 									--smartLabels --downstream 1000 --upstream 1000 \\
-									-p ${task.cpus} 
+									-p ${task.cpus}
 
 		plotProfile -m ${prefix}_matrix.mat.gz -o ${prefix}_bams_profile.pdf \\
 					--outFileNameData ${prefix}.plotProfile.tab
@@ -805,36 +809,37 @@ if (!params.skip_deepTools){
 /*
  * Peak calling index build
  */
+
 ch_filtered_bams_macs_1
-    .combine(ch_filtered_bams_macs_2)
-    .set { ch_filtered_bams_macs_1 }
+	.combine(ch_filtered_bams_macs_2)
+	.set { ch_filtered_bams_macs_1 }
 
 ch_design_control
-    .combine(ch_filtered_bams_macs_1)
-    .filter { it[0] == it[5] && it[1] == it[7] }
-    .join(ch_filtered_flagstat_macs)
-    .map { it ->  it[2..-1] }
-    .into { ch_group_bam_macs_sharp;
+	.combine(ch_filtered_bams_macs_1)
+	.filter { it[0] == it[5] && it[1] == it[7] }
+	.join(ch_filtered_flagstat_macs)
+	.map { it ->  it[2..-1] }
+	.into { ch_group_bam_macs_sharp;
 			ch_group_bam_macs_broad;
 			ch_group_bam_macs_very_broad;
-            }
+			}
 
 ch_group_bam_macs_sharp
 	.filter { it[2] == 'sharp' }
-	.into {ch_group_bam_macs_sharp;
-		  ch_group_bam_peakQC_sharp }
+	.set { ch_group_bam_macs_sharp }
 
 ch_group_bam_macs_broad
 	.filter { it[2] == 'broad' }
-	.into {ch_group_bam_macs_broad;
-		  ch_group_bam_peakQC_broad }
+	.set { ch_group_bam_macs_broad }
 
 ch_group_bam_macs_very_broad
 	.filter { it[2] == 'very-broad' }
-	.set {ch_group_bam_macs_very_broad}
+	.set { ch_group_bam_macs_very_broad }
+
 /*
  * Peak calling
  */
+
 // SHARP PEAKS
 if (!params.skip_peakcalling){
 	process sharpMACS2{
@@ -853,7 +858,7 @@ if (!params.skip_peakcalling){
 
 		output:
 		set val(sampleID), file("*.{bed,xls,gappedPeak,bdg}") into ch_macs_output_sharp
-		set val(sampleName), val(replicate), val(peaktype), val(sampleID), val(controlID), file("*.narrowPeak") into ch_macs_homer_sharp, 
+		set val(sampleName), val(replicate), val(peaktype), val(sampleID), val(controlID), file("*.narrowPeak") into ch_macs_homer_sharp,
 																												ch_macs_qc_sharp,
 																												ch_macs_mqc_sharp,
 																												ch_macs_consensus_sharp,
@@ -873,9 +878,9 @@ if (!params.skip_peakcalling){
 			-n $sampleID \\
 			--keep-dup all
 		cat ${sampleID}_peaks.$peaktype_macs | wc -l | awk -v OFS='\t' '{ print "${sampleID}", \$1 }' | cat $peak_count_header - > ${sampleID}_peaks.count_mqc.tsv
- 		READS_IN_PEAKS=\$(intersectBed -a ${sampleBam[0]} -b ${sampleID}_peaks.$peaktype_macs -bed -c -f 0.20 | awk -F '\t' '{sum += \$NF} END {print sum}')
- 		grep 'mapped (' $sampleFlagstat | awk -v a="\$READS_IN_PEAKS" -v OFS='\t' '{print "${sampleID}", a/\$1}' | cat $frip_score_header - > ${sampleID}_peaks.FRiP_mqc.tsv
- 		find * -type f -name "*.$peaktype_macs" -exec echo -e "peak_calling/sharp/"{}"\\t0,0,178" \\; > ${sampleID}_peaks.igv.txt
+		READS_IN_PEAKS=\$(intersectBed -a ${sampleBam[0]} -b ${sampleID}_peaks.$peaktype_macs -bed -c -f 0.20 | awk -F '\t' '{sum += \$NF} END {print sum}')
+		grep 'mapped (' $sampleFlagstat | awk -v a="\$READS_IN_PEAKS" -v OFS='\t' '{print "${sampleID}", a/\$1}' | cat $frip_score_header - > ${sampleID}_peaks.FRiP_mqc.tsv
+		find * -type f -name "*.$peaktype_macs" -exec echo -e "peak_calling/sharp/"{}"\\t0,0,178" \\; > ${sampleID}_peaks.igv.txt
 		"""
 	}
 
@@ -883,11 +888,11 @@ if (!params.skip_peakcalling){
 	process broadMACS2{
 		tag "${sampleID} - ${controlID}"
 		publishDir path: "${params.outdir}/peak_calling/broad", mode: 'copy',
-				    saveAs: { filename ->
+					saveAs: { filename ->
 						if (filename.endsWith(".tsv")) "stats/$filename"
 						else if (filename.endsWith(".igv.txt")) null
 						else filename
-                	}
+					}
 
 		input:
 		set val(sampleName), val(replicate), val(peaktype), val(sampleID), file(sampleBam), val(controlID), file(controlBam), file(sampleFlagstat) from ch_group_bam_macs_broad
@@ -896,11 +901,11 @@ if (!params.skip_peakcalling){
 
 		output:
 		set val(sampleID), file("*.{bed,xls,gappedPeak,bdg}") into ch_macs_output_broad
-		set val(sampleName), val(replicate), val(peaktype), val(sampleID), val(controlID), file("*.broadPeak") into ch_macs_homer_broad, 
-																											   ch_macs_qc_broad,
-																											   ch_macs_mqc_broad, 
-																											   ch_macs_consensus_broad,
-																											   ch_macs_idr_broad
+		set val(sampleName), val(replicate), val(peaktype), val(sampleID), val(controlID), file("*.broadPeak") into ch_macs_homer_broad,
+																											ch_macs_qc_broad,
+																											ch_macs_mqc_broad,
+																											ch_macs_consensus_broad,
+																											ch_macs_idr_broad
 		file "*igv.txt" into ch_macs_igv_broad
 		file "*_mqc.tsv" into ch_macs_counts_broad
 
@@ -908,8 +913,6 @@ if (!params.skip_peakcalling){
 		broad = "--broad --broad-cutoff ${params.broad_cutoff}"
 		format = params.singleEnd ? "BAM" : "BAMPE"
 		peaktype_macs = "broadPeak"
-
-		//pileup = paraipms.save_macs_pileup ? "-B --SPMR" : ""
 		"""
 		macs2 callpeak \\
 			-t ${sampleBam[0]} \\
@@ -938,25 +941,24 @@ if (!params.skip_peakcalling){
 		
 		output:
 		set val(sampleID), file("*.{bed,xls,gappedPeak,bdg}") into ch_macs_output_vbroad
-		set val(sampleName), val(replicate), val(peaktype), val(sampleID), val(controlID), file("*.verybroad") into ch_macs_homer_vbroad, 
-																											   ch_macs_qc_vbroad,
-																											   ch_macs_mqc_vbroad, 
-																											   ch_macs_consensus_vbroad,
-																											   ch_macs_idr_vbroad
+		set val(sampleName), val(replicate), val(peaktype), val(sampleID), val(controlID), file("*.verybroad") into ch_macs_homer_vbroad,
+																											ch_macs_qc_vbroad,
+																											ch_macs_mqc_vbroad,
+																											ch_macs_consensus_vbroad,
+																											ch_macs_idr_vbroad
 		file "*igv.txt" into ch_macs_igv_vbroad
 		file "*_mqc.tsv" into ch_macs_counts_vbroad
-
 
 		script:
 		peaktype_epic = "veryBroadPeak"
 		"""
 		epic2 -t ${sampleBam[0]} \\
-			  -c ${controlbam[0]} \\
-			  -gn ${params.genome} \\
-			  -kd -a \\
-			  -o ${sampleName}_peaks.$peaktype_epic
+			-c ${controlbam[0]} \\
+			-gn ${params.genome} \\
+			-kd -a \\
+			-o ${sampleName}_peaks.$peaktype_epic
 		cat ${sampleID}_peaks.$peaktype_epic | wc -l | awk -v OFS='\t' '{ print "${sampleID}", \$1 }' | cat $peak_count_header - > ${sampleID}_peaks.count_mqc.tsv
-  		READS_IN_PEAKS=\$(intersectBed -a ${sampleBam[0]} -b ${sampleID}_peaks.$peaktype_epic -bed -c -f 0.20 | awk -F '\t' '{sum += \$NF} END {print sum}')
+		READS_IN_PEAKS=\$(intersectBed -a ${sampleBam[0]} -b ${sampleID}_peaks.$peaktype_epic -bed -c -f 0.20 | awk -F '\t' '{sum += \$NF} END {print sum}')
 		grep 'mapped (' $sampleFlagstat | awk -v a="\$READS_IN_PEAKS" -v OFS='\t' '{print "${sampleID}", a/\$1}' | cat $frip_score_header - > ${sampleID}_peaks.FRiP_mqc.tsv
 		find * -type f -name "*.$peaktype_epic" -exec echo -e "peak_calling/very_broad/"{}"\\t0,0,178" \\; > ${sampleID}_peaks.igv.txt			
 		"""
@@ -966,6 +968,7 @@ if (!params.skip_peakcalling){
 /*
  * Irreproducible Discovery Rate
  */
+
 if (!params.skip_idr && params.replicates){
 	ch_macs_idr_sharp
 			.mix(ch_macs_idr_broad, ch_macs_idr_vbroad)
@@ -1020,8 +1023,8 @@ if (!params.skip_idr && params.replicates){
 /*
  * Peak annotation
  */
-// HOMER
 
+// HOMER
 if (!params.skip_peakanno){
 	ch_macs_homer_sharp
 		.mix(ch_macs_homer_broad, ch_macs_homer_vbroad)
@@ -1075,7 +1078,7 @@ if (!params.skip_peakQC){
 		"""
 		plot_macs_qc.r \\
 			-i ${peaks.join(',')} \\
-			-s ${peaks.join(',').replaceAll("_peaks.narrowPeak","").replaceAll("_peaks.broadPeak","")} \\
+			-s ${peaks.join(',').replaceAll("_peaks.narrowPeak","").replaceAll("_peaks.broadPeak","").replaceAll("_peaks.veryBroadPeak","")} \\
 			-o ./ \\
 			-p macs_peak
 		plot_homer_annotatepeaks.r \\
@@ -1088,7 +1091,6 @@ if (!params.skip_peakQC){
 	}
 }
 
-
 /*
  * MultiQC
  */
@@ -1097,7 +1099,7 @@ if (!params.skip_peakQC){
 process getSoftwareVersions{
 	publishDir path: "${params.outdir}/software_versions", mode: "copy"
 	when:
-  		!params.skip_multiqc
+		!params.skip_multiqc
 
 	output:
 		file 'software_versions_mqc.yaml' into software_versions_yaml
@@ -1119,12 +1121,12 @@ process getSoftwareVersions{
 		echo \$(plotFingerprint --version 2>&1) > v_deeptools.txt || true
 		R --version &> v_R.txt
 		echo \$(macs2 --version 2>&1) &> v_macs2.txt
+		epic2 --version &> v_epic2.txt
+		idr --version &> v_idr.txt
 		scrape_software_versions.py &> software_versions_mqc.yaml
 		"""
 
 }
-
-
 
 // Workflow summary
 process workflow_summary_mqc {
@@ -1134,7 +1136,7 @@ process workflow_summary_mqc {
 	output:
 	file 'workflow_summary_mqc.yaml' into workflow_summary_yaml
 
-  	exec:
+	exec:
 def yaml_file = task.workDir.resolve('workflow_summary_mqc.yaml')
 yaml_file.text  = """
 id: 'summary'
@@ -1143,9 +1145,9 @@ section_name: 'Workflow Summary'
 section_href: 'https://gitlab.curie.fr/chipseq'
 plot_type: 'html'
 data: |
-    <dl class=\"dl-horizontal\">
+	<dl class=\"dl-horizontal\">
 ${summary.collect { k,v -> "            <dt>$k</dt><dd><samp>${v ?: '<span style=\"color:#999999;\">N/A</a>'}</samp></dd>" }.join("\n")}
-    </dl>
+	</dl>
 """.stripIndent()
 }
 
@@ -1153,10 +1155,10 @@ ${summary.collect { k,v -> "            <dt>$k</dt><dd><samp>${v ?: '<span style
 process multiqc {
 	publishDir "${params.outdir}/MultiQC", mode: 'copy'
 
-    when:
-    !params.skip_multiqc
+	when:
+	!params.skip_multiqc
 
-    input:
+	input:
 		file splan from ch_splan.collect()
 		file metadata from ch_metadata.ifEmpty([])
 		file multiqc_config from ch_multiqc_config
@@ -1191,12 +1193,12 @@ process multiqc {
 		file('peak_QC/*') from ch_peak_mqc.collect().ifEmpty([])
 
 
-    output:
+	output:
 		file splan
 		file "*multiqc_report.html" into multiqc_report
 		file "*_data"
 
-    script:
+	script:
 	rtitle = custom_runName ? "--title \"$custom_runName\"" : ''
 	rfilename = custom_runName ? "--filename " + custom_runName.replaceAll('\\W','_').replaceAll('_+','_') + "_multiqc_report" : ''
 	metadata_opts = params.metadata ? "--metadata ${metadata}" : ""
@@ -1207,73 +1209,72 @@ process multiqc {
 	mqc_header.py --name "Chip-seq" --version ${workflow.manifest.version} ${metadata_opts} > multiqc-config-header.yaml
 	multiqc . -f $rtitle $rfilename -c multiqc-config-header.yaml $modules_list -c $multiqc_config
 	"""
-} 
+}
+
 /* Creates a file at the end of workflow execution */
 workflow.onComplete {
 
-    /*pipeline_report.html*/
+	/*pipeline_report.html*/
 
-    def report_fields = [:]
-    report_fields['version'] = workflow.manifest.version
-    report_fields['runName'] = custom_runName ?: workflow.runName
-    report_fields['success'] = workflow.success
-    report_fields['dateComplete'] = workflow.complete
-    report_fields['duration'] = workflow.duration
-    report_fields['exitStatus'] = workflow.exitStatus
-    report_fields['errorMessage'] = (workflow.errorMessage ?: 'None')
-    report_fields['errorReport'] = (workflow.errorReport ?: 'None')
-    report_fields['commandLine'] = workflow.commandLine
-    report_fields['projectDir'] = workflow.projectDir
-    report_fields['summary'] = summary
-    report_fields['summary']['Date Started'] = workflow.start
-    report_fields['summary']['Date Completed'] = workflow.complete
-    report_fields['summary']['Pipeline script file path'] = workflow.scriptFile
-    report_fields['summary']['Pipeline script hash ID'] = workflow.scriptId
-    if(workflow.repository) report_fields['summary']['Pipeline repository Git URL'] = workflow.repository
-    if(workflow.commitId) report_fields['summary']['Pipeline repository Git Commit'] = workflow.commitId
-    if(workflow.revision) report_fields['summary']['Pipeline Git branch/tag'] = workflow.revision
+	def report_fields = [:]
+	report_fields['version'] = workflow.manifest.version
+	report_fields['runName'] = custom_runName ?: workflow.runName
+	report_fields['success'] = workflow.success
+	report_fields['dateComplete'] = workflow.complete
+	report_fields['duration'] = workflow.duration
+	report_fields['exitStatus'] = workflow.exitStatus
+	report_fields['errorMessage'] = (workflow.errorMessage ?: 'None')
+	report_fields['errorReport'] = (workflow.errorReport ?: 'None')
+	report_fields['commandLine'] = workflow.commandLine
+	report_fields['projectDir'] = workflow.projectDir
+	report_fields['summary'] = summary
+	report_fields['summary']['Date Started'] = workflow.start
+	report_fields['summary']['Date Completed'] = workflow.complete
+	report_fields['summary']['Pipeline script file path'] = workflow.scriptFile
+	report_fields['summary']['Pipeline script hash ID'] = workflow.scriptId
+	if(workflow.repository) report_fields['summary']['Pipeline repository Git URL'] = workflow.repository
+	if(workflow.commitId) report_fields['summary']['Pipeline repository Git Commit'] = workflow.commitId
+	if(workflow.revision) report_fields['summary']['Pipeline Git branch/tag'] = workflow.revision
 
-    // Render the TXT template
-    def engine = new groovy.text.GStringTemplateEngine()
-    def tf = new File("$baseDir/assets/oncomplete_template.txt")
-    def txt_template = engine.createTemplate(tf).make(report_fields)
-    def report_txt = txt_template.toString()
+	// Render the TXT template
+	def engine = new groovy.text.GStringTemplateEngine()
+	def tf = new File("$baseDir/assets/oncomplete_template.txt")
+	def txt_template = engine.createTemplate(tf).make(report_fields)
+	def report_txt = txt_template.toString()
 
 	// Render the HTML template
-    def hf = new File("$baseDir/assets/oncomplete_template.html")
-    def html_template = engine.createTemplate(hf).make(report_fields)
-    def report_html = html_template.toString()
+	def hf = new File("$baseDir/assets/oncomplete_template.html")
+	def html_template = engine.createTemplate(hf).make(report_fields)
+	def report_html = html_template.toString()
 
-    // Write summary e-mail HTML to a file
-    def output_d = new File( "${params.outdir}/pipeline_info/" )
-    if( !output_d.exists() ) {
-      output_d.mkdirs()
-    }
-    def output_hf = new File( output_d, "pipeline_report.html" )
-    output_hf.withWriter { w -> w << report_html }
-    def output_tf = new File( output_d, "pipeline_report.txt" )
-    output_tf.withWriter { w -> w << report_txt }
+	// Write summary e-mail HTML to a file
+	def output_d = new File( "${params.outdir}/pipeline_info/" )
+	if( !output_d.exists() ) {
+	output_d.mkdirs()
+	}
+	def output_hf = new File( output_d, "pipeline_report.html" )
+	output_hf.withWriter { w -> w << report_html }
+	def output_tf = new File( output_d, "pipeline_report.txt" )
+	output_tf.withWriter { w -> w << report_txt }
 
+	/*oncomplete file*/
 
+	File woc = new File("${params.outdir}/workflow.oncomplete.txt")
+	Map endSummary = [:]
+	endSummary['Completed on'] = workflow.complete
+	endSummary['Duration']     = workflow.duration
+	endSummary['Success']      = workflow.success
+	endSummary['exit status']  = workflow.exitStatus
+	endSummary['Error report'] = workflow.errorReport ?: '-'
 
-    /*oncomplete file*/
+	String endWfSummary = endSummary.collect { k,v -> "${k.padRight(30, '.')}: $v" }.join("\n")    println endWfSummary
+	String execInfo = "Execution summary\n${logSep}\n${endWfSummary}\n${logSep}\n"
+	woc.write(execInfo)
 
-    File woc = new File("${params.outdir}/workflow.oncomplete.txt")
-    Map endSummary = [:]
-    endSummary['Completed on'] = workflow.complete
-    endSummary['Duration']     = workflow.duration
-    endSummary['Success']      = workflow.success
-    endSummary['exit status']  = workflow.exitStatus
-    endSummary['Error report'] = workflow.errorReport ?: '-'
- 
-    String endWfSummary = endSummary.collect { k,v -> "${k.padRight(30, '.')}: $v" }.join("\n")    println endWfSummary
-    String execInfo = "Execution summary\n${logSep}\n${endWfSummary}\n${logSep}\n"
-    woc.write(execInfo)
-
-    /*]      = workflow.success     endSummary['exit status']  = workflow.exitStatus     endSummary['Error report'] = workflow.errorReport ?: '-' final logs*/
-    if(workflow.success){
-        log.info "[Chip-seq] Pipeline Complete"
-    }else{
-        log.info "[Chip-seq] FAILED: $workflow.runName"
-    }
+	/*]      = workflow.success     endSummary['exit status']  = workflow.exitStatus     endSummary['Error report'] = workflow.errorReport ?: '-' final logs*/
+	if(workflow.success){
+		log.info "[Chip-seq] Pipeline Complete"
+	}else{
+		log.info "[Chip-seq] FAILED: $workflow.runName"
+	}
 }

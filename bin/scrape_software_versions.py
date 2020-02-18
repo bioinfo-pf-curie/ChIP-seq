@@ -19,10 +19,12 @@ regexes = {
 	'preseq': ['v_preseq.txt', r"Version: (\S+)"],
 	'deeptools': ['v_deeptools.txt', r"plotFingerprint (\S+)"],
 	'R': ['v_R.txt', r"R version (\S+)"],
-	'MACS2': ['v_macs2.txt', r"macs2 (\S+)"]
-	# 'epic2': ['soft_versions.txt', r"(\S+)"
-
+	'MACS2': ['v_macs2.txt', r"macs2 (\S+)"],
+	'epic2': ['v_epic2.txt', r"(\S+)"],
+	'idr': ['v_idr.txt', r"IDR (\S+)"]
 }
+
+
 results = OrderedDict()
 results['nf-core/chipseq'] = '<span style="color:#999999;\">N/A</span>'
 results['Nextflow'] = '<span style="color:#999999;\">N/A</span>'
@@ -39,7 +41,8 @@ results['preseq'] = '<span style="color:#999999;\">N/A</span>'
 results['deeptools'] = '<span style="color:#999999;\">N/A</span>'
 results['R'] = '<span style="color:#999999;\">N/A</span>'
 results['MACS2'] = '<span style="color:#999999;\">N/A</span>'
-# results['epic2'] = '<span style="color:#999999;\">N/A</span>'
+results['epic2'] = '<span style="color:#999999;\">N/A</span>'
+results['idr'] = '<span style="color:#999999;\">N/A</span>'
 
 
 

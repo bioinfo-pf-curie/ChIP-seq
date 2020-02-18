@@ -26,7 +26,7 @@ The current workflow is based on the nf-core best practice. See the nf-core proj
 6. Filtering aligned BAM files ([`SAMTools`](http://www.htslib.org/) & [`BAMTools`](https://github.com/pezmaster31/bamtools))
 7. Computing Normalized and Relative Strand Cross-correlation (NSC/RSC) ([`phantompeakqualtools`](https://github.com/kundajelab/phantompeakqualtools))
 8. Diverse alignment QCs ([`deepTools`](https://deeptools.readthedocs.io/en/develop/index.html))
-9. Peak calling for sharp & broad peaks ([`MACS2`](https://github.com/taoliu/MACS))
+9. Peak calling for sharp & broad peaks ([`MACS2`](https://github.com/taoliu/MACS)) and very broad peaks ([`epic2`](https://github.com/biocore-ntnu/epic2))
 10. Calculation of Irreproducible Discovery Rate in case of multiple replicates ([`IDR`](https://github.com/nboley/idr))
 11. Peak annotation ([`HOMER`](http://homer.ucsd.edu/homer/ngs/annotation.html))
 12. Results summary ([`MultiQC`](https://multiqc.info/))
