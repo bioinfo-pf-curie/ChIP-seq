@@ -1,4 +1,11 @@
-A949C02,Input_EGF-0,/bioinfo/users/vlaroche/Documents/chip-seq/test-op/data/A949C02_chr2122.R1.fq.gz
-A949C08,H3K9me3_EGF-0,/bioinfo/users/vlaroche/Documents/chip-seq/test-op/data/A949C08_chr2122.R1.fq.gz
-A949C11,H3K4me3_EGF-0,/bioinfo/users/vlaroche/Documents/chip-seq/test-op/data/A949C11_chr2122.R1.fq.gz
-A949C05,H3K27me3_EGF-0,/bioinfo/users/vlaroche/Documents/chip-seq/test-op/data/A949C05_chr2122.R1.fq.gz
+A949C02,Input_EGF-0,/bioinfo/users/vlaroche/pipeline_chipseq/data/2006397/after_trimming/A949C02/A949C02.R1.fastq.gz
+A1014C02,Input_EGF-1,/bioinfo/users/vlaroche/pipeline_chipseq/data/2007311/after_trimming/A1014C02/A1014C02.R1.fastq.gz
+A1014C10,Input_EGF-2,/bioinfo/users/vlaroche/pipeline_chipseq/data/2007311/after_trimming/A1014C10/A1014C10.R1.fastq.gz
+A1014C06,H3K9me2_EGF-1,/bioinfo/users/vlaroche/pipeline_chipseq/data/2007311/after_trimming/A1014C06/A1014C06.R1.fastq.gz
+A1023C14,H3K9me2_EGF-2,/bioinfo/users/vlaroche/pipeline_chipseq/data/2007375/after_trimming/A1023C14/A1023C14.R1.fastq.gz
+A949C08,H3K9me3_EGF-0,/bioinfo/users/vlaroche/pipeline_chipseq/data/2006397/after_trimming/A949C08/A949C08.R1.fastq.gz
+A1014C08,H3K9me3_EGF-1,/bioinfo/users/vlaroche/pipeline_chipseq/data/2007311/after_trimming/A1014C08/A1014C08.R1.fastq.gz
+A949C11,H3K4me3_EGF-0,/bioinfo/users/vlaroche/pipeline_chipseq/data/2006397/after_trimming/A949C11/A949C11.R1.fastq.gz
+A1014C04,H3K4me3_EGF-1,/bioinfo/users/vlaroche/pipeline_chipseq/data/2007311/after_trimming/A1014C04/A1014C04.R1.fastq.gz
+A949C05,H3K27me3_EGF-0,/bioinfo/users/vlaroche/pipeline_chipseq/data/2006397/after_trimming/A949C05/A949C05.R1.fastq.gz
+A1023C18,H3K27me3_EGF-2,/bioinfo/users/vlaroche/pipeline_chipseq/data/2007375/after_trimming/A1023C18/A1023C18.R1.fastq.gz
