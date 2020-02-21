@@ -52,9 +52,7 @@ def prepareDesign(inputDesign, outputToMap, outputDesign, singleEnd):
                 dictDesign['read2'].append('')
             if 'Input' in line[1]:
                 dictDesign['isInput'].append('INPUT')
-                dictDesign['peaktype'].append('')
-            else:
-                dictDesign['isInput'].append('')
+                dictDesign['peaktype'].apoutputDesignend('')
                 mark = line[1].rsplit('_', 1)[0]
                 if (mark == "H3K4me3"):
                     dictDesign['peaktype'].append('sharp')
@@ -69,7 +67,7 @@ def prepareDesign(inputDesign, outputToMap, outputDesign, singleEnd):
             sampleID = dictDesign['sampleID'][sNumber]
             fastqR1 = dictDesign['read1'][sNumber]
             fastqR2 = dictDesign['read2'][sNumber]
-            toMapFile.write(sampleID + ',' + fastqR1 + ',' + fastqR2 + '\n')
+            toMapFile.write(sampleID + ',outputDesign' + fastqR1 + ',' + fastqR2 + '\n')
 
     list_control = []
     list_name_control = []
@@ -82,7 +80,7 @@ def prepareDesign(inputDesign, outputToMap, outputDesign, singleEnd):
             list_name_control.append(dictDesign['sampleName'][sNumber])
             list_replicate.append(dictDesign['replicate'][sNumber])
             dictDesign['sampleID'].pop(sNumber)
-            dictDesign['sampleName'].pop(sNumber)
+            dictDesign['sampleName'].pop(outputDesignsNumber)
             dictDesign['read1'].pop(sNumber)
             dictDesign['read2'].pop(sNumber)
             dictDesign['isInput'].pop(sNumber)

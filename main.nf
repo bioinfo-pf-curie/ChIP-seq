@@ -22,8 +22,6 @@ https://gitlab.curie.fr/chipseq
 ----------------------------------------------------------------------------------------
 */
 
-// TODO - replace all Chip-seq with the name of your pipeline
-
 def helpMessage() {
 	// TODO: Add to this help message with new command line parameters
 
@@ -242,7 +240,7 @@ if ( params.metadata ){
 
 if (params.samplePlan){
 ch_splan = Channel.fromPath(params.samplePlan)
-ch_design = Channel.fromPath(params.samplePlan)
+ch_splan_check = Channel.fromPath(params.samplePlan)
 }
 else{
 	if (params.singleEnd){
@@ -263,26 +261,24 @@ else{
 		.set{ ch_splan; ch_design }
 	}
 }
-
+if (params.designControl){
+ch_design_check = Channel.fromPath(params.designControl)
+}
 
 /*
- * Prepare design file
+ * Check design and sampleplan files
  */
 
-process prepareDesign{
-	tag "$design"
+process checkDesign{
 	publishDir "${params.outdir}/design", mode: 'copy'
 
 	input:
-	file design from ch_design
-
-	output:
-	file "readsToMap.csv" into ch_reads_to_map
-	file "designControl.csv" into ch_design_control
+	file design from ch_design_check
+ 	file samplePlan from ch_splan_check
 
 	script:
 	"""
-	prepare_design.py $design readsToMap.csv designControl.csv ${params.singleEnd}
+	check_designs.py $design $samplePlan ${params.singleEnd}
 	"""
 }
 
@@ -290,26 +286,35 @@ process prepareDesign{
  * Create a channel for design file
  */
 
+Channel
+	.fromPath(params.designControl)
+	.ifEmpty { exit 1, "Design file not found: ${params.designControl}" }
+	.set { ch_design_control }
+
 ch_design_control
 	.splitCsv(header:true, sep:',')
-	.map { row -> [ row.SAMPLE_ID, row.CONTROL_ID, row.SAMPLENAME, row.REPLICATE, row.PEAKTYPE ] }
+	.map { row -> [ row.SAMPLEID, row.CONTROLID, row.SAMPLENAME, row.REPLICATE, row.PEAKTYPE ] }
 	.set { ch_design_control }
 
 /*
  * Create a channel for input read files
  */
+Channel
+	.fromPath(params.samplePlan)
+	.ifEmpty { exit 1, "Design file not found: ${params.samplePlan}" }
+	.set { ch_reads_to_map }
 
 if(params.samplePlan){
 	if(params.singleEnd){
 		ch_reads_to_map
 			.splitCsv(header: true, sep:',')
-			.map{ row -> [ row.SAMPLE_ID, [file(row.FASTQ_R1, checkIfExists: true)]] }
+			.map{ row -> [ row.SAMPLEID, [file(row.FASTQR1, checkIfExists: true)]] }
 			.into { raw_reads_fastqc;raw_reads_bwa;raw_reads_bt2;raw_reads_star }
 	}
 	else{
 		ch_reads_to_map
 			.splitCsv(header: true, sep:',')
-			.map{ row -> [ row.SAMPLE_ID, [file(row.FASTQ_R1, checkIfExists: true), file(row.FASTQ_R2, checkIfExists: true)]] }
+			.map{ row -> [ row.SAMPLEID, [file(row.FASTQR1, checkIfExists: true), file(row.FASTQR2, checkIfExists: true)]] }
 			.into { raw_reads_fastqc;raw_reads_bwa;raw_reads_bt2;raw_reads_star }
 	}
 	params.reads=false
@@ -421,7 +426,7 @@ if (!params.gene_bed) {
 		output:
 		file "*.bed" into ch_gene_bed
 
-		script: // This script is bundled with the pipeline, in nf-core/chipseq/bin/
+		script:
 		"""
 		gtf2bed $gtf > ${gtf.baseName}.bed
 		"""
@@ -751,7 +756,7 @@ if (!params.skip_deepTools){
 		file gene_bed from ch_gene_bed
 
 		output:		
-		set val(prefix), file("*.pdf") into ch_deeptools_single
+		set val(prefix), file("*.{gz,pdf}") into ch_deeptools_single
 		set val(prefix), file("*.tab") into ch_deeptools_single_mqc
 		script:
 
@@ -759,7 +764,7 @@ if (!params.skip_deepTools){
 		computeMatrix scale-regions -R $gene_bed -S ${bigwig} \\
 									-o ${prefix}_matrix.mat.gz \\
 									--outFileNameMatrix ${prefix}.computeMatrix.vals.mat.gz \\
-									--smartLabels --downstream 1000 --upstream 1000 \\
+									--downstream 1000 --upstream 1000 --skipZeros\\
 									-p ${task.cpus}
 
 		plotProfile -m ${prefix}_matrix.mat.gz -o ${prefix}_bams_profile.pdf \\
@@ -850,6 +855,7 @@ if (!params.skip_peakcalling){
 						else if (filename.endsWith(".igv.txt")) null
 						else filename
 					}
+		cache 'deep'
 
 		input:
 		set val(sampleName), val(replicate), val(peaktype), val(sampleID), file(sampleBam), val(controlID), file(controlBam), file(sampleFlagstat) from ch_group_bam_macs_sharp
@@ -893,6 +899,7 @@ if (!params.skip_peakcalling){
 						else if (filename.endsWith(".igv.txt")) null
 						else filename
 					}
+		cache 'deep'
 
 		input:
 		set val(sampleName), val(replicate), val(peaktype), val(sampleID), file(sampleBam), val(controlID), file(controlBam), file(sampleFlagstat) from ch_group_bam_macs_broad
@@ -933,6 +940,7 @@ if (!params.skip_peakcalling){
 	process veryBroadEpic2{
 		tag "${sampleID} - ${controlID}"
 		publishDir path: "${params.outdir}/peak_calling/very_broad", mode: 'copy'
+		cache 'deep'
 
 		input:
 		set val(sampleName), val(replicate), val(peaktype), val(sampleID), file(sampleBam), val(controlID), file(controlBam), file(sampleFlagstat) from ch_group_bam_macs_very_broad
@@ -940,8 +948,8 @@ if (!params.skip_peakcalling){
 		file frip_score_header from ch_frip_score_header
 		
 		output:
-		set val(sampleID), file("*.{bed,xls,gappedPeak,bdg}") into ch_macs_output_vbroad
-		set val(sampleName), val(replicate), val(peaktype), val(sampleID), val(controlID), file("*.verybroad") into ch_macs_homer_vbroad,
+		// set val(sampleID), file("*.{bed,xls,gappedPeak,bdg}") into ch_macs_output_vbroad
+		set val(sampleName), val(replicate), val(peaktype), val(sampleID), val(controlID), file("*.broadPeak") into ch_macs_homer_vbroad,
 																											ch_macs_qc_vbroad,
 																											ch_macs_mqc_vbroad,
 																											ch_macs_consensus_vbroad,
@@ -950,13 +958,13 @@ if (!params.skip_peakcalling){
 		file "*_mqc.tsv" into ch_macs_counts_vbroad
 
 		script:
-		peaktype_epic = "veryBroadPeak"
+		peaktype_epic = "broadPeak"
 		"""
 		epic2 -t ${sampleBam[0]} \\
-			-c ${controlbam[0]} \\
+			-c ${controlBam[0]} \\
 			-gn ${params.genome} \\
 			-kd -a \\
-			-o ${sampleName}_peaks.$peaktype_epic
+			-o ${sampleID}_peaks.$peaktype_epic
 		cat ${sampleID}_peaks.$peaktype_epic | wc -l | awk -v OFS='\t' '{ print "${sampleID}", \$1 }' | cat $peak_count_header - > ${sampleID}_peaks.count_mqc.tsv
 		READS_IN_PEAKS=\$(intersectBed -a ${sampleBam[0]} -b ${sampleID}_peaks.$peaktype_epic -bed -c -f 0.20 | awk -F '\t' '{sum += \$NF} END {print sum}')
 		grep 'mapped (' $sampleFlagstat | awk -v a="\$READS_IN_PEAKS" -v OFS='\t' '{print "${sampleID}", a/\$1}' | cat $frip_score_header - > ${sampleID}_peaks.FRiP_mqc.tsv
@@ -989,32 +997,15 @@ if (!params.skip_idr && params.replicates){
 
 		input:
 		val sampleName_all from ch_idr_sName.toList()
-		val peakfiles_all from ch_idr_peakfile.toList()
+		val peakFiles_all from ch_idr_peakfile.toList()
 
 		output:
-		file "*.peak" into ch_idr
+		file "*.{narrowPeak,broadPeak}" into ch_idr
+		file "*_log.txt" into ch_mqc_idr
 		
 		script:
-		List<String> sName_list = new ArrayList<String>();
-		List<String> peakfile_list = new ArrayList<String>();
-		for (String sName : sampleName_all){
-			sName_list.add(sName);
-			peakfiles = ""
-			for (List peakfile : peakfiles_all){
-				if (peakfile[0] == sName){
-					peakfiles += peakfile[1]
-					peakfiles += " "
-				}
-			peakfile_list.add(peakfiles)
-			}
-		}
 		"""
-		index=0
-		for sName in $sampleName_all
-		do
-			idr --samples ${peakfile_list[$index]} > ${sName}_peak_IDR.peak
-			let "index++"
-		done
+		replicate_idr.py -sn ${sampleName_all} -pf ${peakFiles_all}
 		"""
 
 	}
@@ -1080,13 +1071,13 @@ if (!params.skip_peakQC){
 			-i ${peaks.join(',')} \\
 			-s ${peaks.join(',').replaceAll("_peaks.narrowPeak","").replaceAll("_peaks.broadPeak","").replaceAll("_peaks.veryBroadPeak","")} \\
 			-o ./ \\
-			-p macs_peak
+			-p peak
 		plot_homer_annotatepeaks.r \\
 			-i ${annotations.join(',')} \\
 			-s ${annotations.join(',').replaceAll("_peaks.annotatePeaks.txt","")} \\
 			-o ./ \\
-			-p macs_annotatePeaks
-		cat $peak_header macs_annotatePeaks.summary.txt > macs_annotatedPeaks.summary_mqc.tsv
+			-p annotatePeaks
+		cat $peak_header annotatePeaks.summary.txt > annotatedPeaks.summary_mqc.tsv
 		"""
 	}
 }
