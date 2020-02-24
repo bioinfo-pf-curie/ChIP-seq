@@ -84,7 +84,9 @@ if (params.help){
 // Configurable reference genomes
 params.fasta = params.genome ? params.genomes[ params.genome ].fasta ?: false : false
 if ( params.fasta ){
-	ch_fasta = file(params.fasta, checkIfExists: true)
+	Channel
+		.fromPath(params.fasta, checkIfExists: true)
+		.set { ch_fasta }
 	lastPath = params.fasta.lastIndexOf(File.separator)
 	bwa_base = params.fasta.substring(lastPath+1)
 }
@@ -138,7 +140,9 @@ if (params.aligner == "star"){
 // Other inputs
 params.gtf = params.genome ? params.genomes[ params.genome ].gtf ?: false : false
 if (params.gtf) {
-	ch_gtf = file(params.gtf, checkIfExists: true)
+	Channel
+		.fromPath(params.gtf, checkIfExists: true)
+		.set{ch_gtf}
 }
 else {
 	exit 1, "GTF annotation file not specified!"
@@ -146,30 +150,51 @@ else {
 
 params.gene_bed = params.genome ? params.genomes[ params.genome ].bed12 ?: false : false
 if (params.gene_bed)  {
-	ch_gene_bed = file(params.gene_bed, checkIfExists: true)
+	Channel
+		.fromPath(params.gene_bed, checkIfExists: true)
+		.into{ch_gene_bed;
+			  ch_gene_bed_deeptools}
 }
 
 params.macs_gsize = params.genome ? params.genomes[ params.genome ].macs_gsize ?: false : false
 params.blacklist = params.genome ? params.genomes[ params.genome ].blacklist ?: false : false
 
 //PPQT headers
-ch_ppqt_cor_header = file("$baseDir/assets/ppqt_cor_header.txt", checkIfExists: true)
-ch_ppqt_nsc_header = file("$baseDir/assets/ppqt_nsc_header.txt", checkIfExists: true)
-ch_ppqt_rsc_header = file("$baseDir/assets/ppqt_rsc_header.txt", checkIfExists: true)
+	Channel
+		.fromPath("$baseDir/assets/ppqt_cor_header.txt", checkIfExists: true)
+		.set{ch_ppqt_cor_header}
+	Channel
+		.fromPath("$baseDir/assets/ppqt_nsc_header.txt", checkIfExists: true)
+		.set{ch_ppqt_nsc_header}
+	Channel
+		.fromPath("$baseDir/assets/ppqt_rsc_header.txt", checkIfExists: true)
+		.set{ch_ppqt_rsc_header}
 
 //Peak Calling headers
-ch_peak_count_header = file("$baseDir/assets/peak_count_header.txt", checkIfExists: true)
-ch_frip_score_header = file("$baseDir/assets/frip_score_header.txt", checkIfExists: true)
-ch_peak_annotation_header = file("$baseDir/assets/peak_annotation_header.txt", checkIfExists: true)
+	Channel
+		.fromPath("$baseDir/assets/peak_count_header.txt", checkIfExists: true)
+		.set{ch_peak_count_header}
+	Channel
+		.fromPath("$baseDir/assets/frip_score_header.txt", checkIfExists: true)
+		.set{ch_frip_score_header}
+	Channel
+		.fromPath("$baseDir/assets/peak_annotation_header.txt", checkIfExists: true)
+		.set{ch_peak_annotation_header}
+
 
 // Stage config files
-ch_multiqc_config = file(params.multiqc_config, checkIfExists: true)
-ch_output_docs = file(params.output_doc, checkIfExists: true)
+	Channel
+		.fromPath(params.multiqc_config, checkIfExists: true)
+		.set{ch_multiqc_config}
+	Channel
+		.fromPath(params.output_doc, checkIfExists: true)
+		.set{ch_output_docs}
 if (params.singleEnd) {
-	ch_bamtools_filter_config = file(params.bamtools_filter_se_config, checkIfExists: true)
+	ch_bamtools_filter_config = Channel.fromPath(params.bamtools_filter_se_config, checkIfExists: true)
 } else {
-	ch_bamtools_filter_config = file(params.bamtools_filter_pe_config, checkIfExists: true)
+	ch_bamtools_filter_config = Channel.fromPath(params.bamtools_filter_pe_config, checkIfExists: true)
 }
+
 
 // Has the run name been specified by the user?
 //  this has the bonus effect of catching both -name and --name
@@ -624,10 +649,10 @@ if(!params.skip_preseq) {
 }
 
 // Filtering
+
 if (!params.skip_filtering){
 	process bamFiltering{
 		tag "${prefix}"
-		cache 'deep'
 		publishDir path: "${params.outdir}/filtered_bams", mode: 'copy',
 					saveAs: {filename ->
 							if (!filename.endsWith(".bam") && (!filename.endsWith(".bam.bai"))) "samtools_stats/$filename"
@@ -638,7 +663,7 @@ if (!params.skip_filtering){
 		input:
 		set val(prefix), file(marked_bam) from ch_marked_bams
 		file bed from ch_gene_bed.collect()
-		file bamtools_filter_config from ch_bamtools_filter_config
+		file bamtools_filter_config from ch_bamtools_filter_config.collect()
 
 		output:
 		set val(prefix), file("*_filtered.{bam,bam.bai}") into ch_filtered_bams
@@ -672,21 +697,63 @@ if (!params.skip_filtering){
 }
 
 // Preparing channels for all subsequent processes using filtered bams
-ch_filtered_bams
-	.into { ch_filtered_bams_metrics;
-			ch_filtered_bams_macs_1;
-			ch_filtered_bams_macs_2;
-			ch_filtered_bams_phantompeakqualtools;
-			ch_filtered_bams_deeptools_single;
-			ch_filtered_bams_deeptools_correl;
-			ch_filtered_bams_counts }
+if(params.singleEnd){
+	ch_filtered_bams
+		.into { ch_filtered_bams_metrics;
+				ch_filtered_bams_macs_1;
+				ch_filtered_bams_macs_2;
+				ch_filtered_bams_phantompeakqualtools;
+				ch_filtered_bams_deeptools_single;
+				ch_filtered_bams_deeptools_correl;
+				ch_filtered_bams_counts }
 
-ch_filtered_flagstat
-	.into { ch_filtered_flagstat_macs;
-			ch_filtered_flagstat_mqc }
+	ch_filtered_flagstat
+		.into { ch_filtered_flagstat_macs;
+				ch_filtered_flagstat_mqc }
 
-ch_filtered_stats
-	.set { ch_filtered_stats_mqc }
+	ch_filtered_stats
+		.set { ch_filtered_stats_mqc }
+} else {
+	process mergeBamRemoveOrphan {
+		tag "$name"
+		label 'process_medium'
+		publishDir path: "${params.outdir}/filtered_bams/mergedLibrary", mode: 'copy',
+			saveAs: { filename ->
+							if (filename.endsWith(".flagstat")) "samtools_stats/$filename"
+							else if (filename.endsWith(".idxstats")) "samtools_stats/$filename"
+							else if (filename.endsWith(".stats")) "samtools_stats/$filename"
+							else if (filename.endsWith("_sorted.bam")) filename
+							else if (filename.endsWith("_sorted.bam.bai")) filename
+							else null
+					}
+
+		input:
+		set val(name), file(bam) from ch_filter_bam
+
+		output:
+		set val(name), file("*_sorted.{bam,bam.bai}") into ch_filtered_bams_metrics,
+														   ch_filtered_bams_macs_1,
+														   ch_filtered_bams_macs_2,
+														   ch_filtered_bams_phantompeakqualtools,
+														   ch_filtered_bams_deeptools_single,
+														   ch_filtered_bams_deeptools_correl,
+														   ch_filtered_bams_counts
+        // set val(prefix), file("${prefix}.bam") into ch_rm_orphan_name_bam_counts
+        set val(name), file("*.flagstat") into ch_filtered_flagstat_macs,
+											   ch_filtered_flagstat_mqc
+        file "*.{idxstats,stats}" into ch_filtered_stats_mqc
+
+        script: 
+        """
+        bampe_rm_orphan.py ${bam[0]} ${prefix}.bam --only_fr_pairs
+        samtools sort -@ $task.cpus -o ${prefix}_sorted.bam -T $prefix ${prefix}.bam
+        samtools index ${prefix}_sorted.bam
+        samtools flagstat ${prefix}_sorted.bam > ${prefix}_sorted.bam.flagstat
+        samtools idxstats ${prefix}_sorted.bam > ${prefix}_sorted.bam.idxstats
+        samtools stats ${prefix}_sorted.bam > ${prefix}.sorted.bam.stats
+        """
+    }
+}
 
 /*
  * PhantomPeakQualTools QC
@@ -754,7 +821,7 @@ if (!params.skip_deepTools){
 
 		input:
 		set val(prefix), file(bigwig) from ch_big_wig
-		file gene_bed from ch_gene_bed
+		file gene_bed from ch_gene_bed_deeptools.collect()
 
 		output:		
 		set val(prefix), file("*.{gz,pdf}") into ch_deeptools_single
@@ -868,9 +935,8 @@ if (!params.skip_peakcalling){
 		set val(sampleName), val(replicate), val(peaktype), val(sampleID), val(controlID), file("*.narrowPeak") into ch_macs_homer_sharp,
 																												ch_macs_qc_sharp,
 																												ch_macs_mqc_sharp,
-																												ch_macs_consensus_sharp,
 																												ch_macs_idr_sharp
-		file "*igv.txt" into ch_macs_igv_sharp
+		//file "*igv.txt" into ch_macs_igv_sharp
 		file "*_mqc.tsv" into ch_macs_counts_sharp
 
 		script:
@@ -912,9 +978,8 @@ if (!params.skip_peakcalling){
 		set val(sampleName), val(replicate), val(peaktype), val(sampleID), val(controlID), file("*.broadPeak") into ch_macs_homer_broad,
 																											ch_macs_qc_broad,
 																											ch_macs_mqc_broad,
-																											ch_macs_consensus_broad,
 																											ch_macs_idr_broad
-		file "*igv.txt" into ch_macs_igv_broad
+		//file "*igv.txt" into ch_macs_igv_broad
 		file "*_mqc.tsv" into ch_macs_counts_broad
 
 		script:
@@ -949,13 +1014,12 @@ if (!params.skip_peakcalling){
 		file frip_score_header from ch_frip_score_header
 		
 		output:
-		// set val(sampleID), file("*.{bed,xls,gappedPeak,bdg}") into ch_macs_output_vbroad
+		// set val(sampleID), file("*.{bed,xls,gappedPeak,bdg}") into ch_macs_output_vbroad ===>> Data for MQC in Sharp&Broad MACS2
 		set val(sampleName), val(replicate), val(peaktype), val(sampleID), val(controlID), file("*.broadPeak") into ch_macs_homer_vbroad,
 																											ch_macs_qc_vbroad,
 																											ch_macs_mqc_vbroad,
-																											ch_macs_consensus_vbroad,
 																											ch_macs_idr_vbroad
-		file "*igv.txt" into ch_macs_igv_vbroad
+		//file "*igv.txt" into ch_macs_igv_vbroad
 		file "*_mqc.tsv" into ch_macs_counts_vbroad
 
 		script:
@@ -1137,9 +1201,9 @@ section_name: 'Workflow Summary'
 section_href: 'https://gitlab.curie.fr/chipseq'
 plot_type: 'html'
 data: |
-	<dl class=\"dl-horizontal\">
+<dl class=\"dl-horizontal\">
 ${summary.collect { k,v -> "            <dt>$k</dt><dd><samp>${v ?: '<span style=\"color:#999999;\">N/A</a>'}</samp></dd>" }.join("\n")}
-	</dl>
+</dl>
 """.stripIndent()
 }
 
@@ -1174,13 +1238,9 @@ process multiqc {
 		file ("deepTools/multiple_bams/bams_coverage_raw.txt") from ch_deeptools_coverage_mqc.collect().ifEmpty([])
 		file ("deepTools/multiple_bams/bams_fingerprint_*") from ch_deeptools_fingerprint_mqc.collect().ifEmpty([])
 
-		file ('peak_calling/sharp/*') from ch_macs_counts_sharp.collect().ifEmpty([])
-		file ('peak_calling/broad/*') from ch_macs_counts_broad.collect().ifEmpty([])
-		file ('peak_calling/very_broad/*') from ch_macs_counts_vbroad.collect().ifEmpty([])
-		file ('peak_calling/sharp/*') from ch_macs_mqc_sharp.collect().ifEmpty([])
-		file ('peak_calling/broad/*') from ch_macs_mqc_broad.collect().ifEmpty([])
-		file ('peak_calling/very_broad/*') from ch_macs_mqc_vbroad.collect().ifEmpty([])
-
+		file ('peak_calling/sharp/*') from ch_macs_output_sharp.collect().ifEmpty([])
+		file ('peak_calling/broad/*') from ch_macs_output_broad.collect().ifEmpty([])
+		// file ('peak_calling/very_broad/*') from ch_macs_counts_vbroad.collect().ifEmpty([])
 
 		file('peak_QC/*') from ch_peak_mqc.collect().ifEmpty([])
 
