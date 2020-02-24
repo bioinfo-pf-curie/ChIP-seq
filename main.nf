@@ -591,6 +591,7 @@ process markDuplicates{
 		METRICS_FILE=${prefix}.MarkDuplicates.metrics.txt \\
 		VALIDATION_STRINGENCY=LENIENT \\
 		TMP_DIR=tmpstararked.bam
+	samtools index ${prefix}_marked.bam
 	samtools idxstats ${prefix}_marked.bam > ${prefix}_marked.idxstats
 	samtools flagstat ${prefix}_marked.bam > ${prefix}_marked.flagstat
 	samtools stats ${prefix}_marked.bam > ${prefix}_marked.stats
