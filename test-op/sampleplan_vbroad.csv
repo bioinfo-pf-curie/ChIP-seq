@@ -1,5 +1,0 @@
-SAMPLEID,SAMPLENAME,FASTQR1
-A1014C02,Input_EGF-1,/bioinfo/users/vlaroche/pipeline_chipseq/data/2007311/after_trimming/A1014C02/A1014C02.R1.fastq.gz
-A1014C10,Input_EGF-2,/bioinfo/users/vlaroche/pipeline_chipseq/data/2007311/after_trimming/A1014C10/A1014C10.R1.fastq.gz
-A1014C06,H3K9me2_EGF-1,/bioinfo/users/vlaroche/pipeline_chipseq/data/2007311/after_trimming/A1014C06/A1014C06.R1.fastq.gz
-A1023C14,H3K9me2_EGF-2,/bioinfo/users/vlaroche/pipeline_chipseq/data/2007375/after_trimming/A1023C14/A1023C14.R1.fastq.gz
