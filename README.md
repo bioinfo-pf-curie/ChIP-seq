@@ -46,7 +46,7 @@ The pipeline can be run on any infrastructure from a list of input files or from
 See the conf/test.conf to set your test dataset.
 
 ```
-nextflow run main.nf -profile test,conda --genome 'hg19' --singleEnd
+nextflow run main.nf -profile test,conda --genome 'hg19' --singleEnd --replicates
 
 ```
 
