@@ -160,27 +160,14 @@ params.macs_gsize = params.genome ? params.genomes[ params.genome ].macs_gsize ?
 params.blacklist = params.genome ? params.genomes[ params.genome ].blacklist ?: false : false
 
 //PPQT headers
-	Channel
-		.fromPath("$baseDir/assets/ppqt_cor_header.txt", checkIfExists: true)
-		.set{ch_ppqt_cor_header}
-	Channel
-		.fromPath("$baseDir/assets/ppqt_nsc_header.txt", checkIfExists: true)
-		.set{ch_ppqt_nsc_header}
-	Channel
-		.fromPath("$baseDir/assets/ppqt_rsc_header.txt", checkIfExists: true)
-		.set{ch_ppqt_rsc_header}
+ch_ppqt_cor_header = file("$baseDir/assets/ppqt_cor_header.txt", checkIfExists: true)
+ch_ppqt_nsc_header = file("$baseDir/assets/ppqt_nsc_header.txt", checkIfExists: true)
+ch_ppqt_rsc_header = file("$baseDir/assets/ppqt_rsc_header.txt", checkIfExists: true)
 
 //Peak Calling headers
-	Channel
-		.fromPath("$baseDir/assets/peak_count_header.txt", checkIfExists: true)
-		.set{ch_peak_count_header}
-	Channel
-		.fromPath("$baseDir/assets/frip_score_header.txt", checkIfExists: true)
-		.set{ch_frip_score_header}
-	Channel
-		.fromPath("$baseDir/assets/peak_annotation_header.txt", checkIfExists: true)
-		.set{ch_peak_annotation_header}
-
+ch_peak_count_header = file("$baseDir/assets/peak_count_header.txt", checkIfExists: true)
+ch_frip_score_header = file("$baseDir/assets/frip_score_header.txt", checkIfExists: true)
+ch_peak_annotation_header = file("$baseDir/assets/peak_annotation_header.txt", checkIfExists: true)
 
 // Stage config files
 	Channel
@@ -1014,7 +1001,7 @@ if (!params.skip_peakcalling){
 		file frip_score_header from ch_frip_score_header
 		
 		output:
-		// set val(sampleID), file("*.{bed,xls,gappedPeak,bdg}") into ch_macs_output_vbroad ===>> Data for MQC in Sharp&Broad MACS2
+		// set val(sampleID), file("*.{bed,xls,gappedPeak,bdg}") into ch_macs_output_vbroad ===>> Mandatory data for MQC in Sharp&Broad MACS2
 		set val(sampleName), val(replicate), val(peaktype), val(sampleID), val(controlID), file("*.broadPeak") into ch_macs_homer_vbroad,
 																											ch_macs_qc_vbroad,
 																											ch_macs_mqc_vbroad,
