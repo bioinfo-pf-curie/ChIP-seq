@@ -16,16 +16,18 @@ def argsParse():
     parser.add_argument("R", metavar="INPUT_READS_FILE", help="Enter a valid "
                                                         "reads csv file name")
     parser.add_argument("SE", metavar="SINGLE_END", help="Is data SE (True) or"
-														" PE (False) ?")
+                                                        " PE (False) ?")
+    parser.add_argument("BD", metavar="BASE DIR", help="Base dir if needed")
 
     args = parser.parse_args()
     inputDesign = args.D
     inputReads = args.R
     singleEnd = args.SE
-    return inputDesign, inputReads, singleEnd
+    baseDir = args.BD
+    return inputDesign, inputReads, singleEnd, baseDir
 
 
-def check_designs(inputDesign, inputReads, singleEnd):
+def check_designs(inputDesign, inputReads, singleEnd, baseDir):
     dict_design_keys = ['SAMPLEID', 'CONTROLID', 'SAMPLENAME', 'REPLICATE', 'PEAKTYPE']
 
     dict_design = {
@@ -109,9 +111,17 @@ def check_designs(inputDesign, inputReads, singleEnd):
         for sample in lines:
             dict_reads['SAMPLEID'].append(sample[0])
             dict_reads['SAMPLENAME'].append(sample[1])
-            dict_reads['FASTQR1'].append(sample[2])
+            if sample[2][0] != '/':
+                readfile = baseDir + '/' + sample[2]
+                dict_reads['FASTQR1'].append(readfile)
+            else:
+                dict_reads['FASTQR1'].append(sample[2])
             if not singleEnd:
-                dict_reads['FASTQR2'].append(line[3])
+                if sample[3][0] != '/':
+                    readfile = baseDir + '/' + sample[3]
+                    dict_reads['FASTQR2'].append(readfile)
+                else:
+                    dict_reads['FASTQR2'].append(sample[3])
 		# Check if there is a missing ID in the design or sample file
         for ID in dict_reads['SAMPLEID']:
             if not (ID in dict_design['SAMPLEID'] or 
@@ -144,5 +154,5 @@ def check_designs(inputDesign, inputReads, singleEnd):
 
 
 if __name__ == '__main__':
-    inputDesign, inputReads, singleEnd = argsParse()
-    check_designs(inputDesign, inputReads, singleEnd)
+    inputDesign, inputReads, singleEnd, baseDir = argsParse()
+    check_designs(inputDesign, inputReads, singleEnd, baseDir)

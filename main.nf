@@ -86,7 +86,10 @@ params.fasta = params.genome ? params.genomes[ params.genome ].fasta ?: false : 
 if ( params.fasta ){
 	Channel
 		.fromPath(params.fasta, checkIfExists: true)
-		.set { ch_fasta }
+		.into{ch_fasta_homer;
+			  ch_fasta_bwa;
+			  ch_fasta_bt2;
+			  ch_fasta_star}
 	lastPath = params.fasta.lastIndexOf(File.separator)
 	bwa_base = params.fasta.substring(lastPath+1)
 }
@@ -103,8 +106,7 @@ if (params.aligner == "bwa-mem"){
 		Channel
 			.fromPath(bwa_dir, checkIfExists: true)
 			.set { ch_bwa_index }
-	}
-	else{
+	} else {
 		exit 1, "BWA index file not found: ${params.bwa_index}"
 	}
 }
@@ -117,8 +119,8 @@ if (params.aligner == "bowtie2"){
 		bt2_base = params.bt2_index.substring(lastPath+1)
 		Channel
 			.fromPath(bt2_dir, checkIfExists: true)
-			.set { ch_bt2_index }	}
-	else{
+			.set { ch_bt2_index }	
+	} else {
 		exit 1, "Bowtie2 index file not found: ${params.bt2_index}"
 	}
 }
@@ -131,8 +133,8 @@ if (params.aligner == "star"){
 		star_base = params.star_index.substring(lastPath+1)
 		Channel
 			.fromPath(star_dir, checkIfExists: true)
-			.set { ch_star_index }	}
-	else{
+			.set { ch_star_index }
+	} else {
 		exit 1, "STAR index file not found: ${params.star_index}"
 	}
 }
@@ -142,7 +144,8 @@ params.gtf = params.genome ? params.genomes[ params.genome ].gtf ?: false : fals
 if (params.gtf) {
 	Channel
 		.fromPath(params.gtf, checkIfExists: true)
-		.set{ch_gtf}
+		.into{ch_gtf_homer;
+			  ch_gtf_to_bed}
 }
 else {
 	exit 1, "GTF annotation file not specified!"
@@ -254,25 +257,6 @@ if (params.samplePlan){
 ch_splan = Channel.fromPath(params.samplePlan)
 ch_splan_check = Channel.fromPath(params.samplePlan)
 }
-else{
-	if (params.singleEnd){
-		Channel
-			.from(params.readPaths)
-			.collectFile() {
-			item -> ["sparams.genome ? sample_plan.csv", item[0] + ',' + item[0] + ',' + item[1][0] + '\n']
-		}
-		.set{ ch_splan; ch_design }
-	}
-
-	else{
-		Channel
-			.from(params.readPaths)
-			.collectFile() {
-			item -> ["sample_plan.csv", item[0] + ',' + item[0] + ',' + item[1][0] + ',' + item[1][1] + '\n']
-		}
-		.set{ ch_splan; ch_design }
-	}
-}
 if (params.designControl){
 ch_design_check = Channel.fromPath(params.designControl)
 }
@@ -290,7 +274,7 @@ process checkDesign{
 
 	script:
 	"""
-	check_designs.py $design $samplePlan ${params.singleEnd}
+	check_designs.py $design $samplePlan ${params.singleEnd} $baseDir
 	"""
 }
 
@@ -364,7 +348,7 @@ if (!params.bwa_index && params.aligner == "bwa-mem"){
 		publishDir "${params.outdir}/bwa_index"
 
 		input:
-			file fasta from ch_fasta
+			file fasta from ch_fasta_bwa
 
 		output:
 			file "bwa_index" into ch_bwa_index
@@ -387,7 +371,7 @@ if (!params.bt2_index && params.aligner == "bowtie2"){
 		publishDir "${params.outdir}/bt2_index"
 
 		input:
-			file fasta from ch_fasta
+			file fasta from ch_fasta_bt2
 
 		output:
 			file "bt2_index" into ch_bt2_index
@@ -410,7 +394,7 @@ if (!params.star_index && params.aligner == "star"){
 		publishDir "${params.outdir}/star_index"
 
 		input:
-			file fasta from ch_fasta
+			file fasta from ch_fasta_star
 
 		output:
 			file "star_index" into ch_star_index
@@ -433,7 +417,7 @@ if (!params.gene_bed) {
 		publishDir "${params.outdir}/reference_genome", mode: 'copy'
 
 		input:
-		file gtf from ch_gtf
+		file gtf from ch_gtf_to_bed
 
 		output:
 		file "*.bed" into ch_gene_bed
@@ -725,7 +709,6 @@ if(params.singleEnd){
 														   ch_filtered_bams_deeptools_single,
 														   ch_filtered_bams_deeptools_correl,
 														   ch_filtered_bams_counts
-        // set val(prefix), file("${prefix}.bam") into ch_rm_orphan_name_bam_counts
         set val(name), file("*.flagstat") into ch_filtered_flagstat_macs,
 											   ch_filtered_flagstat_mqc
         file "*.{idxstats,stats}" into ch_filtered_stats_mqc
@@ -825,7 +808,7 @@ if (!params.skip_deepTools){
 		plotProfile -m ${prefix}_matrix.mat.gz -o ${prefix}_bams_profile.pdf \\
 					--outFileNameData ${prefix}.plotProfile.tab
 
-		sed -e 's/.0\t/\t/g' ${prefix}.plotProfile.tab | sed -e 's/100.0/100/g' > ${prefix}.plotProfile.tab
+		sed -e 's/.0\t/\t/g' ${prefix}.plotProfile.tab | sed -e 's/100.0/100/g' > ${prefix}_plotProfile_corrected.tab
 		"""
 	}
 
@@ -992,7 +975,12 @@ if (!params.skip_peakcalling){
 // VERY BROAD PEAKS
 	process veryBroadEpic2{
 		tag "${sampleID} - ${controlID}"
-		publishDir path: "${params.outdir}/peak_calling/very_broad", mode: 'copy'
+		publishDir path: "${params.outdir}/peak_calling/very_broad", mode: 'copy',
+					saveAs: { filename ->
+						if (filename.endsWith(".tsv")) "stats/$filename"
+						else if (filename.endsWith(".igv.txt")) null
+						else filename
+					}
 		cache 'deep'
 
 		input:
@@ -1079,8 +1067,8 @@ if (!params.skip_peakanno){
 
 		input:
 		set val(sampleName), val(replicate), val(peaktype), val(sampleID), val(controlID), file (peakfile) from ch_macs_homer
-		file gtf_file from ch_gtf
-		file fasta_file from ch_fasta
+		file gtf_file from ch_gtf_homer.collect()
+		file fasta_file from ch_fasta_homer.collect()
 
 		output:
 		file "*.txt" into ch_homer_peak_annotated
@@ -1121,12 +1109,12 @@ if (!params.skip_peakQC){
 		"""
 		plot_macs_qc.r \\
 			-i ${peaks.join(',')} \\
-			-s ${peaks.join(',').replaceAll("_peaks.narrowPeak","").replaceAll("_peaks.broadPeak","").replaceAll("_peaks.veryBroadPeak","")} \\
+			-s ${peaks.join(',').replaceAll("_peaks.narrowPeak","").replaceAll("_peaks.broadPeak","")} \\
 			-o ./ \\
 			-p peak
 		plot_homer_annotatepeaks.r \\
 			-i ${annotations.join(',')} \\
-			-s ${annotations.join(',').replaceAll("_peaks.annotatePeaks.txt","")} \\
+			-s ${annotations.join(',').replaceAll("_annotated_peaks.txt","")} \\
 			-o ./ \\
 			-p annotatePeaks
 		cat $peak_header annotatePeaks.summary.txt > annotatedPeaks.summary_mqc.tsv
@@ -1180,18 +1168,19 @@ process workflow_summary_mqc {
 	file 'workflow_summary_mqc.yaml' into workflow_summary_yaml
 
 	exec:
-def yaml_file = task.workDir.resolve('workflow_summary_mqc.yaml')
-yaml_file.text  = """
-id: 'summary'
-description: " - this information is collected when the pipeline is started."
-section_name: 'Workflow Summary'
-section_href: 'https://gitlab.curie.fr/chipseq'
-plot_type: 'html'
-data: |
-<dl class=\"dl-horizontal\">
+  def yaml_file = task.workDir.resolve('workflow_summary_mqc.yaml')
+  yaml_file.text  = """
+  id: 'summary'
+  description: " - this information is collected when the pipeline is started."
+  section_name: 'Workflow Summary'
+  section_href: 'https://gitlab.curie.fr/rnaseq'
+  plot_type: 'html'
+  data: |
+      <dl class=\"dl-horizontal\">
 ${summary.collect { k,v -> "            <dt>$k</dt><dd><samp>${v ?: '<span style=\"color:#999999;\">N/A</a>'}</samp></dd>" }.join("\n")}
-</dl>
-""".stripIndent()
+      </dl>
+  """.stripIndent()
+
 }
 
 
@@ -1220,13 +1209,15 @@ process multiqc {
 		file ('ppqt/*.spp.out') from ch_ppqt_out_mqc.collect().ifEmpty([])
 		file ('ppqt/*_mqc.tsv') from ch_ppqt_csv_mqc.collect().ifEmpty([])
 
-		file ('deepTools/single_bam/*plotProfile.tab') from ch_deeptools_single_mqc.collect().ifEmpty([])
+		file ('deepTools/single_bam/*_plotProfile_corrected.tab') from ch_deeptools_single_mqc.collect().ifEmpty([])
 		file ("deepTools/multiple_bams/bams_correlation.tab") from ch_deeptools_correl_mqc.collect().ifEmpty([])
 		file ("deepTools/multiple_bams/bams_coverage_raw.txt") from ch_deeptools_coverage_mqc.collect().ifEmpty([])
 		file ("deepTools/multiple_bams/bams_fingerprint_*") from ch_deeptools_fingerprint_mqc.collect().ifEmpty([])
 
-		file ('peak_calling/sharp/*') from ch_macs_output_sharp.collect().ifEmpty([])
-		file ('peak_calling/broad/*') from ch_macs_output_broad.collect().ifEmpty([])
+		file ('peak_calling/sharp/*.xls') from ch_macs_output_sharp.collect().ifEmpty([])
+		file ('peak_calling/broad/*.xls') from ch_macs_output_broad.collect().ifEmpty([])
+		file ('peak_calling/sharp/*') from ch_macs_counts_sharp.collect().ifEmpty([])
+		file ('peak_calling/broad/*') from ch_macs_counts_broad.collect().ifEmpty([])
 		// file ('peak_calling/very_broad/*') from ch_macs_counts_vbroad.collect().ifEmpty([])
 
 		file('peak_QC/*') from ch_peak_mqc.collect().ifEmpty([])
