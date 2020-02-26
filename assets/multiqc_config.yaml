@@ -103,7 +103,6 @@ module_order:
   - samtools
   - picard
   - preseq
-  - phantompeakqualtools
   - deeptools
 
 report_section_order:
