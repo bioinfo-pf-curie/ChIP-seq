@@ -1209,10 +1209,10 @@ process multiqc {
 		file ('ppqt/*.spp.out') from ch_ppqt_out_mqc.collect().ifEmpty([])
 		file ('ppqt/*_mqc.tsv') from ch_ppqt_csv_mqc.collect().ifEmpty([])
 
-		file ('deepTools/single_bam/*_plotProfile_corrected.tab') from ch_deeptools_single_mqc.collect().ifEmpty([])
-		file ("deepTools/multiple_bams/bams_correlation.tab") from ch_deeptools_correl_mqc.collect().ifEmpty([])
-		file ("deepTools/multiple_bams/bams_coverage_raw.txt") from ch_deeptools_coverage_mqc.collect().ifEmpty([])
-		file ("deepTools/multiple_bams/bams_fingerprint_*") from ch_deeptools_fingerprint_mqc.collect().ifEmpty([])
+		// file ('deepTools/single_bam/*_plotProfile_corrected.tab') from ch_deeptools_single_mqc.collect().ifEmpty([])
+		// file ("deepTools/multiple_bams/bams_correlation.tab") from ch_deeptools_correl_mqc.collect().ifEmpty([])
+		// file ("deepTools/multiple_bams/bams_coverage_raw.txt") from ch_deeptools_coverage_mqc.collect().ifEmpty([])
+		// file ("deepTools/multiple_bams/bams_fingerprint_*") from ch_deeptools_fingerprint_mqc.collect().ifEmpty([])
 
 		file ('peak_calling/sharp/*.xls') from ch_macs_output_sharp.collect().ifEmpty([])
 		file ('peak_calling/broad/*.xls') from ch_macs_output_broad.collect().ifEmpty([])

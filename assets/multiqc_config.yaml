@@ -105,9 +105,20 @@ module_order:
   - preseq
   - phantompeakqualtools
   - deeptools
-  - macs2
-  - homer
 
+report_section_order:
+  peak_count:
+      order: -1000
+  frip_score:
+      order: -1100
+  strand_shift_correlation:
+      order: -1200
+  NSC_coefficient:
+      order: -1300
+  RSC_coefficient:
+      order: -1400
+  peak_annotation:
+      order: -1500
 #############################
 ## Display
 
