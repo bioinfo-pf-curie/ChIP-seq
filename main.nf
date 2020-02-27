@@ -795,7 +795,7 @@ if (!params.skip_deepTools){
 
 		output:		
 		set val(prefix), file("*.{gz,pdf}") into ch_deeptools_single
-		set val(prefix), file("*.tab") into ch_deeptools_single_mqc
+		set val(prefix), file("*_corrected.tab") into ch_deeptools_single_mqc
 		script:
 
 		"""
@@ -807,8 +807,7 @@ if (!params.skip_deepTools){
 
 		plotProfile -m ${prefix}_matrix.mat.gz -o ${prefix}_bams_profile.pdf \\
 					--outFileNameData ${prefix}.plotProfile.tab
-
-		sed -e 's/.0\t/\t/g' ${prefix}.plotProfile.tab | sed -e 's/100.0/100/g' > ${prefix}_plotProfile_corrected.tab
+		sed -e 's/.0\t/\t/g' ${prefix}.plotProfile.tab | sed -e 's@.0\$@@g' > ${prefix}_plotProfile_corrected.tab
 		"""
 	}
 
@@ -1209,7 +1208,8 @@ process multiqc {
 		file ('ppqt/*.spp.out') from ch_ppqt_out_mqc.collect().ifEmpty([])
 		file ('ppqt/*_mqc.tsv') from ch_ppqt_csv_mqc.collect().ifEmpty([])
 
-		file ('deepTools/single_bam/*_plotProfile_corrected.tab') from ch_deeptools_single_mqc.collect().ifEmpty([])
+		file ('deepTools/single_bam/*') from ch_deeptools_single.collect().ifEmpty([])
+		file ('deepTools/single_bam/*_corrected.tab') from ch_deeptools_single_mqc.collect().ifEmpty([])
 		file ("deepTools/multiple_bams/bams_correlation.tab") from ch_deeptools_correl_mqc.collect().ifEmpty([])
 		file ("deepTools/multiple_bams/bams_coverage_raw.txt") from ch_deeptools_coverage_mqc.collect().ifEmpty([])
 		file ("deepTools/multiple_bams/bams_fingerprint_*") from ch_deeptools_fingerprint_mqc.collect().ifEmpty([])
