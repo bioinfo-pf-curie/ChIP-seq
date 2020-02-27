@@ -28,7 +28,7 @@ def argsParse():
 
 
 def check_designs(inputDesign, inputReads, singleEnd, baseDir):
-    dict_design_keys = ['SAMPLEID', 'CONTROLID', 'SAMPLENAME', 'REPLICATE', 'PEAKTYPE']
+    # dict_design_keys = ['SAMPLEID', 'CONTROLID', 'SAMPLENAME', 'REPLICATE', 'PEAKTYPE']
 
     dict_design = {
         'SAMPLEID': [],
@@ -38,14 +38,14 @@ def check_designs(inputDesign, inputReads, singleEnd, baseDir):
         'PEAKTYPE': []
     }
     if (singleEnd):
-        dict_reads_keys = ['SAMPLEID', 'SAMPLENAME', 'FASTQR1']
+        # dict_reads_keys = ['SAMPLEID', 'SAMPLENAME', 'FASTQR1']
         dict_reads = {
             'SAMPLEID': [],
             'SAMPLENAME': [],
             'FASTQR1': [],
         }
     else:
-        dict_reads_keys = ['SAMPLEID', 'SAMPLENAME', 'FASTQR1', 'FASTQR2']
+        # dict_reads_keys = ['SAMPLEID', 'SAMPLENAME', 'FASTQR1', 'FASTQR2']
         dict_reads = {
             'SAMPLEID': [],
             'SAMPLENAME': [],
@@ -55,12 +55,12 @@ def check_designs(inputDesign, inputReads, singleEnd, baseDir):
     ### Checks for design file
     with open(inputDesign, 'r') as designFile:
         lines = csv.reader(designFile)
-        header = next(lines, None)
-        # Check if design header is correct
-        if header != dict_design_keys:
-            print('Design file header is wrong, should be : {}'
-                  .format(','.join(dict_design_keys)))
-            sys.exit(1)
+        # header = next(lines, None)
+        # # Check if design header is correct
+        # if header != dict_design_keys:
+        #     print('Design file header is wrong, should be : {}'
+        #           .format(','.join(dict_design_keys)))
+        #     sys.exit(1)
         # Fill dict to check all input design data
         for sample in lines:
             dict_design['SAMPLEID'].append(sample[0])
@@ -101,12 +101,12 @@ def check_designs(inputDesign, inputReads, singleEnd, baseDir):
     ### Checks for sampleplan file
     with open(inputReads, 'r') as readsFile:
         lines = csv.reader(readsFile)
-        header = next(lines, None)
-        # Check if sampleplan header is correct
-        if header != dict_reads_keys:
-            print('Sampleplan file header is wrong, should be : {}'
-                  .format(','.join(dict_reads_keys)))
-            sys.exit(1)
+        # header = next(lines, None)
+        # # Check if sampleplan header is correct
+        # if header != dict_reads_keys:
+        #     print('Sampleplan file header is wrong, should be : {}'
+        #           .format(','.join(dict_reads_keys)))
+        #     sys.exit(1)
         # Fill dict to check all input sample data
         for sample in lines:
             dict_reads['SAMPLEID'].append(sample[0])
