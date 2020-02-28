@@ -317,11 +317,23 @@ if ( params.metadata ){
  */
 
 if (params.samplePlan){
-chSplan = Channel.fromPath(params.samplePlan)
-chSplanCheck = Channel.fromPath(params.samplePlan)
+Channel
+  .fromPath(params.samplePlan)
+  .ifEmpty { exit 1, "Sample Plan file not found: ${params.samplePlan}" }
+  .into { chSplan;chSplanCheck;chReadsToMap }
 }
+
+
 if (params.design){
-chDesignCheck = Channel.fromPath(params.design)
+Channel
+  .fromPath(params.design)
+  .ifEmpty { exit 1, "Design file not found: ${params.design}" }
+  .into { chDesignCheck;chDesignControl }
+
+chDesignControl
+  .splitCsv(header:true, sep:',')
+  .map { row -> [ row[0], row[1], row[2], row[3], row[4] ] }
+  .set { chDesignControl }
 }
 
 /*
@@ -333,7 +345,7 @@ process checkDesign{
 
   input:
   file design from chDesignCheck
-   file samplePlan from chSplanCheck
+  file samplePlan from chSplanCheck
 
   script:
   """
@@ -342,26 +354,8 @@ process checkDesign{
 }
 
 /*
- * Create a channel for design file
- */
-
-Channel
-  .fromPath(params.design)
-  .ifEmpty { exit 1, "Design file not found: ${params.design}" }
-  .set { chDesignControl }
-
-chDesignControl
-  .splitCsv(header:true, sep:',')
-  .map { row -> [ row[0], row[1], row[2], row[3], row[4] ] }
-  .set { chDesignControl }
-
-/*
  * Create a channel for input read files
  */
-Channel
-  .fromPath(params.samplePlan)
-  .ifEmpty { exit 1, "Sample Plan file not found: ${params.samplePlan}" }
-  .set { chReadsToMap }
 
 if(params.samplePlan){
   if(params.singleEnd){
@@ -378,28 +372,28 @@ if(params.samplePlan){
   }
   params.reads=false
 }
-// else if(params.readPaths){
-//   if(params.singleEnd){
-//     Channel
-//       .from(params.readPaths)
-//       .map { row -> [ row[0], [file(row[1][0])]] }
-//       .ifEmpty { exit 1, "params.readPaths was empty - no input files supplied" }
-//       .into { rawReadsFastqc;rawReadsBWA;rawReadsBt2;rawReadsSTAR }
-//   }
-//   else {
-//     Channel
-//       .from(params.readPaths)
-//       .map { row -> [ row[0], [file(row[1][0]), file(row[1][1])]] }
-//       .ifEmpty { exit 1, "params.readPaths was empty - no input files supplied" }
-//       .into { rawReadsFastqc;rawReadsBWA;rawReadsBt2;rawReadsSTAR }
-//   }
-// }
-// else {
-//   Channel
-//     .fromFilePairs( params.reads, size: params.singleEnd ? 1 : 2 )
-//     .ifEmpty { exit 1, "Cannot find any reads matching: ${params.reads}\nNB: Path needs to be enclosed in quotes!\nNB: Path requires at least one * wildcard!\nIf this is single-end data, please specify --singleEnd on the command line." }
-//     .into { rawReadsFastqc;rawReadsBWA;rawReadsBt2;rawReadsSTAR }
-// }
+else if(params.readPaths){
+  if(params.singleEnd){
+    Channel
+      .from(params.readPaths)
+      .map { row -> [ row[0], [file(row[1][0])]] }
+      .ifEmpty { exit 1, "params.readPaths was empty - no input files supplied" }
+      .into { rawReadsFastqc;rawReadsBWA;rawReadsBt2;rawReadsSTAR }
+  }
+  else {
+    Channel
+      .from(params.readPaths)
+      .map { row -> [ row[0], [file(row[1][0]), file(row[1][1])]] }
+      .ifEmpty { exit 1, "params.readPaths was empty - no input files supplied" }
+      .into { rawReadsFastqc;rawReadsBWA;rawReadsBt2;rawReadsSTAR }
+  }
+}
+else {
+  Channel
+    .fromFilePairs( params.reads, size: params.singleEnd ? 1 : 2 )
+    .ifEmpty { exit 1, "Cannot find any reads matching: ${params.reads}\nNB: Path needs to be enclosed in quotes!\nNB: Path requires at least one * wildcard!\nIf this is single-end data, please specify --singleEnd on the command line." }
+    .into { rawReadsFastqc;rawReadsBWA;rawReadsBt2;rawReadsSTAR }
+}
 
 /*
  * FastQC
@@ -902,10 +896,6 @@ if (!params.skipDeepTools){
  * Peak calling index build
  */
 
-chFilteredBamsMacs1
-  .combine(chFilteredBamsMacs2)
-  .set { chFilteredBamsMacs1 }
-
 if (!params.noInput){
   chFilteredBamsMacs1
   .combine(chFilteredBamsMacs2)
@@ -920,7 +910,7 @@ if (!params.noInput){
             chGroupBamMacsBroad;
             chGroupBamMacsVeryBroad;
         }
-else{
+} else {
   chDesignControl
     .combine(chFilteredBamsMacs1)
     .filter { it[0] == it[5] }
