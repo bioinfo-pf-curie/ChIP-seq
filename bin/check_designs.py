@@ -28,8 +28,6 @@ def argsParse():
 
 
 def check_designs(inputDesign, inputReads, singleEnd, baseDir):
-    # dict_design_keys = ['SAMPLEID', 'CONTROLID', 'SAMPLENAME', 'REPLICATE', 'PEAKTYPE']
-
     dict_design = {
         'SAMPLEID': [],
         'CONTROLID': [],
@@ -38,14 +36,12 @@ def check_designs(inputDesign, inputReads, singleEnd, baseDir):
         'PEAKTYPE': []
     }
     if (singleEnd):
-        # dict_reads_keys = ['SAMPLEID', 'SAMPLENAME', 'FASTQR1']
         dict_reads = {
             'SAMPLEID': [],
             'SAMPLENAME': [],
             'FASTQR1': [],
         }
     else:
-        # dict_reads_keys = ['SAMPLEID', 'SAMPLENAME', 'FASTQR1', 'FASTQR2']
         dict_reads = {
             'SAMPLEID': [],
             'SAMPLENAME': [],

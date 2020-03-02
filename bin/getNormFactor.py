@@ -36,7 +36,7 @@ def normFactors(str_inputFlagstats, outputCsv):
     for index in range(len(inputFlagstats)):
         dictNormFactors['sampleID'].append(os.path.basename(
                                                 inputFlagstats[index][1])
-                                                .rsplit('_',1)[0])
+                                                .rsplit('_',1)[0][:-6])
         with open(inputFlagstats[index][1], 'r') as flagfile:
             nbReads = flagfile.readline().rsplit(' + ',2)[0]
             dictNormFactors['nbReads'].append(int(nbReads))
