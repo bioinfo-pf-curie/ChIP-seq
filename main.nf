@@ -50,6 +50,11 @@ def helpMessage() {
   Options:
   --singleEnd                      Specifies that the input is single end reads
 
+  SpikeIn analysis
+  --spike                         Indicates if the experiment includes a spike-in normalization.
+                                  Default : false. Available : 'spike' to use metagenome with reference genome
+                                                               '[spike genome]' to use a specific second genome
+
   References                      If not specified in the configuration file or you wish to overwrite any of the references given by the --genome field
   --fasta                          Path to Fasta reference
   Indexes                         Path to the indexes for aligners
@@ -83,6 +88,9 @@ if (params.help){
 
 // TODO - Add any reference files that are needed - see igenome.conf
 // Configurable reference genomes
+if (params.spike == 'spike'){
+	params.genome += '_spike'
+}
 params.fasta = params.genome ? params.genomes[ params.genome ].fasta ?: false : false
 if ( params.fasta ){
   Channel
@@ -96,7 +104,18 @@ else{
   exit 1, "Fasta file not found: ${params.fasta}"
 }
 
-if (params.spike){
+if (params.spike == 'spike'){
+  params.spikeFasta = params.genome ? params.genomes[ params.genome ].fastaSpike ?: false : false
+  if ( params.spikeFasta ){
+    Channel
+      .fromPath(params.spikeFasta, checkIfExists: true)
+      .into{chSpikeFaBwa;
+            chSpikeFaBt2;
+            chSpikeFaStar}
+  } else {
+    exit 1, "Spike-in fasta file not found: ${params.spikeFasta}"
+  }
+} else if (params.spike){
   params.spikeFasta = params.spike ? params.genomes[ params.spike ].fasta ?: false : false
   if ( params.spikeFasta ){
     Channel
@@ -104,8 +123,7 @@ if (params.spike){
       .into{chSpikeFaBwa;
             chSpikeFaBt2;
             chSpikeFaStar}
-  }
-  else{
+  } else {
     exit 1, "Spike-in fasta file not found: ${params.spikeFasta}"
   }
 }
@@ -123,7 +141,19 @@ if (params.aligner == "bwa-mem"){
     exit 1, "BWA index file not found: ${params.bwaIndex}"
   }
 
-  if (params.spike){
+  if (params.spike == 'spike'){
+    params.spikeBwaIndex = params.genome ? params.genomes[ params.genome ].bwaIndexSpike ?: false : false
+    if (params.spikeBwaIndex){
+      lastPath = params.spikeFasta.lastIndexOf(File.separator)
+      bwaDir =  params.spikeBwaIndex.substring(0,lastPath+1)
+      spikeBwaBase = params.spikeBwaIndex.substring(lastPath+1)
+      Channel
+        .fromPath(bwaDir, checkIfExists: true)
+        .set { chSpikeBwaIndex }
+    } else {
+      exit 1, "Spike BWA index file not found: ${params.spikeBwaIndex}"
+    }
+  } else if (params.spike){
     params.spikeBwaIndex = params.spike ? params.genomes[ params.spike ].bwaIndex ?: false : false
     if (params.spikeBwaIndex){
       lastPath = params.spikeFasta.lastIndexOf(File.separator)
@@ -151,8 +181,20 @@ if (params.aligner == "bowtie2"){
     exit 1, "Bowtie2 index file not found: ${params.bt2Index}"
   }
 
-  if (params.spike){
-    params.spikeBt2Index = params.spike ? params.genomes[ params.spike ].bowtie2Index ?: false : false
+  if (params.spike == 'spike'){
+    params.spikeBt2Index = params.genome ? params.genomes[ params.genome ].bowtie2IndexSpike ?: false : false
+    if (params.spikeBt2Index){
+      lastPath = params.spikeFasta.lastIndexOf(File.separator)
+      bt2Dir =  params.spikeBt2Index.substring(0,lastPath+1)
+      spikeBt2Base = params.spikeBt2Index.substring(lastPath+1)
+      Channel
+        .fromPath(bt2Dir, checkIfExists: true)
+        .set { chSpikeBt2Index }
+    } else {
+      exit 1, "Spike bowtie2 index file not found: ${params.spikeBt2Index}"
+    }
+  } else if (params.spike){
+        params.spikeBt2Index = params.spike ? params.genomes[ params.spike ].bowtie2Index ?: false : false
     if (params.spikeBt2Index){
       lastPath = params.spikeFasta.lastIndexOf(File.separator)
       bt2Dir =  params.spikeBt2Index.substring(0,lastPath+1)
@@ -179,7 +221,19 @@ if (params.aligner == "star"){
     exit 1, "STAR index file not found: ${params.starIndex}"
   }
 
-  if (params.spike){
+  if (params.spike == 'spike'){
+    params.spikeStarIndex = params.genome ? params.genomes[ params.genome ].starIndexSpike ?: false : false
+    if (params.spikeStarIndex){
+      lastPath = params.spike.lastIndexOf(File.separator)
+      starDir =  params.spikeStarIndex.substring(0,lastPath+1)
+      spikeStarBase = params.spikeStarIndex.substring(lastPath+1)
+      Channel
+        .fromPath(starDir, checkIfExists: true)
+        .set { chSpikeStarIndex }
+    } else {
+      exit 1, "Spike STAR index file not found: ${params.spikeStarIndex}"
+    }
+  } else if (params.spike){
     params.spikeStarIndex = params.spike ? params.genomes[ params.spike ].starIndex ?: false : false
     if (params.spikeStarIndex){
       lastPath = params.spike.lastIndexOf(File.separator)
@@ -206,16 +260,23 @@ else {
 }
 
 params.geneBed = params.genome ? params.genomes[ params.genome ].bed12 ?: false : false
-if (params.geneBed)  {
+if (params.geneBed) {
   Channel
     .fromPath(params.geneBed, checkIfExists: true)
     .into{chGeneBed;
           chGeneBedDeeptools}
 }
 
-if (params.spike){
+if (params.spike == 'spike'){
+  params.spikeGeneBed = params.genome ? params.genomes[ params.genome ].bed12Spike ?: false : false
+  if (params.spikeGeneBed) {
+    Channel
+      .fromPath(params.spikeGeneBed, checkIfExists: true)
+      .set{chSpikeGeneBed}
+  }
+} else if (params.spike) {
   params.spikeGeneBed = params.spike ? params.genomes[ params.spike ].bed12 ?: false : false
-  if (params.spikeGeneBed)  {
+  if (params.spikeGeneBed) {
     Channel
       .fromPath(params.spikeGeneBed, checkIfExists: true)
       .set{chSpikeGeneBed}
@@ -334,8 +395,7 @@ if (params.design){
     .splitCsv(header:false, sep:',')
     .map { row -> [ row[0], row[1], row[2], row[3], row[4] ] }
     .set { chDesignControl }
-}
-else{
+} else {
   Channel
     .from(params.design)
     .set {chDesignCheck}
@@ -731,7 +791,7 @@ if (!params.skipFiltering){
 if(!params.singleEnd){
   process mergeBamRemoveOrphan {
     tag "$prefix"
-    publishDir path: "${params.outdir}/filteredBams/mergedLibrary", mode: 'copy',
+    publishDir path: "${params.outdir}/filtering/filteredBams/mergedLibrary", mode: 'copy',
       saveAs: { filename ->
               if (filename.endsWith(".flagstat")) "samtools_stats/$filename"
               else if (filename.endsWith(".idxstats")) "samtools_stats/$filename"
@@ -779,7 +839,7 @@ if (params.spike){
     .set{chFilteredFlagstatSpikes}
   
   process getNormalizationFactor{
-    publishDir "${params.outdir}/spike"
+    publishDir "${params.outdir}/alignment"
 
     input:
     val spikeFlagstats from chFilteredFlagstatSpikes.toList()
@@ -802,43 +862,51 @@ if (params.spike){
     .filter{it[0][-6..-1] != '_spike'}
     .combine(chSpikeNormFactors)
     .filter{it[0] == it[2]}
-    .map { it -> it[0,1,4]}
+    .map { it -> it[0,1]}
     .set{chFilteredBamsOrphan}
 
 
-  process normalizeSamples{
-    tag "${prefix}"
-    publishDir path: "${params.outdir}/spike/spikedBams", mode: 'copy',
-          saveAs: {filename ->
-              if (!filename.endsWith(".bam") && (!filename.endsWith(".bam.bai"))) "samtools_stats/$filename"
-              else if (filename.endsWith("_spiked.bam") || (filename.endsWith("_spiked.bam.bai"))) filename
-              else null
-            }
+  // process normalizeSamples{
+  //   tag "${prefix}"
+  //   publishDir path: "${params.outdir}/filtering/spikedBams", mode: 'copy',
+  //         saveAs: {filename ->
+  //             if (!filename.endsWith(".bam") && (!filename.endsWith(".bam.bai"))) "samtools_stats/$filename"
+  //             else if (filename.endsWith("_spiked.bam") || (filename.endsWith("_spiked.bam.bai"))) filename
+  //             else null
+  //           }
     
-    input:
-    set val(prefix), file(filteredBams), val(normFactors) from chFilteredBamsOrphan
+  //   input:
+  //   set val(prefix), file(filteredBams), val(normFactors) from chFilteredBamsOrphan
 
-    output:
-    set val(prefix), file("*_spiked.{bam,bam.bai}") into chFilteredBamsFinal
-    set val(prefix), file("*.flagstat") into chFilteredFlagstatFinal
-    file "*.{idxstats,stats}" into chFilteredStatsFinal
+  //   output:
+  //   set val(prefix), file("*_spiked.{bam,bam.bai}") into chFilteredBamsFinal
+  //   set val(prefix), file("*.flagstat") into chFilteredFlagstatFinal
+  //   file "*.{idxstats,stats}" into chFilteredStatsFinal
 
-    script:
-    """
-    samtools view -bs 10.${normFactors} ${filteredBams[0]} > ${prefix}_spiked.bam
-    samtools index ${prefix}_spiked.bam
-    samtools flagstat ${prefix}_spiked.bam > ${prefix}_spiked.bam.flagstat
-    samtools idxstats ${prefix}_spiked.bam > ${prefix}_spiked.bam.idxstats
-    samtools stats ${prefix}_spiked.bam > ${prefix}_spiked.bam.stats
-    """
-  }
-} else {
+  //   script:
+  //   """
+  //   samtools sort -@ $task.cpus -o ${prefix}_sorted.bam -T $prefix ${prefix}.bam
+  //   samtools view -bs 10.${normFactors} ${filteredBams[0]} > ${prefix}_spiked.bam
+  //   samtools index ${prefix}_spiked.bam
+  //   samtools flagstat ${prefix}_spiked.bam > ${prefix}_spiked.bam.flagstat
+  //   samtools idxstats ${prefix}_spiked.bam > ${prefix}_spiked.bam.idxstats
+  //   samtools stats ${prefix}_spiked.bam > ${prefix}_spiked.bam.stats
+  //   """
+  // }
   chFilteredBamsOrphan
     .set{chFilteredBamsFinal}
   chFilteredFlagstatOrphan
     .set{chFilteredFlagstatFinal}
   chFilteredStatsOrphan
     .set{chFilteredStatsFinal}
+
+} else {
+chFilteredBamsOrphan
+  .set{chFilteredBamsFinal}
+chFilteredFlagstatOrphan
+  .set{chFilteredFlagstatFinal}
+chFilteredStatsOrphan
+  .set{chFilteredStatsFinal}
 }
 
 // Preparing all filtered aligned reads for further analysis
@@ -1057,12 +1125,6 @@ if (!params.skipPeakcalling && !params.noInput && params.design){
     script:
     format = params.singleEnd ? "BAM" : "BAMPE"
     peaktypeMacs = "narrowPeak"
-    if(!params.noInput){
-      control = "-c ${controlBam[0]}"
-    }
-    else{
-      control = ""
-    }
     """
     macs2 callpeak \\
       -t ${sampleBam[0]} \\
