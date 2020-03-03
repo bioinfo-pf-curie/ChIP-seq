@@ -53,9 +53,9 @@ def helpMessage() {
   References                      If not specified in the configuration file or you wish to overwrite any of the references given by the --genome field
   --fasta                          Path to Fasta reference
   Indexes                         Path to the indexes for aligners
-  --star                           Index for STAR aligner
-  --bwa                            Index for BWA MEM aligner
-  --bowtie2                        Index for Bowtie2 aligner
+  --starIndex                           Index for STAR aligner
+  --bwaIndex                            Index for BWA MEM aligner
+  --bowtie2Index                        Index for Bowtie2 aligner
   Annotation
   --bed                            BED annotation file. Used with samtools to filter the reads, and in Deeptools ComputeMatrix function
   --gtf                            GTF annotation file. Used in HOMER peak annotation
