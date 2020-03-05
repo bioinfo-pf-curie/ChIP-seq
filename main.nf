@@ -104,18 +104,7 @@ else{
   exit 1, "Fasta file not found: ${params.fasta}"
 }
 
-if (params.spike == 'spike'){
-  params.spikeFasta = params.genome ? params.genomes[ params.genome ].fastaSpike ?: false : false
-  if ( params.spikeFasta ){
-    Channel
-      .fromPath(params.spikeFasta, checkIfExists: true)
-      .into{chSpikeFaBwa;
-            chSpikeFaBt2;
-            chSpikeFaStar}
-  } else {
-    exit 1, "Spike-in fasta file not found: ${params.spikeFasta}"
-  }
-} else if (params.spike){
+if (params.spike && params.spike != 'spike'){
   params.spikeFasta = params.spike ? params.genomes[ params.spike ].fasta ?: false : false
   if ( params.spikeFasta ){
     Channel
@@ -141,19 +130,7 @@ if (params.aligner == "bwa-mem"){
     exit 1, "BWA index file not found: ${params.bwaIndex}"
   }
 
-  if (params.spike == 'spike'){
-    params.spikeBwaIndex = params.genome ? params.genomes[ params.genome ].bwaIndexSpike ?: false : false
-    if (params.spikeBwaIndex){
-      lastPath = params.spikeFasta.lastIndexOf(File.separator)
-      bwaDir =  params.spikeBwaIndex.substring(0,lastPath+1)
-      spikeBwaBase = params.spikeBwaIndex.substring(lastPath+1)
-      Channel
-        .fromPath(bwaDir, checkIfExists: true)
-        .set { chSpikeBwaIndex }
-    } else {
-      exit 1, "Spike BWA index file not found: ${params.spikeBwaIndex}"
-    }
-  } else if (params.spike){
+  if (params.spike && params.spike != 'spike'){
     params.spikeBwaIndex = params.spike ? params.genomes[ params.spike ].bwaIndex ?: false : false
     if (params.spikeBwaIndex){
       lastPath = params.spikeFasta.lastIndexOf(File.separator)
@@ -181,19 +158,7 @@ if (params.aligner == "bowtie2"){
     exit 1, "Bowtie2 index file not found: ${params.bt2Index}"
   }
 
-  if (params.spike == 'spike'){
-    params.spikeBt2Index = params.genome ? params.genomes[ params.genome ].bowtie2IndexSpike ?: false : false
-    if (params.spikeBt2Index){
-      lastPath = params.spikeFasta.lastIndexOf(File.separator)
-      bt2Dir =  params.spikeBt2Index.substring(0,lastPath+1)
-      spikeBt2Base = params.spikeBt2Index.substring(lastPath+1)
-      Channel
-        .fromPath(bt2Dir, checkIfExists: true)
-        .set { chSpikeBt2Index }
-    } else {
-      exit 1, "Spike bowtie2 index file not found: ${params.spikeBt2Index}"
-    }
-  } else if (params.spike){
+  if (params.spike && params.spike != 'spike'){
         params.spikeBt2Index = params.spike ? params.genomes[ params.spike ].bowtie2Index ?: false : false
     if (params.spikeBt2Index){
       lastPath = params.spikeFasta.lastIndexOf(File.separator)
@@ -221,19 +186,7 @@ if (params.aligner == "star"){
     exit 1, "STAR index file not found: ${params.starIndex}"
   }
 
-  if (params.spike == 'spike'){
-    params.spikeStarIndex = params.genome ? params.genomes[ params.genome ].starIndexSpike ?: false : false
-    if (params.spikeStarIndex){
-      lastPath = params.spike.lastIndexOf(File.separator)
-      starDir =  params.spikeStarIndex.substring(0,lastPath+1)
-      spikeStarBase = params.spikeStarIndex.substring(lastPath+1)
-      Channel
-        .fromPath(starDir, checkIfExists: true)
-        .set { chSpikeStarIndex }
-    } else {
-      exit 1, "Spike STAR index file not found: ${params.spikeStarIndex}"
-    }
-  } else if (params.spike){
+  if (params.spike && params.spike != 'spike'){
     params.spikeStarIndex = params.spike ? params.genomes[ params.spike ].starIndex ?: false : false
     if (params.spikeStarIndex){
       lastPath = params.spike.lastIndexOf(File.separator)
@@ -267,14 +220,7 @@ if (params.geneBed) {
           chGeneBedDeeptools}
 }
 
-if (params.spike == 'spike'){
-  params.spikeGeneBed = params.genome ? params.genomes[ params.genome ].bed12Spike ?: false : false
-  if (params.spikeGeneBed) {
-    Channel
-      .fromPath(params.spikeGeneBed, checkIfExists: true)
-      .set{chSpikeGeneBed}
-  }
-} else if (params.spike) {
+if (params.spike && params.spike != 'spike'){
   params.spikeGeneBed = params.spike ? params.genomes[ params.spike ].bed12 ?: false : false
   if (params.spikeGeneBed) {
     Channel
@@ -501,7 +447,7 @@ if (!params.skipAlignment && params.aligner == "bwa-mem"){
       file bwaIndex from chBwaIndex.collect()
 
     output:
-      set val(prefix), file("*.bam") into chAlignedReads
+      set val(prefix), file("*.bam") into chAlignReads
 
     script:
       """
@@ -522,7 +468,7 @@ if (!params.skipAlignment && params.aligner == "bowtie2"){
       file bt2Index from chBt2Index.collect()
 
     output:
-      set val(prefix), file("*.bam") into chAlignedReads
+      set val(prefix), file("*.bam") into chAlignReads
 
     script:
     if (params.singleEnd){
@@ -549,7 +495,7 @@ if (!params.skipAlignment && params.aligner == "star"){
       file starIndex from chStarIndex.collect()
 
     output:
-      set val(prefix), file('*.bam') into chAlignedReads
+      set val(prefix), file('*.bam') into chAlignReads
 
     script:
     """
@@ -562,7 +508,7 @@ if (!params.skipAlignment && params.aligner == "star"){
 /*
  * Alignment on spikein genome
  */
-if (params.spike){
+if (params.spike && params.spike != 'spike'){
   // BWA-MEM
   if (!params.skipAlignment && params.aligner == "bwa-mem"){
     process spikeBWA{
@@ -637,7 +583,30 @@ if (params.spike){
 }
 
 // Merging, if necessary reference aligned reads and spike aligned reads
-if(params.spike){
+if(params.spike && params.spike != 'spike'){
+  chAlignReads
+    .mix(chSpikeAlignedReads)
+    .set{chAlignedReads}
+}
+else if(params.spike && params.spike == 'spike'){
+  process sepMetagenome{
+    tag "${prefix}"
+    publishDir "${params.outdir}/alignment/sepMetagenome"
+
+    input:
+      set val(prefix), file(unsortedBam) from chAlignReads
+    
+    output:
+      set val(prefix), file('*_ref.bam') into chAlignedReads
+      set val(prefix), file('*_spike.bam') into chSpikeAlignedReads
+      file ('*.txt') into chLogSep
+
+    script:
+    """
+    sepMetagenome.py -I $unsortedBam -OR ${prefix}_ref.bam -OS ${prefix}_spike.bam -SE ${params.singleEnd} 
+    """
+  }
+
   chAlignedReads
     .mix(chSpikeAlignedReads)
     .set{chAlignedReads}
@@ -649,7 +618,7 @@ if(params.spike){
 
 if (!params.skipAlignment){
   process bamSort{
-    tag "${prefix}"
+    tag "${name}"
     publishDir path: "${params.outdir}/filtering/sortedBams", mode: 'copy',
           saveAs: {filename ->
                 if (!filename.endsWith(".bam") && (!filename.endsWith(".bam.bai"))) "samtools_stats/$filename"
@@ -661,16 +630,22 @@ if (!params.skipAlignment){
       set val(prefix), file(unsortedBam) from chAlignedReads
 
     output:
-      set val(prefix), file('*_sorted.{bam,bam.bai}') into chSortBam
+      set val(name), file('*.{bam,bam.bai}') into chSortBam
       file "*.{flagstat,idxstats,stats}" into chSortBamStats
 
     script:
+    String unsortedBamName = unsortedBam.toString()
+    if (unsortedBamName.contains('spike')){
+      name = "${prefix}_spike"
+    } else {
+      name = "${prefix}"
+    }
     """
-    samtools sort $unsortedBam -T ${prefix} -o ${prefix}_sorted.bam
-    samtools index ${prefix}_sorted.bam
-    samtools flagstat ${prefix}_sorted.bam > ${prefix}_sorted.bam.flagstat
-    samtools idxstats ${prefix}_sorted.bam > ${prefix}_sorted.bam.idxstats
-    samtools stats ${prefix}_sorted.bam > ${prefix}_sorted.bam.stats
+    samtools sort $unsortedBam -T ${name} -o ${name}_sorted.bam
+    samtools index ${name}_sorted.bam
+    samtools flagstat ${name}_sorted.bam > ${name}_sorted.flagstat
+    samtools idxstats ${name}_sorted.bam > ${name}_sorted.idxstats
+    samtools stats ${name}_sorted.bam > ${name}_sorted.stats
     """
   }
 }
@@ -693,8 +668,8 @@ process markDuplicates{
     set val(prefix), file(sortedBams) from chSortBam
 
   output:
-    set val(prefix), file("${prefix}_marked.{bam,bam.bai}") into chMarkedBam, chMarkedPreseq
-    file "${prefix}_marked.{flagstat,idxstats,stats}" into chMarkedBamSamstats
+    set val(prefix), file("*.{bam,bam.bai}") into chMarkedBam, chMarkedPreseq
+    file "*.{flagstat,idxstats,stats}" into chMarkedBamSamstats
     file "*.txt" into chMarkedBamPicstats
 
   script:
@@ -717,6 +692,10 @@ process markDuplicates{
 
 // Preseq complexity analysis before filtering
 if(!params.skipPreseq) {
+  chMarkedPreseq
+    .filter{ it[0][-6..-1] != '_spike'}
+    .set{chMarkedPreseq}
+
   process preseqAnalysis{
     tag "${prefix}"
     publishDir "${params.outdir}/preseq"
@@ -757,9 +736,9 @@ if (!params.skipFiltering){
     file bamtoolsFilterConfig from chBamtoolsFilterConfig.collect()
 
     output:
-    set val(prefix), file("*_filtered.{bam,bam.bai}") into chFilteredBams
-    set val(prefix), file("*_filtered.bam.flagstat") into chFilteredFlagstat
-    file "*_filtered.bam.{idxstats,stats}" into chFilteredStats
+    set val(prefix), file("*.{bam,bam.bai}") into chFilteredBams
+    set val(prefix), file("*.flagstat") into chFilteredFlagstat
+    file "*.{idxstats,stats}" into chFilteredStats
 
     script:
     filterParams = params.singleEnd ? "-F 0x004" : "-F 0x004 -F 0x0008 -f 0x001"
@@ -779,9 +758,9 @@ if (!params.skipFiltering){
         -out ${prefix}_filtered.bam \\
         -script $bamtoolsFilterConfig
     samtools index ${prefix}_filtered.bam
-    samtools flagstat ${prefix}_filtered.bam > ${prefix}_filtered.bam.flagstat
-    samtools idxstats ${prefix}_filtered.bam > ${prefix}_filtered.bam.idxstats
-    samtools stats ${prefix}_filtered.bam > ${prefix}_filtered.bam.stats
+    samtools flagstat ${prefix}_filtered.bam > ${prefix}_filtered.flagstat
+    samtools idxstats ${prefix}_filtered.bam > ${prefix}_filtered.idxstats
+    samtools stats ${prefix}_filtered.bam > ${prefix}_filtered.stats
     $nameSortBam
     """
   }
@@ -814,9 +793,9 @@ if(!params.singleEnd){
     bampe_rm_orphan.py ${bam[0]} ${prefix}.bam --only_fr_pairs
     samtools sort -@ $task.cpus -o ${prefix}_sorted.bam -T $prefix ${prefix}.bam
     samtools index ${prefix}_sorted.bam
-    samtools flagstat ${prefix}_sorted.bam > ${prefix}_sorted.bam.flagstat
-    samtools idxstats ${prefix}_sorted.bam > ${prefix}_sorted.bam.idxstats
-    samtools stats ${prefix}_sorted.bam > ${prefix}_sorted.bam.stats
+    samtools flagstat ${prefix}_sorted.bam > ${prefix}_sorted.flagstat
+    samtools idxstats ${prefix}_sorted.bam > ${prefix}_sorted.idxstats
+    samtools stats ${prefix}_sorted.bam > ${prefix}_sorted.stats
     """
     }
 } else {
@@ -858,14 +837,6 @@ if (params.spike){
     .map { row -> [ row.sampleID, row.nbReads, row.normFactor ]}
     .set { chSpikeNormFactors }
 
-  chFilteredBamsOrphan
-    .filter{it[0][-6..-1] != '_spike'}
-    .combine(chSpikeNormFactors)
-    .filter{it[0] == it[2]}
-    .map { it -> it[0,1]}
-    .set{chFilteredBamsOrphan}
-
-
   // process normalizeSamples{
   //   tag "${prefix}"
   //   publishDir path: "${params.outdir}/filtering/spikedBams", mode: 'copy',
@@ -896,21 +867,24 @@ if (params.spike){
   chFilteredBamsOrphan
     .set{chFilteredBamsFinal}
   chFilteredFlagstatOrphan
-    .set{chFilteredFlagstatFinal}
+    .into{chFilteredFlagstatFinal;
+          chFilteredFlagstatMqc}
   chFilteredStatsOrphan
     .set{chFilteredStatsFinal}
 
 } else {
 chFilteredBamsOrphan
-  .set{chFilteredBamsFinal}
+  .set{ chFilteredBamsFinal }
 chFilteredFlagstatOrphan
-  .set{chFilteredFlagstatFinal}
+  .into{chFilteredFlagstatFinal;
+        chFilteredFlagstatMqc}
 chFilteredStatsOrphan
   .set{chFilteredStatsFinal}
 }
 
 // Preparing all filtered aligned reads for further analysis
 chFilteredBamsFinal
+  .filter( ~/^((?!_spike).)*$/)
   .into { chFilteredBamsMetrics;
       chFilteredBamsMacs1;
       chFilteredBamsMacs2;
@@ -920,8 +894,8 @@ chFilteredBamsFinal
       chFilteredBamsCounts }
 
 chFilteredFlagstatFinal
-  .into { chFilteredFlagstatMacs;
-      chFilteredFlagstatMqc }
+  .filter( ~/^((?!_spike).)*$/)
+  .set { chFilteredFlagstatMacs }
 
 chFilteredStatsFinal
   .set { chFilteredStatsMqc }
@@ -963,22 +937,47 @@ if (!params.skipPpqt){
 /*
  * BigWig generation
  */
+if (params.spike){
+  chFilteredBamsDeeptoolsSingle
+    .filter{it[0][-6..-1] != '_spike'}
+    .combine(chSpikeNormFactors)
+    .filter{it[0] == it[2]}
+    .map { it -> it[0,1,4]}
+    .set{chFilteredBamsDeeptoolsSingle}
 
-process bigWigGeneration{
-  tag "${prefix}"
-  cache 'deep'
-  publishDir "${params.outdir}/bigWig", mode: "copy"
+  process bigWigGenerationScaled{
+    tag "${prefix}"
+    cache 'deep'
+    publishDir "${params.outdir}/bigWig", mode: "copy"
 
-  input:
-  set val(prefix), file(filteredBams) from chFilteredBamsDeeptoolsSingle
+    input:
+    set val(prefix), file(filteredBams), val(normFactor) from chFilteredBamsDeeptoolsSingle
 
-  output:
-  set val(prefix), file('*_bw.bigwig') into chBigWig
+    output:
+    set val(prefix), file('*_bw.bigwig') into chBigWig
 
-  script:
-  """
-  bamCoverage -b ${filteredBams[0]} -o ${prefix}_bw.bigwig -p ${task.cpus}
-  """
+    script:
+    """
+    bamCoverage -b ${filteredBams[0]} -o ${prefix}_bw.bigwig -p ${task.cpus} --scaleFactor ${normFactor}
+    """
+  }
+} else {
+  process bigWigGeneration{
+    tag "${prefix}"
+    cache 'deep'
+    publishDir "${params.outdir}/bigWig", mode: "copy"
+
+    input:
+    set val(prefix), file(filteredBams) from chFilteredBamsDeeptoolsSingle
+
+    output:
+    set val(prefix), file('*_bw.bigwig') into chBigWig
+
+    script:
+    """
+    bamCoverage -b ${filteredBams[0]} -o ${prefix}_bw.bigwig -p ${task.cpus}
+    """
+  }
 }
 
 /*
@@ -1405,13 +1404,15 @@ if (!params.skipIdr && params.replicates  && params.design){
  */
 
 // HOMER
-if (params.design){
+
+
+if (!params.skipPeakanno && !params.noInput && params.design){
+  if (params.design){
   chMacsHomerSharp
     .mix(chMacsHomerBroad, chMacsHomerVbroad)
     .set{chMacs_homer}
-}
+  }
 
-if (!params.skipPeakanno && !params.noInput && params.design){
   process peakAnnoHomer{
     tag "${sampleID} - ${controlID}"
     publishDir path: "${params.outdir}/peak_annotation", mode: 'copy'
@@ -1461,13 +1462,15 @@ if (!params.skipPeakanno && !params.noInput && params.design){
  * Peak calling & annotation QC
  */
 
-if (params.design){
-  chMacsQcSharp
-    .mix(chMacsQcBroad)
-    .set{chMacsQc}
-}
+
 
 if (!params.skipPeakQC && !params.noInput && params.design){
+  if (params.design){
+    chMacsQcSharp
+      .mix(chMacsQcBroad)
+      .set{chMacsQc}
+  }
+
   process peakQC{
     publishDir "${params.outdir}/peak_QC/", mode: 'copy'
 
@@ -1607,24 +1610,24 @@ process multiqc {
     file ('/filtering/filteredBams/samtools_stats/*') from chFilteredFlagstatMqc.collect().ifEmpty([])
     file ('/filtering/filteredBams/samtools_stats/*') from chFilteredStatsMqc.collect().ifEmpty([])
 
-    file ('preseq/*') from chPreseqStats.collect().ifEmpty([])
+    // file ('preseq/*') from chPreseqStats.collect().ifEmpty([])
 
-    file ('ppqt/*.spp.out') from chPpqtOutMqc.collect().ifEmpty([])
-    file ('ppqt/*_mqc.tsv') from chPpqtCsvMqc.collect().ifEmpty([])
+    // file ('ppqt/*.spp.out') from chPpqtOutMqc.collect().ifEmpty([])
+    // file ('ppqt/*_mqc.tsv') from chPpqtCsvMqc.collect().ifEmpty([])
 
-    file ('deepTools/singleBam/*') from chDeeptoolsSingle.collect().ifEmpty([])
-    file ('deepTools/singleBam/*_corrected.tab') from chDeeptoolsSingleMqc.collect().ifEmpty([])
-    file ("deepTools/multipleBams/bams_correlation.tab") from chDeeptoolsCorrelMqc.collect().ifEmpty([])
-    file ("deepTools/multipleBams/bams_coverage_raw.txt") from chDeeptoolsCovMqc.collect().ifEmpty([])
-    file ("deepTools/multipleBams/bams_fingerprint_*") from chDeeptoolsFingerprintMqc.collect().ifEmpty([])
+    // file ('deepTools/singleBam/*') from chDeeptoolsSingle.collect().ifEmpty([])
+    // file ('deepTools/singleBam/*_corrected.tab') from chDeeptoolsSingleMqc.collect().ifEmpty([])
+    // file ("deepTools/multipleBams/bams_correlation.tab") from chDeeptoolsCorrelMqc.collect().ifEmpty([])
+    // file ("deepTools/multipleBams/bams_coverage_raw.txt") from chDeeptoolsCovMqc.collect().ifEmpty([])
+    // file ("deepTools/multipleBams/bams_fingerprint_*") from chDeeptoolsFingerprintMqc.collect().ifEmpty([])
 
-    file ('peakCalling/sharp/*.xls') from chMacsOutputSharp.collect().ifEmpty([])
-    file ('peakCalling/broad/*.xls') from chMacsOutputBroad.collect().ifEmpty([])
-    file ('peakCalling/sharp/*') from chMacsCountsSharp.collect().ifEmpty([])
-    file ('peakCalling/broad/*') from chMacsCountsBroad.collect().ifEmpty([])
-    // file ('peakCalling/very_broad/*') from chMacsCountsVbroad.collect().ifEmpty([])
+    // file ('peakCalling/sharp/*.xls') from chMacsOutputSharp.collect().ifEmpty([])
+    // file ('peakCalling/broad/*.xls') from chMacsOutputBroad.collect().ifEmpty([])
+    // file ('peakCalling/sharp/*') from chMacsCountsSharp.collect().ifEmpty([])
+    // file ('peakCalling/broad/*') from chMacsCountsBroad.collect().ifEmpty([])
+    // // file ('peakCalling/very_broad/*') from chMacsCountsVbroad.collect().ifEmpty([])
 
-    file('peak_QC/*') from chPeakMqc.collect().ifEmpty([])
+    // file('peak_QC/*') from chPeakMqc.collect().ifEmpty([])
 
 
   output:
@@ -1641,7 +1644,7 @@ process multiqc {
 
   """
   mqc_header.py --name "Chip-seq" --version ${workflow.manifest.version} ${metadata_opts} > multiqc-config-header.yaml
-  multiqc . -f $rtitle $rfilename -c multiqc-config-header.yaml $modules_list -c $multiqcConfig
+  multiqc . -f $rtitle $rfilename -c multiqc-config-header.yaml $modules_list -c $multiqcConfig -s
   """
 }
 

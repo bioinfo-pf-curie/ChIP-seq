@@ -100,8 +100,12 @@ sp:
 
 module_order:
   - fastqc
-  - samtools
-  - picard
+  - samtools:
+    path_filters_exclude:
+      - '*_spike*'
+  - picard:
+    path_filters_exclude:
+      - '*_spike*'
   - preseq
   - deeptools
 
