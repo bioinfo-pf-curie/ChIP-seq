@@ -46,7 +46,7 @@ The pipeline can be run on any infrastructure from a list of input files or from
 See the conf/test.conf to set your test dataset.
 
 ```
-nextflow run main.nf -profile test,conda --genome 'hg19' --singleEnd --replicates
+nextflow run main.nf -profile test,conda --replicates
 
 ```
 If the analysis does not contain replicates, the --replicates option is not useful, but the test sample requires it.
@@ -82,16 +82,16 @@ Here are a few examples of how to set the profile option.
 ### Sample Plan
 
 A sample plan is a csv file (comma separated) that list all samples with their biological IDs.
-The sample plan is expected to have a header as described below, entirely uppercase :
+The sample plan is expected to be created as below :
 
-SAMPLEID | SAMPLENAME | FASTQR1 [Path to R1.fastq file] | FASTQR2 [Path to R2.fastq file]
+SAMPLE_ID | SAMPLE_NAME | FASTQ_R1 [Path to R1.fastq file] | FASTQ_R2 [For paired end, path to Read 2 fastq]
 
 ### Design control
 
 A design control is a csv file that list all experimental samples, their IDs, the associated input control, the replicate number and the expected peak type.
-The design control is expected to have a header as described below, entirely uppercase :
+The design control is expected to be created as below :
 
-SAMPLEID | CONTROLID | SAMPLENAME [Without '-ReplicateNumber'] | REPLICATE [Only the number] | PEAKTYPE
+SAMPLE_ID | CONTROL_ID | SAMPLE_NAME [Without '-ReplicateNumber'] | REPLICATE [Only the number] | PEAK_TYPE
 
 Both files will be checked by the pipeline and have to be rigorously defined in order to make the pipeline work.
 

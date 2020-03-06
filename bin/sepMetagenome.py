@@ -181,7 +181,7 @@ def sepMetagenome(inputBam, outputBamRef, outputBamSpike, singleEnd):
         'ambiguous': 0,
     }
 
-    comparison = 1
+    comparison = 2
     prev_alignments = []
 
     for alignment in samInput.fetch(until_eof = True):

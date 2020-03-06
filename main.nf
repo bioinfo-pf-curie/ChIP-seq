@@ -89,9 +89,12 @@ if (params.help){
 // TODO - Add any reference files that are needed - see igenome.conf
 // Configurable reference genomes
 if (params.spike == 'spike'){
-	params.genome += '_spike'
+	genomeRef = params.genome + '_spike'
 }
-params.fasta = params.genome ? params.genomes[ params.genome ].fasta ?: false : false
+else {
+	genomeRef = params.genome
+}
+params.fasta = genomeRef ? params.genomes[ genomeRef ].fasta ?: false : false
 if ( params.fasta ){
   Channel
     .fromPath(params.fasta, checkIfExists: true)
@@ -118,7 +121,7 @@ if (params.spike && params.spike != 'spike'){
 }
 
 if (params.aligner == "bwa-mem"){
-  params.bwaIndex = params.genome ? params.genomes[ params.genome ].bwaIndex ?: false : false
+  params.bwaIndex = genomeRef ? params.genomes[ genomeRef ].bwaIndex ?: false : false
   if (params.bwaIndex){
     lastPath = params.fasta.lastIndexOf(File.separator)
     bwaDir =  params.bwaIndex.substring(0,lastPath+1)
@@ -146,7 +149,7 @@ if (params.aligner == "bwa-mem"){
 }
 
 if (params.aligner == "bowtie2"){
-  params.bt2Index = params.genome ? params.genomes[ params.genome ].bowtie2Index ?: false : false
+  params.bt2Index = genomeRef ? params.genomes[ genomeRef ].bowtie2Index ?: false : false
   if (params.bt2Index){
     lastPath = params.fasta.lastIndexOf(File.separator)
     bt2Dir =  params.bt2Index.substring(0,lastPath+1)
@@ -174,7 +177,7 @@ if (params.aligner == "bowtie2"){
 }
 
 if (params.aligner == "star"){
-  params.starIndex = params.genome ? params.genomes[ params.genome ].starIndex ?: false : false
+  params.starIndex = genomeRef ? params.genomes[ genomeRef ].starIndex ?: false : false
   if (params.starIndex){
     lastPath = params.fasta.lastIndexOf(File.separator)
     starDir =  params.starIndex.substring(0,lastPath+1)
@@ -202,17 +205,17 @@ if (params.aligner == "star"){
 }
 
 // Other inputs
-params.gtf = params.genome ? params.genomes[ params.genome ].gtf ?: false : false
+params.gtf = genomeRef ? params.genomes[ genomeRef ].gtf ?: false : false
 if (params.gtf) {
   Channel
     .fromPath(params.gtf, checkIfExists: true)
-    .set{chGtfHomer}
+    .into{chGtfHomer; chGtfFeatCounts}
 }
 else {
   exit 1, "GTF annotation file not specified!"
 }
 
-params.geneBed = params.genome ? params.genomes[ params.genome ].bed12 ?: false : false
+params.geneBed = genomeRef ? params.genomes[ genomeRef ].bed12 ?: false : false
 if (params.geneBed) {
   Channel
     .fromPath(params.geneBed, checkIfExists: true)
@@ -229,8 +232,8 @@ if (params.spike && params.spike != 'spike'){
   }
 }
 
-params.macsGsize = params.genome ? params.genomes[ params.genome ].macsGsize ?: false : false
-params.blacklist = params.genome ? params.genomes[ params.genome ].blacklist ?: false : false
+params.macsGsize = genomeRef ? params.genomes[ genomeRef ].macsGsize ?: false : false
+params.blacklist = genomeRef ? params.genomes[ genomeRef ].blacklist ?: false : false
 
 //PPQT headers
 chPpqtCorHeader = file("$baseDir/assets/ppqt_cor_header.txt", checkIfExists: true)
@@ -784,7 +787,7 @@ if(!params.singleEnd){
     set val(prefix), file(bam) from chFilteredBams
 
     output:
-    set val(prefix), file("*_sorted.{bam,bam.bai}") into chFilteredBamsOrphan
+    set val(prefix), file("*_sorted.{bam,bam.bai}") into chFilteredBamsOrphan, chGroupBamNameFeatCounts
     set val(prefix), file("*.flagstat") into chFilteredFlagstatOrphan
     file "*.{idxstats,stats}" into chFilteredStatsOrphan
 
@@ -800,7 +803,8 @@ if(!params.singleEnd){
     }
 } else {
   chFilteredBams
-    .set{chFilteredBamsOrphan}
+    .into{chFilteredBamsOrphan;
+          chGroupBamNameFeatCounts}
   chFilteredFlagstat
     .set{chFilteredFlagstatOrphan}
   chFilteredStats
@@ -1066,6 +1070,7 @@ if (!params.noInput && params.design){
     .into { chGroupBamMacsSharp;
             chGroupBamMacsBroad;
             chGroupBamMacsVeryBroad;
+            chGroupBamFeatCounts
           }
 } else if (params.noInput && params.design) {
   chDesignControl
@@ -1076,6 +1081,7 @@ if (!params.noInput && params.design){
     .into { chGroupBamMacsSharp;
             chGroupBamMacsBroad;
             chGroupBamMacsVeryBroad;
+            chGroupBamFeatCounts
           }
 }
 
@@ -1218,7 +1224,7 @@ if (!params.skipPeakcalling && !params.noInput && params.design){
     """
     epic2 -t ${sampleBam[0]} \\
       -c ${controlBam[0]} \\
-      -gn ${params.genome} \\
+      -gn ${genomeRef} \\
       -kd -a \\
       -o ${sampleID}_peaks.$peaktypeEpic
     cat ${sampleID}_peaks.$peaktypeEpic | wc -l | awk -v OFS='\t' '{ print "${sampleID}", \$1 }' | cat $peakCountHeader - > ${sampleID}_peaks.count_mqc.tsv
@@ -1350,7 +1356,7 @@ if (!params.skipPeakcalling && !params.noInput && params.design){
 
     """
     epic2 -t ${sampleBam[0]} \\
-      -gn ${params.genome} \\
+      -gn ${genomeRef} \\
       -kd -a \\
       -o ${sampleID}_peaks.$peaktypeEpic
     cat ${sampleID}_peaks.$peaktypeEpic | wc -l | awk -v OFS='\t' '{ print "${sampleID}", \$1 }' | cat $peakCountHeader - > ${sampleID}_peaks.count_mqc.tsv
@@ -1528,6 +1534,36 @@ if (!params.skipPeakQC && !params.noInput && params.design){
   }
 }
 
+if (!params.skipFeatCounts){
+  chGroupBamFeatCounts
+    .map { it -> [ it[3], [ it[0], it[1], it[2] ] ] }
+    .join(chGroupBamNameFeatCounts)
+    .map { it -> [ it[1][0], it[1][1], it[1][2], it[2] ] }
+    .groupTuple()
+    .map { it -> [ it[0], it[3].flatten().sort() ] }
+    .set { chGroupBamFeatCounts }
+
+  process featureCounts{
+    tag "${sampleName}"
+    publishDir "${params.outdir}/featCounts/${sampleName}"
+
+    input:
+    set val(sampleName), file(bams) from chGroupBamFeatCounts
+    file gtf from chGtfFeatCounts
+
+    output:
+    file "*_featCounts.txt" into chFeatCounts
+    file "*_featCounts.txt.summary" into chFeatCountsMqc
+
+    script:
+    bamFiles = bams.findAll { it.toString().endsWith('.bam') }.sort()
+    peParams = params.single_end ? '' : "-p --donotsort"
+    """
+    featureCounts -T ${task.cpus} -a $gtf -o ${sampleName}_featCounts.txt $peParams ${bamFiles.join(' ')}
+    """
+  }
+}
+
 /*
  * MultiQC
  */
@@ -1610,24 +1646,26 @@ process multiqc {
     file ('/filtering/filteredBams/samtools_stats/*') from chFilteredFlagstatMqc.collect().ifEmpty([])
     file ('/filtering/filteredBams/samtools_stats/*') from chFilteredStatsMqc.collect().ifEmpty([])
 
-    // file ('preseq/*') from chPreseqStats.collect().ifEmpty([])
+    file ('preseq/*') from chPreseqStats.collect().ifEmpty([])
 
-    // file ('ppqt/*.spp.out') from chPpqtOutMqc.collect().ifEmpty([])
-    // file ('ppqt/*_mqc.tsv') from chPpqtCsvMqc.collect().ifEmpty([])
+    file ('ppqt/*.spp.out') from chPpqtOutMqc.collect().ifEmpty([])
+    file ('ppqt/*_mqc.tsv') from chPpqtCsvMqc.collect().ifEmpty([])
 
-    // file ('deepTools/singleBam/*') from chDeeptoolsSingle.collect().ifEmpty([])
-    // file ('deepTools/singleBam/*_corrected.tab') from chDeeptoolsSingleMqc.collect().ifEmpty([])
-    // file ("deepTools/multipleBams/bams_correlation.tab") from chDeeptoolsCorrelMqc.collect().ifEmpty([])
-    // file ("deepTools/multipleBams/bams_coverage_raw.txt") from chDeeptoolsCovMqc.collect().ifEmpty([])
-    // file ("deepTools/multipleBams/bams_fingerprint_*") from chDeeptoolsFingerprintMqc.collect().ifEmpty([])
+    file ('deepTools/singleBam/*') from chDeeptoolsSingle.collect().ifEmpty([])
+    file ('deepTools/singleBam/*_corrected.tab') from chDeeptoolsSingleMqc.collect().ifEmpty([])
+    file ("deepTools/multipleBams/bams_correlation.tab") from chDeeptoolsCorrelMqc.collect().ifEmpty([])
+    file ("deepTools/multipleBams/bams_coverage_raw.txt") from chDeeptoolsCovMqc.collect().ifEmpty([])
+    file ("deepTools/multipleBams/bams_fingerprint_*") from chDeeptoolsFingerprintMqc.collect().ifEmpty([])
 
-    // file ('peakCalling/sharp/*.xls') from chMacsOutputSharp.collect().ifEmpty([])
-    // file ('peakCalling/broad/*.xls') from chMacsOutputBroad.collect().ifEmpty([])
-    // file ('peakCalling/sharp/*') from chMacsCountsSharp.collect().ifEmpty([])
-    // file ('peakCalling/broad/*') from chMacsCountsBroad.collect().ifEmpty([])
-    // // file ('peakCalling/very_broad/*') from chMacsCountsVbroad.collect().ifEmpty([])
+    file ('peakCalling/sharp/*.xls') from chMacsOutputSharp.collect().ifEmpty([])
+    file ('peakCalling/broad/*.xls') from chMacsOutputBroad.collect().ifEmpty([])
+    file ('peakCalling/sharp/*') from chMacsCountsSharp.collect().ifEmpty([])
+    file ('peakCalling/broad/*') from chMacsCountsBroad.collect().ifEmpty([])
+    // file ('peakCalling/very_broad/*') from chMacsCountsVbroad.collect().ifEmpty([])
 
-    // file('peak_QC/*') from chPeakMqc.collect().ifEmpty([])
+    file('peak_QC/*') from chPeakMqc.collect().ifEmpty([])
+    
+    file('featCounts/*') from chFeatCountsMqc.collect().ifEmpty([])
 
 
   output:
@@ -1640,7 +1678,7 @@ process multiqc {
   rfilename = customRunName ? "--filename " + customRunName.replaceAll('\\W','_').replaceAll('_+','_') + "_multiqc_report" : ''
   metadata_opts = params.metadata ? "--metadata ${metadata}" : ""
   splan_opts = params.samplePlan ? "--splan ${params.samplePlan}" : ""
-  modules_list = "-m custom_content -m fastqc -m samtools -m picard -m preseq -m phantompeakqualtools -m deeptools -m macs2 -m homer"
+  modules_list = "-m custom_content -m fastqc -m samtools -m picard -m preseq -m phantompeakqualtools -m deeptools -m macs2 -m homer -m featureCounts"
 
   """
   mqc_header.py --name "Chip-seq" --version ${workflow.manifest.version} ${metadata_opts} > multiqc-config-header.yaml
