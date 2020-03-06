@@ -40,38 +40,52 @@ def helpMessage() {
   nextflow run main.nf -profile test,toolsPath --genome 'hg19' --singleEnd
 
   Mandatory arguments:
-  --samplePlan                  Path to sample plan file if '--reads' is not specified
-  --genome                      Name of iGenomes reference
-  -profile                      Configuration profile to use. Can use multiple (comma separated)
-                  Available: conda, docker, singularity, awsbatch, test, toolsPath and more.
-  --aligner            Alignment tool to use:
-                  Available : bwa, star, bowtie2
+  --samplePlan             Path to sample plan file if '--reads' is not specified
+  --genome                 Name of iGenomes reference
+  -profile                 Configuration profile to use. Can use multiple (comma separated)
+                              Available: conda, docker, singularity, awsbatch, test, toolsPath and more.
+  --aligner                Alignment tool to use:
+                              Available : bwa, star, bowtie2
 
   Options:
-  --singleEnd                      Specifies that the input is single end reads
+  --singleEnd              Specifies that the input is single end reads
 
   SpikeIn analysis
-  --spike                         Indicates if the experiment includes a spike-in normalization.
-                                  Default : false. Available : 'spike' to use metagenome with reference genome
-                                                               '[spike genome]' to use a specific second genome
+  --spike                  Indicates if the experiment includes a spike-in normalization.
+                           Default : false. Available : 'spike' to use metagenome with reference genome
+                           '[spike genome]' to use a specific second genome
 
-  References                      If not specified in the configuration file or you wish to overwrite any of the references given by the --genome field
-  --fasta                          Path to Fasta reference
-  Indexes                         Path to the indexes for aligners
-  --starIndex                           Index for STAR aligner
-  --bwaIndex                            Index for BWA MEM aligner
-  --bowtie2Index                        Index for Bowtie2 aligner
+  References           If not specified in the configuration file or you wish to overwrite any of the references given by the --genome field
+  --fasta                  Path to Fasta reference
+  Indexes              Path to the indexes for aligners
+  --starIndex              Index for STAR aligner
+  --bwaIndex               Index for BWA MEM aligner
+  --bowtie2Index           Index for Bowtie2 aligner
   Annotation
-  --bed                            BED annotation file. Used with samtools to filter the reads, and in Deeptools ComputeMatrix function
-  --gtf                            GTF annotation file. Used in HOMER peak annotation
+  --bed                    BED annotation file. Used with samtools to filter the reads, and in Deeptools ComputeMatrix function
+  --gtf                    GTF annotation file. Used in HOMER peak annotation
   Peak calling
-  --macsGzise                      Reference genome size for MACS2
-  --noInput                        Default : false. Use --noInput to indicate no input controls in peak calling tools.
+  --macsGzise              Reference genome size for MACS2
+  --noInput                Default : false. Use --noInput to indicate no input controls in peak calling tools.
+
+  Skip options:        All are false by default
+  --skipMultiqc            Skips final report writing
+  --skipFastqc             Skips fastQC
+  --skipAlignment          Skips alignments
+  --skipPreseq             Skips preseq QC
+  --skipFiltering          Skips filtering
+  --skipPpqt               Skips phantompeakqualtools QC
+  --skipDeepTools          Skips deeptools QC
+  --skipPeakcalling        Skips peak calling
+  --skipPeakanno           Skips peak annotation
+  --skipPeakQC             Skips peak QC
+  --skipIdr                Skips IDR QC
+  --skipFeatCounts         Skips feature count
 
   Other options:
-  --outdir                         The output directory where the results will be saved
-  --email                          Set this parameter to your e-mail address to get a summary e-mail with details of the run sent to you when the workflow exits
-  -name                            Name for the pipeline run. If not specified, Nextflow will automatically generate a random mnemonic.
+  --outdir                 The output directory where the results will be saved
+  --email                  Set this parameter to your e-mail address to get a summary e-mail with details of the run sent to you when the workflow exits
+  -name                    Name for the pipeline run. If not specified, Nextflow will automatically generate a random mnemonic.
 
   """.stripIndent()
 }
@@ -598,7 +612,7 @@ else if(params.spike && params.spike == 'spike'){
 
     input:
       set val(prefix), file(unsortedBam) from chAlignReads
-    
+
     output:
       set val(prefix), file('*_ref.bam') into chAlignedReads
       set val(prefix), file('*_spike.bam') into chSpikeAlignedReads
@@ -606,7 +620,7 @@ else if(params.spike && params.spike == 'spike'){
 
     script:
     """
-    sepMetagenome.py -I $unsortedBam -OR ${prefix}_ref.bam -OS ${prefix}_spike.bam -SE ${params.singleEnd} 
+    sepMetagenome.py -I $unsortedBam -OR ${prefix}_ref.bam -OS ${prefix}_spike.bam -SE ${params.singleEnd}
     """
   }
 
@@ -628,7 +642,7 @@ if (!params.skipAlignment){
                 else if (filename.endsWith(".bam") || (filename.endsWith(".bam.bai"))) filename
                 else null
               }
-         
+
     input:
       set val(prefix), file(unsortedBam) from chAlignedReads
 
@@ -820,7 +834,7 @@ if (params.spike){
   chFilteredFlagstatSpikes
     .filter{it[0][-6..-1] == '_spike'}
     .set{chFilteredFlagstatSpikes}
-  
+
   process getNormalizationFactor{
     publishDir "${params.outdir}/alignment"
 
@@ -849,7 +863,7 @@ if (params.spike){
   //             else if (filename.endsWith("_spiked.bam") || (filename.endsWith("_spiked.bam.bai"))) filename
   //             else null
   //           }
-    
+
   //   input:
   //   set val(prefix), file(filteredBams), val(normFactors) from chFilteredBamsOrphan
 
@@ -1061,7 +1075,7 @@ if (!params.noInput && params.design){
   chFilteredBamsMacs1
   .combine(chFilteredBamsMacs2)
   .set { chFilteredBamsMacs1 }
-  
+
   chDesignControl
     .combine(chFilteredBamsMacs1)
     .filter { it[0] == it[5] && it[1] == it[7] }
@@ -1664,7 +1678,7 @@ process multiqc {
     // file ('peakCalling/very_broad/*') from chMacsCountsVbroad.collect().ifEmpty([])
 
     file('peak_QC/*') from chPeakMqc.collect().ifEmpty([])
-    
+
     file('featCounts/*') from chFeatCountsMqc.collect().ifEmpty([])
 
 
