@@ -215,7 +215,8 @@ def sepMetagenome(inputBam, outputBamRef, outputBamSpike, singleEnd):
     samOutputRef.close()
     samOutputSpike.close()
 
-    with open('log.txt', 'w') as logFile:
+    logName = inputBam.rsplit('.',1)[0] + '_log.txt'
+    with open(logName, 'w') as logFile:
         logFile.write('Total number of reads processed : ' + str(counter_alignments['all']) + '\n')
         logFile.write('Reads mapped on reference genome : ' + str(counter_alignments['reference']) + '\n')
         logFile.write('Reads mapped on spike genome : ' + str(counter_alignments['spike']) + '\n')
