@@ -19,15 +19,14 @@ The current workflow is based on the nf-core best practice. See the nf-core proj
 
 1. Run quality control of raw sequencing reads ([`fastqc`](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/))
 2. Align reads on reference genome ([`BWA`](http://bio-bwa.sourceforge.net/) / [`Bowtie2`](http://bowtie-bio.sourceforge.net/bowtie2/index.shtml) / [`STAR`](https://github.com/alexdobin/STAR))
-  * If using spike-in normalization, ambiguous reads and unmapped reads will be removed from both BAM files generated ([`pysam`](https://pysam.readthedocs.io/en/latest/api.html), [`deepTools`](https://deeptools.readthedocs.io/en/develop/index.html))
+    * If using spike-in normalization, ambiguous reads and unmapped reads will be removed from both BAM files generated ([`pysam`](https://pysam.readthedocs.io/en/latest/api.html), [`deepTools`](https://deeptools.readthedocs.io/en/develop/index.html))
 3. Sort aligned reads ([`SAMTools`](http://www.htslib.org/))
 4. Mark duplicates ([`Picard`](https://broadinstitute.github.io/picard/))
 5. Library complexity analysis ([`Preseq`](http://smithlabresearch.org/software/preseq/))
 6. Filtering aligned BAM files ([`SAMTools`](http://www.htslib.org/) & [`BAMTools`](https://github.com/pezmaster31/bamtools))
 7. Computing Normalized and Relative Strand Cross-correlation (NSC/RSC) ([`phantompeakqualtools`](https://github.com/kundajelab/phantompeakqualtools))
 8. Diverse alignment QCs and BigWig file creation ([`deepTools`](https://deeptools.readthedocs.io/en/develop/index.html))
-  * If using spike-in normalization, a scaling factor will be computed for BigWig generation ([`DESeq2`](https://bioconductor.org/packages/release/bioc/html/DESeq2.html))
-
+    * If using spike-in normalization, a scaling factor will be computed for BigWig generation ([`DESeq2`](https://bioconductor.org/packages/release/bioc/html/DESeq2.html))
 9. Peak calling for sharp & broad peaks ([`MACS2`](https://github.com/taoliu/MACS)) and very broad peaks ([`epic2`](https://github.com/biocore-ntnu/epic2))
 10. Feature counting for every sample ([`featureCounts`](http://bioinf.wehi.edu.au/featureCounts/))
 11. Calculation of Irreproducible Discovery Rate in case of multiple replicates ([`IDR`](https://github.com/nboley/idr))
