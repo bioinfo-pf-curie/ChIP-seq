@@ -1,5 +1,0 @@
-A1546F1,WT_rep1,/data/kdi_prod/.../A1546_1_R1.fastq.gz,/data/kdi_prod/.../A1546_1_R2.fastq.gz,A1546F2
-A1546F2,WT_rep2,/data/kdi_prod/.../A1546_2_R1.fastq.gz,/data/kdi_prod/.../A1546_2_R2.fastq.gz,
-A1546F3,P1_CSTIT,/data/kdi_prod/.../A1546_3_R1.fastq.gz,/data/kdi_prod/.../A1546_3_R2.fastq.gz,A1546F4
-A1546F4,P1_TUMOR,/data/kdi_prod/.../A1546_4_R1.fastq.gz,/data/kdi_prod/.../A1546_4_R2.fastq.gz,
-

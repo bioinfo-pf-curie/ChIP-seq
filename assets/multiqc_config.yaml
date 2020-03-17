@@ -1,0 +1,124 @@
+#
+# MY_PIPELINE config for MultiQC
+#
+#################################################################
+
+skip_generalstats: true
+read_count_multiplier: 0.000001
+read_count_prefix: 'M'
+read_count_desc: 'millions'
+
+###################################
+## Custom content
+custom_data:
+    my_stats:
+        file_format: 'csv'
+        section_name: 'General Metrics'
+        description: ' of sequenced data. Note that in the context of paired-end data, the number pairs are reported (as reads).'
+        plot_type: 'table'
+        pconfig:
+            namespace: 'stats'
+            id: 'stats'
+            title: 'General Statistics'
+            save_file: true
+            col1_header: 'Sample ID'
+        headers:
+            Sample_name:
+              title: 'Sample Name'
+              scale: false
+              format: '{:.0f}'
+              placement: 2000
+            Number_of_reads:
+              title: 'Total Reads'
+              scale: 'YlGnBu'
+              format: '{:,.0f}'
+              placement: 4000
+            Number_of_aligned_reads:
+              title: 'Aligned Reads'
+              scale: 'RdYlGn'
+              format: '{:,.0f}'
+              hidden: true
+              placement: 7000
+            Percent_of_aligned_reads:
+              title: 'Aligned Reads (%)'
+              min: 0
+              max: 100
+              scale: 'RdYlGn'
+              suffix: '%'
+              format: '{:,.1f}'
+              placement: 8000
+            Number_of_uniquely_aligned_reads:
+              title: 'Unique Reads'
+              scale: 'RdYlGn'
+              format: '{:,.0f}'
+              hidden: true
+              placement: 9000
+            Percent_uniquely_aligned_reads:
+              title: 'Unique Reads (%)'
+              min: 0
+              max: 100
+              scale: 'RdYlGn'
+              suffix: '%'
+              format: '{:,.1f}'
+              placement: 10000
+            Number_of_multiple_aligned_reads:
+              title: 'Multiple Reads'
+              scale: 'RdYlGn-rev'
+              format: '{:,.0f}'
+              hidden: true
+              placement: 11000
+            Percent_multiple_aligned:
+              title: 'Multiple Reads (%)'
+              min: 0
+              max: 100
+              scale: 'RdYlGn-rev'
+              suffix: '%'
+              format: '{:,.1f}'
+              placement: 12000
+            Number_of_duplicates:
+              title: 'Duplicates'
+              scale: 'RdYlGn-rev'
+              format: '{:,.0f}'
+              hidden: true
+              placement: 13000
+            Percent_duplicates:
+              title: 'Duplicates (%)'
+              min: 0
+              max: 100
+              scale: 'RdYlGn-rev'
+              suffix: '%'
+              format: '{:,.1f}'
+              placement: 14000
+
+
+sp:
+   my_stats:
+      fn: '*.stats'
+
+###############################
+## Modules 
+
+module_order:
+  - fastqc
+  - samtools
+  - picard
+  - preseq
+  - deeptools
+
+report_section_order:
+  peak_count:
+      order: -1000
+  frip_score:
+      order: -1100
+  strand_shift_correlation:
+      order: -1200
+  NSC_coefficient:
+      order: -1300
+  RSC_coefficient:
+      order: -1400
+  peak_annotation:
+      order: -1500
+#############################
+## Display
+
+plots_force_interactive: True
