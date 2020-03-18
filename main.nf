@@ -466,8 +466,14 @@ if (!params.skipAlignment && params.aligner == "bwa-mem"){
       set val(prefix), file("*.bam") into chAlignReads
 
     script:
+    if (params.spike == 'spike'){
+      alnMult = '-a'
+    }
+    else{
+      alnMult = ''
+    }
     """
-    bwa mem -t ${task.cpus} $bwaIndex${bwaBase} $reads \\
+    bwa mem -t ${task.cpus} $alnMult $bwaIndex${bwaBase} $reads \\
     | samtools view -b -h -o ${prefix}.bam
     """
   }
@@ -617,14 +623,14 @@ if(params.spike && params.spike != 'spike'){
 
     output:
       set val(prefixRef), file('*_ref.bam') into chAlignedReads
-      set val(prefixSpike), file('*_spike.bam') into chSpikeAlignedReads
+      set val(prefixSpike), file('*_spikein.bam') into chSpikeAlignedReads
       file ('*.txt') into chLogCompare
 
     script:
     """
     samtools sort $unsortedBamRef -n -T ${prefixRef} -o ${prefixRef}_sorted.bam
     samtools sort $unsortedBamSpike -n -T ${prefixSpike} -o ${prefixSpike}_sorted.bam
-    compareAlignments.py -IR $unsortedBamRef -IS $unsortedBamSpike -OR ${prefixRef}.bam -OS ${prefixSpike}.bam -SE ${params.singleEnd}
+    compareAlignments.py -IR ${prefixRef}_sorted.bam -IS ${prefixSpike}_sorted.bam -OR ${prefixRef}_ref.bam -OS ${prefixSpike}in.bam -SE ${params.singleEnd}
     """
   }
   
@@ -720,16 +726,15 @@ process markDuplicates{
     file "*.txt" into chMarkedBamPicstats
 
   script:
-  bamFiles = sortedBams.findAll { it.toString().endsWith('.bam') }.sort()
   """
   picard -Xmx4g MarkDuplicates \\
-    INPUT=${bamFiles[0]} \\
+    INPUT=${sortedBams[0]} \\
     OUTPUT=${prefix}_marked.bam \\
     ASSUME_SORTED=true \\
     REMOVE_DUPLICATES=false \\
     METRICS_FILE=${prefix}.MarkDuplicates.metrics.txt \\
     VALIDATION_STRINGENCY=LENIENT \\
-    TMP_DIR=tmpstararked.bam
+    TMP_DIR=tmpdir
   samtools index ${prefix}_marked.bam
   samtools idxstats ${prefix}_marked.bam > ${prefix}_marked.idxstats
   samtools flagstat ${prefix}_marked.bam > ${prefix}_marked.flagstat
@@ -1593,123 +1598,118 @@ if (!params.skipFeatCounts){
 /*
  * MultiQC
  */
+if(!params.skipMultiqc){
+  // Retrieve software from environment
+  process getSoftwareVersions{
+    publishDir path: "${params.outdir}/software_versions", mode: "copy"
 
-// Retrieve software from environment
-process getSoftwareVersions{
-  publishDir path: "${params.outdir}/software_versions", mode: "copy"
-  when:
-    !params.skipMultiqc
 
-  output:
-    file 'software_versions_mqc.yaml' into softwareVersionsYaml
+    output:
+      file 'software_versions_mqc.yaml' into softwareVersionsYaml
 
-  script:
+    script:
+      """
+      echo $workflow.manifest.version &> v_pipeline.txt
+      echo $workflow.nextflow.version &> v_nextflow.txt
+      fastqc --version &> v_fastqc.txt
+      multiqc --version &> v_multiqc.txt
+      echo \$(bwa 2>&1) &> v_bwa.txt
+      bowtie2 --version &> v_bowtie2.txt
+      STAR --version &> v_star.txt
+      samtools --version &> v_samtools.txt
+      bedtools --version &> v_bedtools.txt
+      echo \$(bamtools --version 2>&1) > v_bamtools.txt
+      echo \$(picard MarkDuplicates --version 2>&1) &> v_picard.txt
+      preseq &> v_preseq.txt
+      echo \$(plotFingerprint --version 2>&1) > v_deeptools.txt || true
+      R --version &> v_R.txt
+      echo \$(macs2 --version 2>&1) &> v_macs2.txt
+      epic2 --version &> v_epic2.txt
+      idr --version &> v_idr.txt
+      scrape_software_versions.py &> software_versions_mqc.yaml
+      """
+
+  }
+
+  // Workflow summary
+  process workflowSummaryMqc {
+
+    output:
+    file 'workflow_summary_mqc.yaml' into workflowSummaryYaml
+
+    exec:
+    def yaml_file = task.workDir.resolve('workflow_summary_mqc.yaml')
+    yaml_file.text  = """
+    id: 'summary'
+    description: " - this information is collected when the pipeline is started."
+    section_name: 'Workflow Summary'
+    section_href: 'https://gitlab.curie.fr/rnaseq'
+    plot_type: 'html'
+    data: |
+        <dl class=\"dl-horizontal\">
+  ${summary.collect { k,v -> "            <dt>$k</dt><dd><samp>${v ?: '<span style=\"color:#999999;\">N/A</a>'}</samp></dd>" }.join("\n")}
+        </dl>
+    """.stripIndent()
+
+  }
+
+
+  process multiqc {
+    publishDir "${params.outdir}/MultiQC", mode: 'copy'
+
+    input:
+      file splan from chSplan.collect()
+      file metadata from chMetadata.ifEmpty([])
+      file multiqcConfig from chMultiqcConfig
+      file ('software_versions/*') from softwareVersionsYaml.collect()
+      file ('workflow_summary/*') from workflowSummaryYaml.collect()
+
+      file ('fastQC/*') from chFastqcResults.collect().ifEmpty([])
+
+      file ('/filtering/markedBams/samtools_stats/*') from chMarkedBamSamstats.collect().ifEmpty([])
+      file ('/filtering/markedBams/samtools_stats/*') from chMarkedBamPicstats.collect().ifEmpty([])
+      file ('/filtering/filteredBams/samtools_stats/*') from chFilteredFlagstatMqc.collect().ifEmpty([])
+      file ('/filtering/filteredBams/samtools_stats/*') from chFilteredStatsMqc.collect().ifEmpty([])
+
+      file ('preseq/*') from chPreseqStats.collect().ifEmpty([])
+
+      file ('ppqt/*.spp.out') from chPpqtOutMqc.collect().ifEmpty([])
+      file ('ppqt/*_mqc.tsv') from chPpqtCsvMqc.collect().ifEmpty([])
+
+      file ('deepTools/singleBam/*') from chDeeptoolsSingle.collect().ifEmpty([])
+      file ('deepTools/singleBam/*_corrected.tab') from chDeeptoolsSingleMqc.collect().ifEmpty([])
+      file ("deepTools/multipleBams/bams_correlation.tab") from chDeeptoolsCorrelMqc.collect().ifEmpty([])
+      file ("deepTools/multipleBams/bams_coverage_raw.txt") from chDeeptoolsCovMqc.collect().ifEmpty([])
+      file ("deepTools/multipleBams/bams_fingerprint_*") from chDeeptoolsFingerprintMqc.collect().ifEmpty([])
+
+      file ('peakCalling/sharp/*.xls') from chMacsOutputSharp.collect().ifEmpty([])
+      file ('peakCalling/broad/*.xls') from chMacsOutputBroad.collect().ifEmpty([])
+      file ('peakCalling/sharp/*') from chMacsCountsSharp.collect().ifEmpty([])
+      file ('peakCalling/broad/*') from chMacsCountsBroad.collect().ifEmpty([])
+      // file ('peakCalling/very_broad/*') from chMacsCountsVbroad.collect().ifEmpty([])
+
+      file('peak_QC/*') from chPeakMqc.collect().ifEmpty([])
+
+      file('featCounts/*') from chFeatCountsMqc.collect().ifEmpty([])
+
+
+    output:
+      file splan
+      file "*multiqc_report.html" into multiqc_report
+      file "*_data"
+
+    script:
+    rtitle = customRunName ? "--title \"$customRunName\"" : ''
+    rfilename = customRunName ? "--filename " + customRunName.replaceAll('\\W','_').replaceAll('_+','_') + "_multiqc_report" : ''
+    metadata_opts = params.metadata ? "--metadata ${metadata}" : ""
+    splan_opts = params.samplePlan ? "--splan ${params.samplePlan}" : ""
+    modules_list = "-m custom_content -m fastqc -m samtools -m picard -m preseq -m phantompeakqualtools -m deeptools -m macs2 -m homer -m featureCounts"
+
     """
-    echo $workflow.manifest.version &> v_pipeline.txt
-    echo $workflow.nextflow.version &> v_nextflow.txt
-    fastqc --version &> v_fastqc.txt
-    multiqc --version &> v_multiqc.txt
-    echo \$(bwa 2>&1) &> v_bwa.txt
-    bowtie2 --version &> v_bowtie2.txt
-    STAR --version &> v_star.txt
-    samtools --version &> v_samtools.txt
-    bedtools --version &> v_bedtools.txt
-    echo \$(bamtools --version 2>&1) > v_bamtools.txt
-    echo \$(picard MarkDuplicates --version 2>&1) &> v_picard.txt
-    preseq &> v_preseq.txt
-    echo \$(plotFingerprint --version 2>&1) > v_deeptools.txt || true
-    R --version &> v_R.txt
-    echo \$(macs2 --version 2>&1) &> v_macs2.txt
-    epic2 --version &> v_epic2.txt
-    idr --version &> v_idr.txt
-    scrape_software_versions.py &> software_versions_mqc.yaml
+    mqc_header.py --name "Chip-seq" --version ${workflow.manifest.version} ${metadata_opts} > multiqc-config-header.yaml
+    multiqc . -f $rtitle $rfilename -c multiqc-config-header.yaml $modules_list -c $multiqcConfig -s
     """
-
-}
-
-// Workflow summary
-process workflowSummaryMqc {
-  when:
-    !params.skipMultiqc
-
-  output:
-  file 'workflow_summary_mqc.yaml' into workflowSummaryYaml
-
-  exec:
-  def yaml_file = task.workDir.resolve('workflow_summary_mqc.yaml')
-  yaml_file.text  = """
-  id: 'summary'
-  description: " - this information is collected when the pipeline is started."
-  section_name: 'Workflow Summary'
-  section_href: 'https://gitlab.curie.fr/rnaseq'
-  plot_type: 'html'
-  data: |
-      <dl class=\"dl-horizontal\">
-${summary.collect { k,v -> "            <dt>$k</dt><dd><samp>${v ?: '<span style=\"color:#999999;\">N/A</a>'}</samp></dd>" }.join("\n")}
-      </dl>
-  """.stripIndent()
-
-}
-
-
-process multiqc {
-  publishDir "${params.outdir}/MultiQC", mode: 'copy'
-
-  when:
-  !params.skipMultiqc
-
-  input:
-    file splan from chSplan.collect()
-    file metadata from chMetadata.ifEmpty([])
-    file multiqcConfig from chMultiqcConfig
-    file ('software_versions/*') from softwareVersionsYaml.collect()
-    file ('workflow_summary/*') from workflowSummaryYaml.collect()
-
-    file ('fastQC/*') from chFastqcResults.collect().ifEmpty([])
-
-    file ('filtering/markedBams/samtools_stats/*') from chMarkedBamSamstats.collect().ifEmpty([])
-    file ('filtering/markedBams/samtools_stats/*') from chMarkedBamPicstats.collect().ifEmpty([])
-    file ('filtering/filteredBams/samtools_stats/*') from chFilteredFlagstatMqc.collect().ifEmpty([])
-    file ('filtering/filteredBams/samtools_stats/*') from chFilteredStatsMqc.collect().ifEmpty([])
-
-    file ('preseq/*') from chPreseqStats.collect().ifEmpty([])
-
-    file ('ppqt/*.spp.out') from chPpqtOutMqc.collect().ifEmpty([])
-    file ('ppqt/*_mqc.tsv') from chPpqtCsvMqc.collect().ifEmpty([])
-
-    file ('deepTools/singleBam/*') from chDeeptoolsSingle.collect().ifEmpty([])
-    file ('deepTools/singleBam/*_corrected.tab') from chDeeptoolsSingleMqc.collect().ifEmpty([])
-    file ("deepTools/multipleBams/bams_correlation.tab") from chDeeptoolsCorrelMqc.collect().ifEmpty([])
-    file ("deepTools/multipleBams/bams_coverage_raw.txt") from chDeeptoolsCovMqc.collect().ifEmpty([])
-    file ("deepTools/multipleBams/bams_fingerprint_*") from chDeeptoolsFingerprintMqc.collect().ifEmpty([])
-
-    file ('peakCalling/sharp/*.xls') from chMacsOutputSharp.collect().ifEmpty([])
-    file ('peakCalling/broad/*.xls') from chMacsOutputBroad.collect().ifEmpty([])
-    file ('peakCalling/sharp/*') from chMacsCountsSharp.collect().ifEmpty([])
-    file ('peakCalling/broad/*') from chMacsCountsBroad.collect().ifEmpty([])
-    // file ('peakCalling/very_broad/*') from chMacsCountsVbroad.collect().ifEmpty([])
-
-    file('peak_QC/*') from chPeakMqc.collect().ifEmpty([])
-
-    file('featCounts/*') from chFeatCountsMqc.collect().ifEmpty([])
-
-
-  output:
-    file splan
-    file "*multiqc_report.html" into multiqc_report
-    file "*_data"
-
-  script:
-  rtitle = customRunName ? "--title \"$customRunName\"" : ''
-  rfilename = customRunName ? "--filename " + customRunName.replaceAll('\\W','_').replaceAll('_+','_') + "_multiqc_report" : ''
-  metadata_opts = params.metadata ? "--metadata ${metadata}" : ""
-  splan_opts = params.samplePlan ? "--splan ${params.samplePlan}" : ""
-  modules_list = "-m custom_content -m fastqc -m samtools -m picard -m preseq -m phantompeakqualtools -m deeptools -m macs2 -m homer -m featureCounts"
-
-  """
-  mqc_header.py --name "Chip-seq" --version ${workflow.manifest.version} ${metadata_opts} > multiqc-config-header.yaml
-  multiqc . -f $rtitle $rfilename -c multiqc-config-header.yaml $modules_list -c $multiqcConfig -s
-  """
+  }
 }
 
 /* Creates a file at the end of workflow execution */

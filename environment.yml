@@ -1,4 +1,4 @@
-name: chipseq_pipeline
+name: chipseq
 channels:
   - conda-forge
   - bioconda

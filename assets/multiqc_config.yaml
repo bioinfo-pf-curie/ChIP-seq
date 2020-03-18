@@ -3,9 +3,9 @@
 #
 #################################################################
 
-# read_count_multiplier: 0.000001
-# read_count_prefix: 'M'
-# read_count_desc: 'millions'
+read_count_multiplier: 0.000001
+read_count_prefix: 'M'
+read_count_desc: 'millions'
 
 ###################################
 ## Custom content
@@ -90,9 +90,9 @@
 #               placement: 14000
 
 
-# sp:
-#    my_stats:
-#       fn: '*.stats'
+sp:
+   my_stats:
+      fn: '*.stats'
 
 ###############################
 ## Modules 

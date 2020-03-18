@@ -96,36 +96,99 @@ def comp_two_single_alignments(list_alignments,scores):
     if (scores[0] < scores[1]): # Best score from parent 1
         alignment1.set_tag(AS_TAG,1)
         selected = 'reference'
-        return alignment1, selected
+        return alignment1
     elif (scores[0] > scores[1]): # Best score from parent 2
         alignment2.set_tag(AS_TAG,1)
         selected = 'spike'
-        return alignment2, selected
+        return alignment2
     else: # Same score
         if ((alignment1.pos == alignment2.pos) and (alignment1.rname == alignment2.rname)):
             # No allelic information on this read
             alignment1.set_tag(AS_TAG,"UA")
             selected = 'unmapped'
-            return alignment1, selected
+            return alignment1
         else:
             # Ambiguous/Conflictual case
             alignment1.set_tag(AS_TAG,"CF")
             selected = 'ambiguous'
-            return alignment1, selected
+            return alignment1
+
+def comp_three_single_alignments(list_alignments,scores):
+    '''
+    This function compares three alignments on scores where smaller is better
+    and returns the best alignment with a TAG (AS_TAG):
+        0: Equally mapped on both parents
+        1: Preferentially mapped on one parent
+        2: Ambiguous
+
+    list_alignments: 3 alignments to compare [list]
+    scores: 3 scores associated to alignments (same index) [list]
+    '''
+    
+    if (max(scores) == min(scores)): # Ambiguous case : at least 2 positions with same score
+        alignment = list_alignments[0]
+        alignment.set_tag(AS_TAG,"CF")
+        return alignment
+    else:
+        # Get first minimum score
+        alignment1 = list_alignments[scores.index(min(scores))]
+        score1 = scores[scores.index(min(scores))]
+        # Remove alignment and score from lists
+        del list_alignments[scores.index(min(scores))]
+        del scores[scores.index(min(scores))]
+        alignment2 = list_alignments[scores.index(min(scores))]
+        score2 = scores[scores.index(min(scores))]
+        return comp_two_single_alignments([alignment1,alignment2],[score1,score2])
+
+def comp_single_alignments(list_alignments,comparison):
+    '''
+    Function to select and return the best position for a alignment either:
+
+    list_alignments: different lines for the alignment [list]
+    comparison: parameter chosen for the comparison [int]
+    '''
+    scores = calc_scores(list_alignments,comparison)
+    if (len(list_alignments) > 2):
+    # Three alignments have been reported
+        alignment = comp_three_single_alignments(list_alignments,scores)
+    elif (len(list_alignments) > 1):
+    # If only two alignments were reported
+        alignment = comp_two_single_alignments(list_alignments,scores)
+    else:
+        alignment = list_alignments[0]
+        if ((alignment.flag >= 4) and (str(bin(alignment.flag))[-3] == '1')):
+            alignment.set_tag(AS_TAG,"UA")
+        else:
+            alignment.set_tag(AS_TAG,1)
+    return alignment
 
 def compareRefSpike(inputBamRef, inputBamSpike, outputBamRef, outputBamSpike, singleEnd):
+    mergedbam = None
+    genotype = 1
     if singleEnd:
         seq_type = 1
     else:
         seq_type = 2
 
-    samInputRef = pysam.AlignmentFile(inputBamRef, 'rb')
-    samInputSpike = pysam.AlignmentFile(inputBamSpike, 'rb')
-    samOutputRef = pysam.AlignmentFile(outputBamRef, 'wb', template=samInputRef)
-    samOutputSpike = pysam.AlignmentFile(outputBamSpike, 'wb', template=samInputSpike)
+    for bam_file in inputBamRef, inputBamSpike:
+        bam = pysam.AlignmentFile(bam_file, "rb")
+        # Output merged file
+        if (mergedbam == None):
+            mergedbam = pysam.AlignmentFile("temp_merged.bam", "wb", template=bam)
+        # Get the name of the bam from which the alignments come from
+        #origin = bam_name.split(".")[0].split('/')[-1]
+        for alignment in bam.fetch(until_eof=True):
+            alignment.set_tag(AS_TAG, "G"+str(genotype))
+            mergedbam.write(alignment)
+        # Closing BAM file
+        bam.close()
+        genotype += 1
+    # Closing merged BAM
+    mergedbam.close()
 
     counter_alignments = {
         'all': 0,
+        'samename': 0,
         'reference': 0,
         'spike': 0,
         'unmapped': 0,
@@ -133,36 +196,48 @@ def compareRefSpike(inputBamRef, inputBamSpike, outputBamRef, outputBamSpike, si
     }
 
     comparison = 2
+    samInput = pysam.AlignmentFile('temp_merged.bam', 'rb')
+    samOutputRef = pysam.AlignmentFile(outputBamRef, 'wb', template=samInput)
+    samOutputSpike = pysam.AlignmentFile(outputBamSpike, 'wb', template=samInput)
+
     prev_alignments = []
 
-    for alignRef, alignSpike in zip(samInputRef.fetch(until_eof = True), samInputSpike.fetch(until_eof = True)):
-        counter_alignments['all'] += 1
-        pair_reads = [alignRef, alignSpike]
-        scores = calc_scores(pair_reads, comparison)
-        # First we need to process the previous group of alignments
-        if (seq_type == 1): # Single-end
-            # Select best position
-            selected_alignment, selected = comp_two_single_alignments(pair_reads,scores)
-            # Write alignment in output file
-            if selected == 'unmapped':
-                counter_alignments['unmapped'] += 1
-            elif selected == 'ambiguous':
-                counter_alignments['ambiguous'] += 1
-            elif selected == 'reference':
-                write_single_alignment(selected_alignment,samOutputRef)
-                counter_alignments['reference'] += 1
-            elif selected == 'spike':
-                write_single_alignment(selected_alignment,samOutputSpike)
-                counter_alignments['spike'] += 1
-        # Then we process the alignment as it is a first alignment
-    samInputRef.close()
-    samInputSpike.close()
+    for alignment in samInput.fetch(until_eof = True):
+        counter_alignments['all'] += 1            
+        if (len(prev_alignments) == 0):
+            prev_alignments.append(alignment)
+        else:
+            if (alignment.query_name == prev_alignments[0].query_name):
+                prev_alignments.append(alignment)
+            else:
+                # First we need to process the previous group of alignments
+                if (seq_type == 1): # Single-end
+                    # Select best position
+                    selected_alignment = comp_single_alignments(prev_alignments,comparison)
+                    refName = str(samInput.get_reference_name(selected_alignment.reference_id))
+                    # Write alignment in output file
+                    if selected_alignment.get_tag(AS_TAG) == 'UA':
+                        counter_alignments['unmapped'] += 1
+                    elif selected_alignment.get_tag(AS_TAG) == 'CF':
+                        counter_alignments['ambiguous'] += 1
+                    elif refName[0:3] == 'chr':
+                        write_single_alignment(selected_alignment,samOutputRef)
+                        counter_alignments['reference'] += 1
+                    else:
+                        write_single_alignment(selected_alignment,samOutputSpike)
+                        counter_alignments['spike'] += 1
+                prev_alignments = []
+                # Then we process the alignment as it is a first alignment
+                prev_alignments.append(alignment)
+    samInput.close()
     samOutputRef.close()
     samOutputSpike.close()
+
 
     logName = os.path.basename(inputBamRef).rsplit('_',1)[0] + '_log.txt'
     with open(logName, 'w') as logFile:
         logFile.write('Total number of reads processed : ' + str(counter_alignments['all']) + '\n')
+        logFile.write('Total number of reads compared with same name : ' + str(counter_alignments['samename']) + '\n')
         logFile.write('Reads mapped on reference genome : ' + str(counter_alignments['reference']) + '\n')
         logFile.write('Reads mapped on spike genome : ' + str(counter_alignments['spike']) + '\n')
         logFile.write('Reads unmapped : ' + str(counter_alignments['unmapped']) + '\n')
