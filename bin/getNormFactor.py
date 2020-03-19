@@ -43,7 +43,7 @@ def normFactors(str_inputFlagstats, outputCsv):
 
     minReads = min(dictNormFactors['nbReads'])
     for nbReads in dictNormFactors['nbReads']:
-        normFactor = str(round((minReads / nbReads), 2))[2:]
+        normFactor = str(round((minReads / nbReads),2))
         dictNormFactors['normFactor'].append(normFactor)
 
     colnames = ['sampleID', 'nbReads', 'normFactor']

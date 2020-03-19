@@ -17,19 +17,21 @@ The current workflow is based on the nf-core best practice. See the nf-core proj
 
 ### Pipeline Summary
 
-0. Create indexes if necessary ([`BWA`](http://bio-bwa.sourceforge.net/) / [`Bowtie2`](http://bowtie-bio.sourceforge.net/bowtie2/index.shtml) / [`STAR`](https://github.com/alexdobin/STAR))
 1. Run quality control of raw sequencing reads ([`fastqc`](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/))
 2. Align reads on reference genome ([`BWA`](http://bio-bwa.sourceforge.net/) / [`Bowtie2`](http://bowtie-bio.sourceforge.net/bowtie2/index.shtml) / [`STAR`](https://github.com/alexdobin/STAR))
+    * If using spike-in normalization, ambiguous reads and unmapped reads will be removed from both BAM files generated ([`pysam`](https://pysam.readthedocs.io/en/latest/api.html), [`deepTools`](https://deeptools.readthedocs.io/en/develop/index.html))
 3. Sort aligned reads ([`SAMTools`](http://www.htslib.org/))
 4. Mark duplicates ([`Picard`](https://broadinstitute.github.io/picard/))
 5. Library complexity analysis ([`Preseq`](http://smithlabresearch.org/software/preseq/))
 6. Filtering aligned BAM files ([`SAMTools`](http://www.htslib.org/) & [`BAMTools`](https://github.com/pezmaster31/bamtools))
 7. Computing Normalized and Relative Strand Cross-correlation (NSC/RSC) ([`phantompeakqualtools`](https://github.com/kundajelab/phantompeakqualtools))
-8. Diverse alignment QCs ([`deepTools`](https://deeptools.readthedocs.io/en/develop/index.html))
+8. Diverse alignment QCs and BigWig file creation ([`deepTools`](https://deeptools.readthedocs.io/en/develop/index.html))
+    * If using spike-in normalization, a scaling factor will be computed for BigWig generation ([`DESeq2`](https://bioconductor.org/packages/release/bioc/html/DESeq2.html))
 9. Peak calling for sharp & broad peaks ([`MACS2`](https://github.com/taoliu/MACS)) and very broad peaks ([`epic2`](https://github.com/biocore-ntnu/epic2))
-10. Calculation of Irreproducible Discovery Rate in case of multiple replicates ([`IDR`](https://github.com/nboley/idr))
-11. Peak annotation ([`HOMER`](http://homer.ucsd.edu/homer/ngs/annotation.html))
-12. Results summary ([`MultiQC`](https://multiqc.info/))
+10. Feature counting for every sample ([`featureCounts`](http://bioinf.wehi.edu.au/featureCounts/))
+11. Calculation of Irreproducible Discovery Rate in case of multiple replicates ([`IDR`](https://github.com/nboley/idr))
+12. Peak annotation ([`HOMER`](http://homer.ucsd.edu/homer/ngs/annotation.html))
+13. Results summary ([`MultiQC`](https://multiqc.info/))
 
 ### Quick help
 
@@ -46,7 +48,7 @@ The pipeline can be run on any infrastructure from a list of input files or from
 See the conf/test.conf to set your test dataset.
 
 ```
-nextflow run main.nf -profile test,conda --genome 'hg19' --singleEnd --replicates
+nextflow run main.nf -profile test,conda --replicates
 
 ```
 If the analysis does not contain replicates, the --replicates option is not useful, but the test sample requires it.
@@ -82,16 +84,16 @@ Here are a few examples of how to set the profile option.
 ### Sample Plan
 
 A sample plan is a csv file (comma separated) that list all samples with their biological IDs.
-The sample plan is expected to have a header as described below, entirely uppercase :
+The sample plan is expected to be created as below :
 
-SAMPLEID | SAMPLENAME | FASTQR1 [Path to R1.fastq file] | FASTQR2 [Path to R2.fastq file]
+SAMPLE_ID | SAMPLE_NAME | FASTQ_R1 [Path to R1.fastq file] | FASTQ_R2 [For paired end, path to Read 2 fastq]
 
 ### Design control
 
 A design control is a csv file that list all experimental samples, their IDs, the associated input control, the replicate number and the expected peak type.
-The design control is expected to have a header as described below, entirely uppercase :
+The design control is expected to be created as below :
 
-SAMPLEID | CONTROLID | SAMPLENAME [Without '-ReplicateNumber'] | REPLICATE [Only the number] | PEAKTYPE
+SAMPLE_ID | CONTROL_ID | SAMPLE_NAME [Without '-ReplicateNumber'] | REPLICATE [Only the number] | PEAK_TYPE
 
 Both files will be checked by the pipeline and have to be rigorously defined in order to make the pipeline work.
 

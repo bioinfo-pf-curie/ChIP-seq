@@ -1,4 +1,4 @@
-name: chipseq_pipeline
+name: chipseq
 channels:
   - conda-forge
   - bioconda
@@ -7,7 +7,7 @@ dependencies:
   # Add required software dependencies here
   - python=3.7
   - bioconda::fastqc=0.11.8
-  - bioconda::multiqc=1.7
+  - bioconda::multiqc=1.8
   - bioconda::bwa=0.7.17
   - bioconda::samtools=1.9
   - bioconda::bowtie2=2.3.5
@@ -21,9 +21,9 @@ dependencies:
   - bioconda::deeptools=3.2.1
   - bioconda::macs2=2.2.6
   - bioconda::epic2=0.0.40
+  - bioconda::subread=2.0.0
   - bioconda::homer=4.10
   - bioconda::idr=2.0.4.2
-  - bioconda::igv=2.5.2
 
   # R-packages
   - r-base=3.4.1
@@ -31,3 +31,4 @@ dependencies:
   - r-ggplot2=3.1.0
   - r-reshape2=1.4.3
   - r-scales=1.0.0
+  - bioconductor-deseq2=1.20.0

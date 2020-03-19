@@ -51,7 +51,8 @@ def IDR(sampleNames, str_peakFiles):
             os.system("idr --samples " + peakFiles_list[index]
                       + '--input-file-type ' + peaktype
                       + ' -o ' + sampleName + '_IDR.' + peaktype
-                      + ' -l ' + sampleName + '_log.txt')
+                      + ' -l ' + sampleName + '_log.txt'
+					  + ' --plot')
         index += 1
 
 if __name__ == '__main__':
