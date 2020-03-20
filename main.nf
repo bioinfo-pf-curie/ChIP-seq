@@ -1365,30 +1365,32 @@ process peakAnnoHomer{
 chIDRpeaks
   .map { it -> [it[0],it[4]] }
   .groupTuple()
+  .dump (tag:'rep')
   .set{ chPeaksPerGroup }
-
-chIDRid
-  .map { it -> [it[0],it[3]] }
-  .groupTuple()
-  .set{ chIdPerGroup }
 
 process IDR{
   tag "${group}"
   publishDir path: "${params.outdir}/IDR", mode: 'copy'
 
   when:
-  sampleIDs.size() > 1 && !params.skipIDR
+  allPeaks.toList().size > 1 && !params.skipIDR
 
   input:
-  set val(group), val(sampleIDs), file(allPeaks) from chIdPerGroup.join(chPeaksPerGroup).dump(tag:'rep')
+  set val(group), file(allPeaks) from chPeaksPerGroup
 
   output:
-  file "*.{narrowPeak,broadPeak}" into chIdr
-  file "*_log.txt" into chMqcIdr
+  file "*idrValues.txt" into chIdr
+  file "*log.txt" into chMqcIdr
 
   script:
+  peaktype = allPeaks[0].toString()
+  peaktype = peaktype.substring(peaktype.lastIndexOf(".") + 1)
   """
-  replicate_idr.py -sn ${sampleIDs} -pf ${allPeaks}
+  idr --samples ${allPeaks} \\
+      --input-file-type  ${peaktype} \\
+      -o ${group}_idrValues.txt \\
+      -l ${group}_log.txt \\
+      --plot
   """
 }
 
@@ -1404,7 +1406,6 @@ process IDR{
 //      .mix(chMacsQcBroad)
 //      .set{chMacsQc}
 //  }
-
 //  process peakQC{
 //    publishDir "${params.outdir}/peak_QC/", mode: 'copy'
 //
@@ -1461,9 +1462,6 @@ process IDR{
 //    """
 //  }
 //}
-
-
-
 
 
 /*
@@ -1591,11 +1589,11 @@ process multiqc {
   file ('ppqt/*.spp.out') from chPpqtOutMqc.collect().ifEmpty([])
   file ('ppqt/*_mqc.tsv') from chPpqtCsvMqc.collect().ifEmpty([])
 
-  //file ('deepTools/*') from chDeeptoolsSingle.collect().ifEmpty([])
-  //file ('deepTools/*_corrected.tab') from chDeeptoolsSingleMqc.collect().ifEmpty([])
-  //file ("deepTools/bams_correlation.tab") from chDeeptoolsCorrelMqc.collect().ifEmpty([])
-  //file ("deepTools/bams_coverage_raw.txt") from chDeeptoolsCovMqc.collect().ifEmpty([])
-  //file ("deepTools/bams_fingerprint_*") from chDeeptoolsFingerprintMqc.collect().ifEmpty([])
+  file ('deepTools/*') from chDeeptoolsSingle.collect().ifEmpty([])
+  file ('deepTools/*_corrected.tab') from chDeeptoolsSingleMqc.collect().ifEmpty([])
+  file ("deepTools/bams_correlation.tab") from chDeeptoolsCorrelMqc.collect().ifEmpty([])
+  file ("deepTools/bams_coverage_raw.txt") from chDeeptoolsCovMqc.collect().ifEmpty([])
+  file ("deepTools/bams_fingerprint_*") from chDeeptoolsFingerprintMqc.collect().ifEmpty([])
 
   file ('peakCalling/sharp/*.xls') from chMacsOutputSharp.collect().ifEmpty([])
   file ('peakCalling/broad/*.xls') from chMacsOutputBroad.collect().ifEmpty([])
