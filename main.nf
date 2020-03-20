@@ -42,13 +42,24 @@ def helpMessage() {
   --genome                 Name of iGenomes reference
   -profile                 Configuration profile to use. Can use multiple (comma separated)
                            Available: conda, docker, singularity, awsbatch, test, toolsPath and more.
-  --aligner                Alignment tool to use ['bwa', 'star', 'bowtie2']
 
-  Options:
+  Inputs:
+  --design                 Path to design file for downstream analysis
   --singleEnd              Specifies that the input is single end reads
   --spike                  Indicates if the experiment includes a spike-in normalization.
                            Default : false. Available : 'spike' to use metagenome with reference genome
                            '[spike genome]' to use a specific second genome
+
+  Tools:
+  --aligner                Alignment tool to use ['bwa-mem', 'star', 'bowtie2']. Default: 'bwa-mem'
+  
+  Filtering:
+  --mapQ                   Minimum mapping quality to consider
+  --keepDups               Do not remove duplicates afer marking
+  --blacklist              Path to black list regions (.bed)
+
+  Peak calling
+  --macsGzise              Reference genome size for MACS2
 
   References           If not specified in the configuration file or you wish to overwrite any of the references given by the --genome field
   --fasta                  Path to Fasta reference
@@ -62,23 +73,19 @@ def helpMessage() {
   --bed                    BED annotation file. Used with samtools to filter the reads, and in Deeptools ComputeMatrix function
   --gtf                    GTF annotation file. Used in HOMER peak annotation
 
-  Peak calling
-  --macsGzise              Reference genome size for MACS2
-  --noInput                Default : false. Use --noInput to indicate no input controls in peak calling tools.
-
   Skip options:        All are false by default
   --skipMultiqc            Skips final report writing
   --skipFastqc             Skips fastQC
   --skipAlignment          Skips alignments
   --skipPreseq             Skips preseq QC
   --skipFiltering          Skips filtering
-  --skipPpqt               Skips phantompeakqualtools QC
+  --skipPPQT               Skips phantompeakqualtools QC
   --skipDeepTools          Skips deeptools QC
   --skipPeakcalling        Skips peak calling
   --skipPeakanno           Skips peak annotation
-  --skipPeakQC             Skips peak QC
-  --skipIdr                Skips IDR QC
+  --skipIDR                Skips IDR QC
   --skipFeatCounts         Skips feature count
+  --skipMultiQC            Skips MultiQC step
 
   Other options:
   --outdir                 The output directory where the results will be saved
@@ -254,9 +261,19 @@ chPpqtRSCHeader = file("$baseDir/assets/ppqt_rsc_header.txt", checkIfExists: tru
 //Peak Calling
 params.macsGsize = genomeRef ? params.genomes[ genomeRef ].macsGsize ?: false : false
 params.blacklist = genomeRef ? params.genomes[ genomeRef ].blacklist ?: false : false
-chPeakCountHeader = file("$baseDir/assets/peak_count_header.txt", checkIfExists: true)
-chFripScoreHeader = file("$baseDir/assets/frip_score_header.txt", checkIfExists: true)
-chPeakAnnotationHeader = file("$baseDir/assets/peak_annotation_header.txt", checkIfExists: true)
+
+Channel
+  .fromPath("$baseDir/assets/peak_count_header.txt")
+  .into { chPeakCountHeaderSharp; chPeakCountHeaderBroad; chPeakCountHeaderVeryBroad }
+
+Channel
+  .fromPath("$baseDir/assets/frip_score_header.txt")
+  .into{ chFripScoreHeaderSharp; chFripScoreHeaderBroad; chFripScoreHeaderVeryBroad }
+
+//Channel
+//  .fromPath("$baseDir/assets/peak_annotation_header.txt")
+//  .set{ chPeakAnnotationHeader }
+
 
 //Filtering
 if (params.singleEnd) {
@@ -427,7 +444,7 @@ if (params.design){
   Channel
     .fromPath(params.design)
     .ifEmpty { exit 1, "Design file not found: ${params.design}" }
-    .into { chDesignCheck;chDesignControl }
+    .into { chDesignCheck; chDesignControl }
 
   chDesignControl
     .splitCsv(header:false, sep:',')
@@ -436,7 +453,7 @@ if (params.design){
       return [ row[0], row[1], row[2], row[3], row[4] ]
      }
     .dump(tag:'design')
-    .set { chDesignControl }
+    .into { chDesignControl; chDesignReplicate }
 
   // Create special channel to deal with no input cases
   Channel
@@ -445,6 +462,7 @@ if (params.design){
     .set{ chNoInput }
 }else{
   chDesignControl=Channel.empty()
+  chDesignReplicate=Channel.empty()
   chDesignCheck=Channel.empty()
 }
 
@@ -768,7 +786,7 @@ process markDuplicates{
   set val(prefix), file(sortedBams) from chSortBam
 
   output:
-  set val(prefix), file("*.{bam,bam.bai}") into chMarkedBam, chMarkedPreseq
+  set val(prefix), file("*.{bam,bam.bai}") into chMarkedBams, chMarkedBamsFilt, chMarkedPreseq
   set val(prefix), file("*.flagstat") into chMarkedFlagstat
   file "*.{idxstats,stats}" into chMarkedStats
   file "*.txt" into chMarkedPicstats
@@ -832,7 +850,7 @@ process bamFiltering {
   !params.skipFiltering
 
   input:
-  set val(prefix), file(markedBam) from chMarkedBam
+  set val(prefix), file(markedBam) from chMarkedBamsFilt
   file bed from chGeneBed.collect()
   file bamtoolsFilterConfig from chBamtoolsFilterConfig.collect()
 
@@ -1126,7 +1144,7 @@ process deepToolsCorrelationQC{
 
 
 /*#########################################################################
-  /!\ From this point, 'design' is now mandatory /!\
+  /!\ From this point, 'design' is mandatory /!\
 ###########################################################################*/
 
 /*
@@ -1134,28 +1152,30 @@ process deepToolsCorrelationQC{
  */
 
 if (params.design){
-  chFilteredBamsMacs1
-    .join(chFilteredFlagstatMacs)
-    .combine(chNoInput.concat(chFilteredBamsMacs2))
-    .set { chFilteredBamsMacs1 }
+  chBamsMacs1
+    .join(chFlagstatMacs)
+    .combine(chNoInput.concat(chBamsMacs2))
+    .set { chBamsMacs1 }
 
   chDesignControl
-    .combine(chFilteredBamsMacs1)
+    .combine(chBamsMacs1)
     .filter { it[0] == it[5] && it[1] == it[8] }
     .map { it ->  it[2..-1] }
-    .dump (tag:'peakCall')
     .into { chGroupBamMacsSharp; chGroupBamMacsBroad; chGroupBamMacsVeryBroad; chGroupBamFeatCounts}
 
   chGroupBamMacsSharp
     .filter { it[2] == 'sharp' }
+    .dump(tag:'peakCall')
     .set { chGroupBamMacsSharp }
 
   chGroupBamMacsBroad
     .filter { it[2] == 'broad' }
+    .dump(tag:'peakCall')
     .set { chGroupBamMacsBroad }
 
   chGroupBamMacsVeryBroad
     .filter { it[2] == 'very-broad' }
+    .dump(tag:'peakCall')
     .set { chGroupBamMacsVeryBroad }
 }else{
   chGroupBamMacsSharp=Channel.empty()
@@ -1181,13 +1201,14 @@ process sharpMACS2{
   !params.skipPeakCalling
 
   input:
-  set val(sampleName), val(replicate), val(peaktype), val(sampleID), file(sampleBam), file(sampleFlagstat), val(controlID), file(controlBam) from chGroupBamMacsSharp
-  file peakCountHeader from chPeakCountHeader.collect()
-  file fripScoreHeader from chFripScoreHeader.collect()
+  set val(group), val(replicate), val(peaktype), val(sampleID), file(sampleBam), file(sampleFlagstat), val(controlID), file(controlBam) from chGroupBamMacsSharp
+  file peakCountHeader from chPeakCountHeaderSharp.collect()
+  file fripScoreHeader from chFripScoreHeaderSharp.collect()
 
   output:
   set val(sampleID), file("*.{bed,xls,gappedPeak,bdg}") into chMacsOutputSharp
-  set val(sampleName), val(replicate), val(peaktype), val(sampleID), val(controlID), file("*.narrowPeak") into chMacsHomerSharp, chMacsQcSharp, chMacsIdrSharp
+  set val(group), val(replicate), val(peaktype), val(sampleID), file("*.narrowPeak") into chPeaksMacsSharp
+  //set val(group), val(replicate), val(peaktype), val(sampleID), val(controlID), file("*.narrowPeak") into chMacsHomerSharp, chMacsQcSharp, chMacsIdrSharp
   //file "*igv.txt" into chMacs_igv_sharp
   file "*_mqc.tsv" into chMacsCountsSharp
 
@@ -1221,16 +1242,17 @@ process broadMACS2{
             }
    
   when:
-  params.skipPeakCalling
+  !params.skipPeakCalling
 
   input:
-  set val(sampleName), val(replicate), val(peaktype), val(sampleID), file(sampleBam), file(sampleFlagstat), val(controlID), file(controlBam) from chGroupBamMacsBroad
-  file peakCountHeader from chPeakCountHeader.collect()
-  file fripScoreHeader from chFripScoreHeader.collect()
+  set val(group), val(replicate), val(peaktype), val(sampleID), file(sampleBam), file(sampleFlagstat), val(controlID), file(controlBam) from chGroupBamMacsBroad
+  file peakCountHeader from chPeakCountHeaderBroad.collect()
+  file fripScoreHeader from chFripScoreHeaderBroad.collect()
 
   output:
   set val(sampleID), file("*.{bed,xls,gappedPeak,bdg}") into chMacsOutputBroad
-  set val(sampleName), val(replicate), val(peaktype), val(sampleID), val(controlID), file("*.broadPeak") into chMacsHomerBroad, chMacsQcBroad, chMacsIdrBroad
+  set val(group), val(replicate), val(peaktype), val(sampleID), file("*.broadPeak") into chPeaksMacsBroad
+  //set val(group), val(replicate), val(peaktype), val(sampleID), val(controlID), file("*.broadPeak") into chMacsHomerBroad, chMacsQcBroad, chMacsIdrBroad
   //file "*igv.txt" into chMacs_igv_broad
   file "*_mqc.tsv" into chMacsCountsBroad
 
@@ -1266,16 +1288,17 @@ process veryBroadEpic2{
             }
  
   when:
-  !skipPeakCalling
+  !params.skipPeakCalling
 
   input:
-  set val(sampleName), val(replicate), val(peaktype), val(sampleID), file(sampleBam), file(sampleFlagstat), val(controlID), file(controlBam) from chGroupBamMacsVeryBroad
-  file peakCountHeader from chPeakCountHeader
-  file fripScoreHeader from chFripScoreHeader
+  set val(group), val(replicate), val(peaktype), val(sampleID), file(sampleBam), file(sampleFlagstat), val(controlID), file(controlBam) from chGroupBamMacsVeryBroad
+  file peakCountHeader from chPeakCountHeaderVeryBroad.collect()
+  file fripScoreHeader from chFripScoreHeaderVeryBroad.collect()
 
   output:
   // set val(sampleID), file("*.{bed,xls,gappedPeak,bdg}") into chMacs_output_vbroad ===>> Mandatory data for MQC in Sharp&Broad MACS2
-  set val(sampleName), val(replicate), val(peaktype), val(sampleID), val(controlID), file("*.broadPeak") into chMacsHomerVbroad, chMacsQcVbroad, chMacsIdrVbroad
+  set val(group), val(replicate), val(peaktype), val(sampleID), file("*.broadPeak") into chPeaksEpic
+  //set val(group), val(replicate), val(peaktype), val(sampleID), val(controlID), file("*.broadPeak") into chMacsHomerVbroad, chMacsQcVbroad, chMacsIdrVbroad
   //file "*igv.txt" into chMacs_igv_vbroad
   file "*_mqc.tsv" into chMacsCountsVbroad
 
@@ -1295,82 +1318,81 @@ process veryBroadEpic2{
   """
 }
 
+// Join the results of all peaks callers
+chPeaksMacsSharp
+  .mix(chPeaksMacsBroad, chPeaksEpic)
+  .into{ chPeaksHomer; chIDRpeaks; chIDRid }
+
+
 /*
  * Peaks Annotation
  */
 
+process peakAnnoHomer{
+  tag "${sampleID}"
+  publishDir path: "${params.outdir}/peak_annotation", mode: 'copy'
 
-if (!params.skipPeakAnno && params.design){
-  if (params.design){
-  chMacsHomerSharp
-    .mix(chMacsHomerBroad, chMacsHomerVbroad)
-    .set{chMacs_homer}
-  }
+  when:
+  !params.skipPeakAnno
 
-  process peakAnnoHomer{
-    tag "${sampleID} - ${controlID}"
-    publishDir path: "${params.outdir}/peak_annotation", mode: 'copy'
+  input:
+  set val(group), val(replicate), val(peaktype), val(sampleID), file (peakfile) from chPeaksHomer
+  file gtfFile from chGtfHomer.collect()
+  file fastaFile from chFastaHomer.collect()
 
-    input:
-    set val(sampleName), val(replicate), val(peaktype), val(sampleID), val(controlID), file (peakfile) from chMacs_homer
-    file gtfFile from chGtfHomer.collect()
-    file fastaFile from chFastaHomer.collect()
+  output:
+  file "*.txt" into chHomerPeakAnnotated
 
-    output:
-    file "*.txt" into chHomerPeakAnnotated
-
-    script:
-    """
-    annotatePeaks.pl $peakfile \\
-          $fastaFile \\
-          -gtf $gtfFile \\
-          -cpu ${task.cpus} \\
-          > ${sampleID}_annotated_peaks.txt
-    """
-  }
+  script:
+  """
+  annotatePeaks.pl $peakfile \\
+        $fastaFile \\
+        -gtf $gtfFile \\
+        -cpu ${task.cpus} \\
+        > ${sampleID}_annotated_peaks.txt
+  """
 }
 
 
 /*
- * Replicates
+ * Per Group Analysis
  */
 
 /*
  * Irreproducible Discovery Rate
+ */
 
-if (!params.skipIdr && params.replicates  && params.design){
-  chMacsIdrSharp
-      .mix(chMacsIdrBroad, chMacsIdrVbroad)
-      .into{chIdrSName;
-        chIdrPeakfile}
+chIDRpeaks
+  .map { it -> [it[0],it[4]] }
+  .groupTuple()
+  .set{ chPeaksPerGroup }
 
-  chIdrSName
-      .map{ it -> it[0]}
-      .unique()
-      .set{chIdrSName}
+chIDRid
+  .map { it -> [it[0],it[3]] }
+  .groupTuple()
+  .set{ chIdPerGroup }
 
-  chIdrPeakfile
-      .map{ it -> it[0, -1]}
-      .set{chIdrPeakfile}
+process IDR{
+  tag "${group}"
+  publishDir path: "${params.outdir}/IDR", mode: 'copy'
 
-  process IDR{
-    publishDir path: "${params.outdir}/IDR", mode: 'copy'
+  when:
+  sampleIDs.size() > 1 && !params.skipIDR
 
-    input:
-    val sampleNameAll from chIdrSName.toList()
-    val peakFilesAll from chIdrPeakfile.toList()
+  input:
+  set val(group), val(sampleIDs), file(allPeaks) from chIdPerGroup.join(chPeaksPerGroup).dump(tag:'rep')
 
-    output:
-    file "*.{narrowPeak,broadPeak}" into chIdr
-    file "*_log.txt" into chMqcIdr
+  output:
+  file "*.{narrowPeak,broadPeak}" into chIdr
+  file "*_log.txt" into chMqcIdr
 
-    script:
-    """
-    replicate_idr.py -sn ${sampleNameAll} -pf ${peakFilesAll}
-    """
-  }
+  script:
+  """
+  replicate_idr.py -sn ${sampleIDs} -pf ${allPeaks}
+  """
 }
-*/
+
+
 
 
 //
