@@ -1,7 +1,3 @@
 A949C02,Input_EGF-0,test-op/data/A949C02_chr2122.R1.fq.gz
-A1014C02,Input_EGF-1,test-op/data/A1014C02_chr2122.R1.fq.gz
 A949C08,H3K9me3_EGF-0,test-op/data/A949C08_chr2122.R1.fq.gz
 A949C11,H3K4me3_EGF-0,test-op/data/A949C11_chr2122.R1.fq.gz
-A949C05,H3K27me3_EGF-0,test-op/data/A949C05_chr2122.R1.fq.gz
-A1014C06,H3K9me2_EGF-1,test-op/data/A1014C06_chr2122.R1.fq.gz
-A1014C08,H3K9me3_EGF-1,test-op/data/A1014C08_chr2122.R1.fq.gz

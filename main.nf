@@ -23,8 +23,6 @@ https://gitlab.curie.fr/chipseq
 */
 
 def helpMessage() {
-  // TODO: Add to this help message with new command line parameters
-
   if ("${workflow.manifest.version}" =~ /dev/ ){
   devMess = file("$baseDir/assets/dev_message.txt")
   log.info devMess.text
@@ -43,20 +41,18 @@ def helpMessage() {
   --samplePlan             Path to sample plan file if '--reads' is not specified
   --genome                 Name of iGenomes reference
   -profile                 Configuration profile to use. Can use multiple (comma separated)
-                              Available: conda, docker, singularity, awsbatch, test, toolsPath and more.
-  --aligner                Alignment tool to use:
-                              Available : bwa, star, bowtie2
+                           Available: conda, docker, singularity, awsbatch, test, toolsPath and more.
+  --aligner                Alignment tool to use ['bwa', 'star', 'bowtie2']
 
   Options:
   --singleEnd              Specifies that the input is single end reads
-
-  SpikeIn analysis
   --spike                  Indicates if the experiment includes a spike-in normalization.
                            Default : false. Available : 'spike' to use metagenome with reference genome
                            '[spike genome]' to use a specific second genome
 
   References           If not specified in the configuration file or you wish to overwrite any of the references given by the --genome field
   --fasta                  Path to Fasta reference
+
   Indexes              Path to the indexes for aligners
   --starIndex              Index for STAR aligner
   --bwaIndex               Index for BWA MEM aligner
@@ -65,6 +61,7 @@ def helpMessage() {
   Annotation
   --bed                    BED annotation file. Used with samtools to filter the reads, and in Deeptools ComputeMatrix function
   --gtf                    GTF annotation file. Used in HOMER peak annotation
+
   Peak calling
   --macsGzise              Reference genome size for MACS2
   --noInput                Default : false. Use --noInput to indicate no input controls in peak calling tools.
@@ -101,123 +98,126 @@ if (params.help){
   exit 0
 }
 
-// TODO - Add any reference files that are needed - see igenome.conf
 // Configurable reference genomes
 if (params.spike == 'spike'){
-	genomeRef = params.genome + '_spike'
+  genomeRef = params.genome + '_spike'
 }
 else {
-	genomeRef = params.genome
+  genomeRef = params.genome
 }
+
 params.fasta = genomeRef ? params.genomes[ genomeRef ].fasta ?: false : false
 if ( params.fasta ){
   Channel
     .fromPath(params.fasta, checkIfExists: true)
-    .into{chFastaHomer;
-          chFastaBwa;
-          chFastaBt2;
-          chFastaStar}
+    .into{chFastaHomer; chFastaBwa; chFastaBt2; chFastaStar}
 }
 else{
   exit 1, "Fasta file not found: ${params.fasta}"
 }
 
+
 if (params.spike && params.spike != 'spike'){
   params.spikeFasta = params.spike ? params.genomes[ params.spike ].fasta ?: false : false
   if ( params.spikeFasta ){
     Channel
-      .fromPath(params.spikeFasta, checkIfExists: true)
-      .into{chSpikeFaBwa;
-            chSpikeFaBt2;
-            chSpikeFaStar}
+      .fromPath(params.spikeFasta, checkIfExists: true)      
+      .into{chSpikeFaBwa; chSpikeFaBt2; chSpikeFaStar}
   } else {
     exit 1, "Spike-in fasta file not found: ${params.spikeFasta}"
   }
 }
 
-if (params.aligner == "bwa-mem"){
-  params.bwaIndex = genomeRef ? params.genomes[ genomeRef ].bwaIndex ?: false : false
-  if (params.bwaIndex){
-    lastPath = params.fasta.lastIndexOf(File.separator)
-    bwaDir =  params.bwaIndex.substring(0,lastPath+1)
-    bwaBase = params.bwaIndex.substring(lastPath+1)
+//Bwa-mem Index
+params.bwaIndex = genomeRef ? params.genomes[ genomeRef ].bwaIndex ?: false : false
+if (params.bwaIndex){
+  lastPath = params.fasta.lastIndexOf(File.separator)
+  bwaDir =  params.bwaIndex.substring(0,lastPath+1)
+  bwaBase = params.bwaIndex.substring(lastPath+1)
+  Channel
+    .fromPath(bwaDir, checkIfExists: true)
+    .ifEmpty {exit 1, "BWA index file not found: ${params.bwaIndex}"}
+    .set { chBwaIndex }
+} else {
+  exit 1, "BWA index file not found: ${params.bwaIndex}"
+}
+
+//if (params.spike && params.spike != 'spike'){
+  params.spikeBwaIndex = params.spike ? params.genomes[ params.spike ].bwaIndex ?: false : false
+  if (params.spikeBwaIndex){
+    lastPath = params.spikeFasta.lastIndexOf(File.separator)
+    bwaDir =  params.spikeBwaIndex.substring(0,lastPath+1)
+    spikeBwaBase = params.spikeBwaIndex.substring(lastPath+1)
     Channel
       .fromPath(bwaDir, checkIfExists: true)
-      .set { chBwaIndex }
+      .ifEmpty {exit 1, "Spike BWA index file not found: ${params.spikeBwaIndex}"}
+      .set { chSpikeBwaIndex }
   } else {
-    exit 1, "BWA index file not found: ${params.bwaIndex}"
+    chSpikeBwaIndex=Channel.empty()
+    //exit 1, "Spike BWA index file not found: ${params.spikeBwaIndex}"
   }
+//}
 
-  if (params.spike && params.spike != 'spike'){
-    params.spikeBwaIndex = params.spike ? params.genomes[ params.spike ].bwaIndex ?: false : false
-    if (params.spikeBwaIndex){
-      lastPath = params.spikeFasta.lastIndexOf(File.separator)
-      bwaDir =  params.spikeBwaIndex.substring(0,lastPath+1)
-      spikeBwaBase = params.spikeBwaIndex.substring(lastPath+1)
-      Channel
-        .fromPath(bwaDir, checkIfExists: true)
-        .set { chSpikeBwaIndex }
-    } else {
-      exit 1, "Spike BWA index file not found: ${params.spikeBwaIndex}"
-    }
-  }
+//Bowtie2 indexes
+params.bt2Index = genomeRef ? params.genomes[ genomeRef ].bowtie2Index ?: false : false
+if (params.bt2Index){
+  lastPath = params.fasta.lastIndexOf(File.separator)
+  bt2Dir =  params.bt2Index.substring(0,lastPath+1)
+  bt2Base = params.bt2Index.substring(lastPath+1)
+  Channel
+    .fromPath(bt2Dir, checkIfExists: true)
+    .ifEmpty {exit 1, "Bowtie2 index file not found: ${params.bt2Index}"}
+    .set { chBt2Index }
+} else {
+  exit 1, "Bowtie2 index file not found: ${params.bt2Index}"
 }
 
-if (params.aligner == "bowtie2"){
-  params.bt2Index = genomeRef ? params.genomes[ genomeRef ].bowtie2Index ?: false : false
-  if (params.bt2Index){
-    lastPath = params.fasta.lastIndexOf(File.separator)
-    bt2Dir =  params.bt2Index.substring(0,lastPath+1)
-    bt2Base = params.bt2Index.substring(lastPath+1)
+//if (params.spike && params.spike != 'spike'){
+      params.spikeBt2Index = params.spike ? params.genomes[ params.spike ].bowtie2Index ?: false : false
+  if (params.spikeBt2Index){
+    lastPath = params.spikeFasta.lastIndexOf(File.separator)
+    bt2Dir =  params.spikeBt2Index.substring(0,lastPath+1)
+    spikeBt2Base = params.spikeBt2Index.substring(lastPath+1)
     Channel
       .fromPath(bt2Dir, checkIfExists: true)
-      .set { chBt2Index }
+      .ifEmpty {exit 1, "Spike Bowtie2 index file not found: ${params.spikeBt2Index}"}
+      .set { chSpikeBt2Index }
   } else {
-    exit 1, "Bowtie2 index file not found: ${params.bt2Index}"
+    chSpikeBt2Index=Channel.empty()
+    //exit 1, "Spike bowtie2 index file not found: ${params.spikeBt2Index}"
   }
+//}
 
-  if (params.spike && params.spike != 'spike'){
-        params.spikeBt2Index = params.spike ? params.genomes[ params.spike ].bowtie2Index ?: false : false
-    if (params.spikeBt2Index){
-      lastPath = params.spikeFasta.lastIndexOf(File.separator)
-      bt2Dir =  params.spikeBt2Index.substring(0,lastPath+1)
-      spikeBt2Base = params.spikeBt2Index.substring(lastPath+1)
-      Channel
-        .fromPath(bt2Dir, checkIfExists: true)
-        .set { chSpikeBt2Index }
-    } else {
-      exit 1, "Spike bowtie2 index file not found: ${params.spikeBt2Index}"
-    }
-  }
+//Star indexes
+params.starIndex = genomeRef ? params.genomes[ genomeRef ].starIndex ?: false : false
+if (params.starIndex){
+  lastPath = params.fasta.lastIndexOf(File.separator)
+  starDir =  params.starIndex.substring(0,lastPath+1)
+  starBase = params.starIndex.substring(lastPath+1)
+  Channel
+    .fromPath(starDir, checkIfExists: true)
+    .ifEmpty {exit 1, "STAR index file not found: ${params.starIndex}"}
+    .set { chStarIndex }
+} else {
+  exit 1, "STAR index file not found: ${params.starIndex}"
 }
 
-if (params.aligner == "star"){
-  params.starIndex = genomeRef ? params.genomes[ genomeRef ].starIndex ?: false : false
-  if (params.starIndex){
-    lastPath = params.fasta.lastIndexOf(File.separator)
-    starDir =  params.starIndex.substring(0,lastPath+1)
-    starBase = params.starIndex.substring(lastPath+1)
+//if (params.spike && params.spike != 'spike'){
+  params.spikeStarIndex = params.spike ? params.genomes[ params.spike ].starIndex ?: false : false
+  if (params.spikeStarIndex){
+    lastPath = params.spike.lastIndexOf(File.separator)
+    starDir =  params.spikeStarIndex.substring(0,lastPath+1)
+    spikeStarBase = params.spikeStarIndex.substring(lastPath+1)
     Channel
       .fromPath(starDir, checkIfExists: true)
-      .set { chStarIndex }
+      .ifEmpty {exit 1, "Spike STAR index file not found: ${params.spikeStarIndex}"}
+      .set { chSpikeStarIndex }
   } else {
-    exit 1, "STAR index file not found: ${params.starIndex}"
+    chSpikeStarIndex = Channel.empty()
+    //exit 1, "Spike STAR index file not found: ${params.spikeStarIndex}"
   }
+//}
 
-  if (params.spike && params.spike != 'spike'){
-    params.spikeStarIndex = params.spike ? params.genomes[ params.spike ].starIndex ?: false : false
-    if (params.spikeStarIndex){
-      lastPath = params.spike.lastIndexOf(File.separator)
-      starDir =  params.spikeStarIndex.substring(0,lastPath+1)
-      spikeStarBase = params.spikeStarIndex.substring(lastPath+1)
-      Channel
-        .fromPath(starDir, checkIfExists: true)
-        .set { chSpikeStarIndex }
-    } else {
-      exit 1, "Spike STAR index file not found: ${params.spikeStarIndex}"
-    }
-  }
-}
 
 // Other inputs
 params.gtf = genomeRef ? params.genomes[ genomeRef ].gtf ?: false : false
@@ -234,8 +234,7 @@ params.geneBed = genomeRef ? params.genomes[ genomeRef ].bed12 ?: false : false
 if (params.geneBed) {
   Channel
     .fromPath(params.geneBed, checkIfExists: true)
-    .into{chGeneBed;
-          chGeneBedDeeptools}
+    .into{chGeneBed; chGeneBedDeeptools}
 }
 
 if (params.spike && params.spike != 'spike'){
@@ -247,26 +246,19 @@ if (params.spike && params.spike != 'spike'){
   }
 }
 
-params.macsGsize = genomeRef ? params.genomes[ genomeRef ].macsGsize ?: false : false
-params.blacklist = genomeRef ? params.genomes[ genomeRef ].blacklist ?: false : false
-
 //PPQT headers
 chPpqtCorHeader = file("$baseDir/assets/ppqt_cor_header.txt", checkIfExists: true)
 chPpqtNSCHeader = file("$baseDir/assets/ppqt_nsc_header.txt", checkIfExists: true)
 chPpqtRSCHeader = file("$baseDir/assets/ppqt_rsc_header.txt", checkIfExists: true)
 
-//Peak Calling headers
+//Peak Calling
+params.macsGsize = genomeRef ? params.genomes[ genomeRef ].macsGsize ?: false : false
+params.blacklist = genomeRef ? params.genomes[ genomeRef ].blacklist ?: false : false
 chPeakCountHeader = file("$baseDir/assets/peak_count_header.txt", checkIfExists: true)
 chFripScoreHeader = file("$baseDir/assets/frip_score_header.txt", checkIfExists: true)
 chPeakAnnotationHeader = file("$baseDir/assets/peak_annotation_header.txt", checkIfExists: true)
 
-// Stage config files
-  Channel
-    .fromPath(params.multiqcConfig, checkIfExists: true)
-    .set{chMultiqcConfig}
-  Channel
-    .fromPath(params.outputDoc, checkIfExists: true)
-    .set{chOutputDocs}
+//Filtering
 if (params.singleEnd) {
   chBamtoolsFilterConfig = Channel.fromPath(params.bamtoolsFilterSEConfig, checkIfExists: true)
 } else {
@@ -274,17 +266,26 @@ if (params.singleEnd) {
 }
 
 
-// Has the run name been specified by the user?
-//  this has the bonus effect of catching both -name and --name
+//Stage config files
+Channel
+  .fromPath(params.multiqcConfig, checkIfExists: true)
+  .set{chMultiqcConfig}
+Channel
+  .fromPath(params.outputDoc, checkIfExists: true)
+  .set{chOutputDocs}
+
+
+//Has the run name been specified by the user?
+//This has the bonus effect of catching both -name and --name
 customRunName = params.name
 if( !(workflow.runName ==~ /[a-z]+_[a-z]+/) ){
-customRunName = workflow.runName
+  customRunName = workflow.runName
 }
 
-// Header log info
+//Header log info
 if ("${workflow.manifest.version}" =~ /dev/ ){
-devMess = file("$baseDir/assets/dev_message.txt")
-log.info devMess.text
+  devMess = file("$baseDir/assets/dev_message.txt")
+  log.info devMess.text
 }
 
 log.info """=======================================================
@@ -295,7 +296,6 @@ def summary = [:]
 summary['Pipeline Name']  = 'Chip-seq'
 summary['Pipeline Version'] = workflow.manifest.version
 summary['Run Name']     = customRunName ?: workflow.runName
-// TODO : Report custom parameters here
 if (params.samplePlan) {
   summary['SamplePlan']   = params.samplePlan
 }
@@ -324,7 +324,6 @@ log.info summary.collect { k,v -> "${k.padRight(15)}: $v" }.join("\n")
 log.info "========================================="
 
 
-
 /*
  * CHANNELS
  */
@@ -336,18 +335,93 @@ if ( params.metadata ){
     .set { chMetadata }
 }
 
+/*
+ * Create a channel for input read files
+ */
+
+if(params.samplePlan){
+   if(params.singleEnd){
+      Channel
+         .from(file("${params.samplePlan}"))
+         .splitCsv(header: false)
+         .map{ row -> [ row[0], [file(row[2])]] }
+         .into { rawReadsFastqc; rawReadsBWA; rawReadsBt2; rawReadsSTAR; rawSpikeReadsBWA; rawSpikeReadsBt2; rawSpikeReadsSTAR }
+   }else{
+      Channel
+         .from(file("${params.samplePlan}"))
+         .splitCsv(header: false)
+         .map{ row -> [ row[0], [file(row[2]), file(row[3])]] }
+         .into { rawReadsFastqc; rawReadsBWA; rawReadsBt2; rawReadsSTAR; rawSpikeReadsBWA; rawSpikeReadsBt2; rawSpikeReadsSTAR }
+   }
+   params.reads=false
+}
+else if(params.readPaths){
+    if(params.singleEnd){
+        Channel
+            .from(params.readPaths)
+            .map { row -> [ row[0], [file(row[1][0])]] }
+            .ifEmpty { exit 1, "params.readPaths was empty - no input files supplied" }
+            .into { rawReadsFastqc; rawReadsBWA; rawReadsBt2; rawReadsSTAR; rawSpikeReadsBWA; rawSpikeReadsBt2; rawSpikeReadsSTAR }
+    } else {
+        Channel
+            .from(params.readPaths)
+            .map { row -> [ row[0], [file(row[1][0]), file(row[1][1])]] }
+            .ifEmpty { exit 1, "params.readPaths was empty - no input files supplied" }
+            .into { rawReadsFastqc; rawReadsBWA; rawReadsBt2; rawReadsSTAR; rawSpikeReadsBWA; rawSpikeReadsBt2; rawSpikeReadsSTAR }
+    }
+} else {
+    Channel
+        .fromFilePairs( params.reads, size: params.singleEnd ? 1 : 2 )
+        .ifEmpty { exit 1, "Cannot find any reads matching: ${params.reads}\nNB: Path needs to be enclosed in quotes!\nNB: Path requires at least one * wildcard!\nIf this is single-end data, please specify --singleEnd on the command line." }
+        .into { rawReadsFastqc; rawReadsBWA; rawReadsBt2; rawReadsSTAR; rawSpikeReadsBWA; rawSpikeReadsBt2; rawSpikeReadsSTAR }
+}
+
 
 /*
- * Retrieve sample plan & design control files
+ * Make sample plan if not available
  */
 
 if (params.samplePlan){
   Channel
     .fromPath(params.samplePlan)
-    .ifEmpty { exit 1, "Sample Plan file not found: ${params.samplePlan}" }
-    .into { chSplan;chSplanCheck;chReadsToMap }
+    .into {chSplan; chSplanCheck}
+}else if(params.readPaths){
+  if (params.singleEnd){
+    Channel
+       .from(params.readPaths)
+       .collectFile() {
+         item -> ["sample_plan.csv", item[0] + ',' + item[0] + ',' + item[1][0] + '\n']
+        }
+       .set{ chSplan; chSplanCheck }
+  }else{
+     Channel
+       .from(params.readPaths)
+       .collectFile() {
+         item -> ["sample_plan.csv", item[0] + ',' + item[0] + ',' + item[1][0] + ',' + item[1][1] + '\n']
+        }
+       .set{ chSplan; chSplanCheck }
+  }
+}else{
+  if (params.singleEnd){
+    Channel
+       .fromFilePairs( params.reads, size: 1 )
+       .collectFile() {
+          item -> ["sample_plan.csv", item[0] + ',' + item[0] + ',' + item[1][0] + '\n']
+       }     
+       .set { chSplan; chSplanCheck }
+  }else{
+    Channel
+       .fromFilePairs( params.reads, size: 2 )
+       .collectFile() {
+          item -> ["sample_plan.csv", item[0] + ',' + item[0] + ',' + item[1][0] + ',' + item[1][1] + '\n']
+       }     
+       .set { chSplan; chSplanCheck }
+   }
 }
 
+/*
+ * Design file
+ */
 
 if (params.design){
   Channel
@@ -357,12 +431,21 @@ if (params.design){
 
   chDesignControl
     .splitCsv(header:false, sep:',')
-    .map { row -> [ row[0], row[1], row[2], row[3], row[4] ] }
+    .map { row ->
+      if(row[1]==""){row[1]='NO_INPUT'}
+      return [ row[0], row[1], row[2], row[3], row[4] ]
+     }
+    .dump(tag:'design')
     .set { chDesignControl }
-} else {
+
+  // Create special channel to deal with no input cases
   Channel
-    .from(params.design)
-    .set {chDesignCheck}
+    .from( ["NO_INPUT", ["NO_FILE","NO_FILE"]] )
+    .toList()
+    .set{ chNoInput }
+}else{
+  chDesignControl=Channel.empty()
+  chDesignCheck=Channel.empty()
 }
 
 /*
@@ -385,68 +468,28 @@ process checkDesign{
   """
 }
 
-/*
- * Create a channel for input read files
- */
-
-if(params.samplePlan){
-  if(params.singleEnd){
-    chReadsToMap
-      .splitCsv(header: false, sep:',')
-      .map{ row -> [ row[0], [file(row[2], checkIfExists: true)]] }
-      .into { rawReadsFastqc;rawReadsBWA;rawReadsBt2;rawReadsSTAR;rawSpikeReadsBWA;rawSpikeReadsBt2;rawSpikeReadsSTAR }
-  }
-  else{
-    chReadsToMap
-      .splitCsv(header: false, sep:',')
-      .map{ row -> [ row[0], [file(row[2], checkIfExists: true), file(row[3], checkIfExists: true)]] }
-      .into { rawReadsFastqc;rawReadsBWA;rawReadsBt2;rawReadsSTAR;rawSpikeReadsBWA;rawSpikeReadsBt2;rawSpikeReadsSTAR }
-  }
-  params.reads=false
-}
-else if(params.readPaths){
-  if(params.singleEnd){
-    Channel
-      .from(params.readPaths)
-      .map { row -> [ row[0], [file(row[1][0])]] }
-      .ifEmpty { exit 1, "params.readPaths was empty - no input files supplied" }
-      .into { rawReadsFastqc;rawReadsBWA;rawReadsBt2;rawReadsSTAR }
-  }
-  else {
-    Channel
-      .from(params.readPaths)
-      .map { row -> [ row[0], [file(row[1][0]), file(row[1][1])]] }
-      .ifEmpty { exit 1, "params.readPaths was empty - no input files supplied" }
-      .into { rawReadsFastqc;rawReadsBWA;rawReadsBt2;rawReadsSTAR }
-  }
-}
-else {
-  Channel
-    .fromFilePairs( params.reads, size: params.singleEnd ? 1 : 2 )
-    .ifEmpty { exit 1, "Cannot find any reads matching: ${params.reads}\nNB: Path needs to be enclosed in quotes!\nNB: Path requires at least one * wildcard!\nIf this is single-end data, please specify --singleEnd on the command line." }
-    .into { rawReadsFastqc;rawReadsBWA;rawReadsBt2;rawReadsSTAR }
-}
 
 /*
  * FastQC
  */
 
-if (!params.skipFastqc){
-  process fastQC{
-    tag "${prefix}"
-    publishDir "${params.outdir}/fastQC"
+process fastQC{
+  tag "${prefix}"
+  publishDir "${params.outdir}/fastQC"
 
-    input:
-      set val(prefix), file(reads) from rawReadsFastqc
+  when:
+  !params.skipFastqc
 
-    output:
-      file "*_fastqc.{zip,html}" into chFastqcResults
+  input:
+  set val(prefix), file(reads) from rawReadsFastqc
 
-    script:
-      """
-      fastqc -q $reads -t 6
-      """
-  }
+  output:
+  file "*_fastqc.{zip,html}" into chFastqcResults
+
+  script:
+  """
+  fastqc -q $reads -t 6
+  """
 }
 
 /*
@@ -454,166 +497,169 @@ if (!params.skipFastqc){
  */
 
 // BWA-MEM
-if (!params.skipAlignment && params.aligner == "bwa-mem"){
-  process BWA{
-    tag "${prefix}"
-    publishDir "${params.outdir}/alignment/bwa_alignment"
+process bwaMem{
+  tag "${prefix}"
+  publishDir "${params.outdir}/alignment/bwa_alignment"
 
-    input:
-      set val(prefix), file(reads) from rawReadsBWA
-      file bwaIndex from chBwaIndex.collect()
+  when:
+  !params.skipAlignment && params.aligner == "bwa-mem"
 
-    output:
-      set val(prefix), file("*.bam") into chAlignReads
+  input:
+  set val(prefix), file(reads) from rawReadsBWA
+  file bwaIndex from chBwaIndex.collect()
 
-    script:
-    if (params.spike == 'spike'){
-      alnMult = '-a'
-    }
-    else{
-      alnMult = ''
-    }
-    """
-    bwa mem -t ${task.cpus} $alnMult $bwaIndex${bwaBase} $reads \\
-    | samtools view -b -h -o ${prefix}.bam
-    """
-  }
+  output:
+  set val(prefix), file("*.bam") into chAlignReadsBwa
+
+  script:
+  alnMult = params.spike == 'spike' ? '-a' : ''
+  """
+  bwa mem -t ${task.cpus} $alnMult $bwaIndex${bwaBase} $reads \\
+  | samtools view -b -h -o ${prefix}.bam
+  """
 }
 
 // BOWTIE2
-if (!params.skipAlignment && params.aligner == "bowtie2"){
-  process bowtie2{
-    tag "${prefix}"
-    publishDir "${params.outdir}/alignment/bowtie2_alignment"
+process bowtie2{
+  tag "${prefix}"
+  publishDir "${params.outdir}/alignment/bowtie2_alignment"
 
-    input:
-      set val(prefix), file(reads) from rawReadsBt2
-      file bt2Index from chBt2Index.collect()
+  when:
+  !params.skipAlignment && params.aligner == "bowtie2"
 
-    output:
-      set val(prefix), file("*.bam") into chAlignReads
+  input:
+  set val(prefix), file(reads) from rawReadsBt2
+  file bt2Index from chBt2Index.collect()
 
-    script:
-    if (params.singleEnd){
-      readcommand = "-1 ${reads[0]}"
-    }
-    else{
-      readcommand = "-1 ${reads[0]} -2 ${reads[1]}"
-    }
+  output:
+  set val(prefix), file("*.bam") into chAlignReadsBowtie2
 
-    if (params.spike == 'spike'){
-      alnMult = '-k 3'
-    }
-    else{
-      alnMult = ''
-    }
-    """
-    bowtie2 -p ${task.cpus} $alnMult -x $bt2Index/${bt2Base} $readcommand \\
-    | samtools view -b -h -o ${prefix}.bam
-    """
-  }
+  script:
+  readCommand = params.singleEnd ? "-1 ${reads[0]}" : "-1 ${reads[0]} -2 ${reads[1]}"
+  alnMult = params.spike ? alnMult = '-k 3' : ''
+  """
+  bowtie2 -p ${task.cpus} $alnMult -x $bt2Index/${bt2Base} $readCommand \\
+  | samtools view -b -h -o ${prefix}.bam
+  """
 }
 
 // STAR
-if (!params.skipAlignment && params.aligner == "star"){
-  process star{
-    tag "${prefix}"
-    publishDir "${params.outdir}/alignment/star_alignment"
+process star{
+  tag "${prefix}"
+  publishDir "${params.outdir}/alignment/star_alignment"
 
-    input:
-      set val(prefix), file(reads) from rawReadsSTAR
-      file starIndex from chStarIndex.collect()
+  when:
+  !params.skipAlignment && params.aligner == "star"
 
-    output:
-      set val(prefix), file('*.bam') into chAlignReads
+  input:
+  set val(prefix), file(reads) from rawReadsSTAR
+  file starIndex from chStarIndex.collect()
 
-    script:
-    """
-    STAR --genomeDir $starIndex/${starBase} --runThreadN ${task.cpus} --readFilesIn $reads --outSAMtype BAM Unsorted --readFilesCommand zcat \\
-    | samtools view -b -h -o ${prefix}.bam
-    """
-  }
+  output:
+  set val(prefix), file('*.bam') into chAlignReadsStar
+
+  script:
+  """
+  STAR --genomeDir $starIndex/${starBase} --runThreadN ${task.cpus} --readFilesIn $reads --outSAMtype BAM Unsorted --readFilesCommand zcat \\
+  | samtools view -b -h -o ${prefix}.bam
+  """
+}
+
+if (params.aligner == "bowtie2"){
+  chAlignReads = chAlignReadsBowtie2
+}else if (params.aligner == "bwa-mem"){
+  chAlignReads = chAlignReadsBwa
+}else if (params.aligner == "star"){
+  chAlignReads = chAlignReadsStar
 }
 
 /*
- * Alignment on spikein genome
+ * SPIKES GENOME
  */
-if (params.spike && params.spike != 'spike'){
-  // BWA-MEM
-  if (!params.skipAlignment && params.aligner == "bwa-mem"){
-    process spikeBWA{
-      tag "${prefix}"
-      publishDir "${params.outdir}/alignment/spike/bwa_alignment"
 
-      input:
-        set val(prefix), file(reads) from rawSpikeReadsBWA
-        file spikeBwaIndex from chSpikeBwaIndex.collect()
+// BWA-MEM
+process spikeBwaMem{
+  tag "${prefix}"
+  publishDir "${params.outdir}/alignment/spike/bwa_alignment"
 
-      output:
-        set val(spikeprefix), file("*_spike.bam") into chSpikeAlignReads
+  when:
+  params.spike && params.spike != 'spike' && !params.skipAlignment && params.aligner == "bwa-mem"
 
-      script:
-      spikeprefix = "${prefix}_spike"
-      """
-      bwa mem -t ${task.cpus} $spikeBwaIndex${spikeBwaBase} $reads \\
-      | samtools view -b -h -o ${spikeprefix}.bam
-      """
-    }
-  }
+  input:
+  set val(prefix), file(reads) from rawSpikeReadsBWA
+  file spikeBwaIndex from chSpikeBwaIndex.collect()
 
-  // BOWTIE2
-  if (!params.skipAlignment && params.aligner == "bowtie2"){
-    process spikeBowtie2{
-      tag "${prefix}"
-      publishDir "${params.outdir}/alignment/spike/bowtie2_alignment"
+  output:
+  set val(spikeprefix), file("*_spike.bam") into chSpikeAlignReadsBwa
 
-      input:
-        set val(prefix), file(reads) from rawSpikeReadsBt2
-        file spikeBt2Index from chSpikeBt2Index.collect()
-
-      output:
-        set val(spikeprefix), file("*.bam") into chSpikeAlignReads
-
-      script:
-      spikeprefix = "${prefix}_spike"
-      if (params.singleEnd){
-        readcommand = "-1 ${reads[0]}"
-      }
-      else{
-        readcommand = "-1 ${reads[0]} -2 ${reads[1]}"
-      }
-      """
-      bowtie2 -p ${task.cpus} -x $spikeBt2Index/${spikeBt2Base} $readcommand \\
-      | samtools view -b -h -o ${spikeprefix}.bam
-      """
-    }
-  }
-
-  // STAR
-  if (!params.skipAlignment && params.aligner == "star"){
-    process spikeStar{
-      tag "${prefix}"
-      publishDir "${params.outdir}/alignment/spike/star_alignment"
-
-      input:
-        set val(prefix), file(reads) from rawSpikeReadsSTAR
-        file spikeStarIndex from chSpikeStarIndex.collect()
-
-      output:
-        set val(spikeprefix), file('*.bam') into chSpikeAlignReads
-
-      script:
-      spikeprefix = "${prefix}_spike"
-      """
-      STAR --genomeDir $spikeStarIndex/${spikeStarBase} --runThreadN ${task.cpus} --readFilesIn $reads --outSAMtype BAM Unsorted --readFilesCommand zcat \\
-      | samtools view -b -h -o ${spikeprefix}.bam
-      """
-    }
-  }
+  script:
+  spikeprefix = "${prefix}_spike"
+  """
+  bwa mem -t ${task.cpus} $spikeBwaIndex${spikeBwaBase} $reads \\
+  | samtools view -b -h -o ${spikeprefix}.bam
+  """
 }
 
-// Merging, if necessary reference aligned reads and spike aligned reads
+// BOWTIE2
+process spikeBowtie2{
+  tag "${prefix}"
+  publishDir "${params.outdir}/alignment/spike/bowtie2_alignment"
+
+  when:
+  params.spike && params.spike != 'spike' && !params.skipAlignment && params.aligner == "bowtie2"
+
+  input:
+  set val(prefix), file(reads) from rawSpikeReadsBt2
+  file spikeBt2Index from chSpikeBt2Index.collect()
+
+  output:
+  set val(spikeprefix), file("*.bam") into chSpikeAlignReadsBowtie2
+
+  script:
+  spikeprefix = "${prefix}_spike"
+  readCommand = params.singleEnd ? "-1 ${reads[0]}" : "-1 ${reads[0]} -2 ${reads[1]}"
+  """
+  bowtie2 -p ${task.cpus} -x $spikeBt2Index/${spikeBt2Base} $readcommand \\
+  | samtools view -b -h -o ${spikeprefix}.bam
+  """
+ }
+ 
+// STAR
+process spikeStar{
+  tag "${prefix}"
+  publishDir "${params.outdir}/alignment/spike/star_alignment"
+
+  when:
+  params.spike && params.spike != 'spike' && !params.skipAlignment && params.aligner == "star"
+
+  input:
+  set val(prefix), file(reads) from rawSpikeReadsSTAR
+  file spikeStarIndex from chSpikeStarIndex.collect()
+
+  output:
+  set val(spikeprefix), file('*.bam') into chSpikeAlignReadsStar
+
+  script:
+  spikeprefix = "${prefix}_spike"
+  """
+  STAR --genomeDir $spikeStarIndex/${spikeStarBase} --runThreadN ${task.cpus} --readFilesIn $reads --outSAMtype BAM Unsorted --readFilesCommand zcat \\
+  | samtools view -b -h -o ${spikeprefix}.bam
+  """
+}
+
+
+// Split Reference and Spike genomes
 if(params.spike && params.spike != 'spike'){
+
+  if (params.aligner == "bowtie2"){
+    chSpikeAlignReads = chSpikeAlignReadsBowtie2
+  }else if (params.aligner == "bwa-mem"){
+    chSpikeAlignReads = chSpikeAlignReadsBwa
+  }else if (params.aligner == "star"){
+    chSpikeAlignReads = chSpikeAlignReadsStar
+  }
+
+  // Merging, if necessary reference aligned reads and spike aligned reads
   process compareRefSpike{
     tag "${prefixRef}"
     publishDir "${params.outdir}/alignment/compareRefSpike"
@@ -637,8 +683,11 @@ if(params.spike && params.spike != 'spike'){
   
   chAlignedReads
     .mix(chSpikeAlignedReads)
+    .dump (tag:'bams')
     .set{chAlignedReads}
+
 } else if(params.spike && params.spike == 'spike'){
+
   process sepMetagenome{
     tag "${prefix}"
     publishDir "${params.outdir}/alignment/sepMetagenome"
@@ -660,9 +709,11 @@ if(params.spike && params.spike != 'spike'){
 
   chAlignedReads
     .mix(chSpikeAlignedReads)
+    .dump (tag:'bams')
     .set{chAlignedReads}
 } else {
   chAlignReads
+    .dump (tag:'bams')
     .set{chAlignedReads}
 }
 
@@ -670,61 +721,57 @@ if(params.spike && params.spike != 'spike'){
  * Sorting BAM files
  */
 
-if (!params.skipAlignment){
-  process bamSort{
-    tag "${name}"
-    publishDir path: "${params.outdir}/filtering/sortedBams", mode: 'copy',
-          saveAs: {filename ->
-                if (!filename.endsWith(".bam") && (!filename.endsWith(".bam.bai"))) "samtools_stats/$filename"
-                else if (filename.endsWith(".bam") || (filename.endsWith(".bam.bai"))) filename
-                else null
-              }
+process bamSort{
+  tag "${name}"
+  publishDir path: "${params.outdir}/filtering/sortedBams", mode: 'copy',
+    saveAs: {filename ->
+             if (!filename.endsWith(".bam") && (!filename.endsWith(".bam.bai"))) "samtools_stats/$filename"
+             else if (filename.endsWith(".bam") || (filename.endsWith(".bam.bai"))) filename
+             else null
+            }
+  when:
+  !params.skipAlignment
 
-    input:
-      set val(prefix), file(unsortedBam) from chAlignedReads
+  input:
+  set val(prefix), file(unsortedBam) from chAlignedReads
 
-    output:
-      set val(name), file('*.{bam,bam.bai}') into chSortBam
-      file "*.{flagstat,idxstats,stats}" into chSortBamStats
+  output:
+  set val(name), file('*.{bam,bam.bai}') into chSortBam
+  file "*.{flagstat,idxstats,stats}" into chSortBamStats
 
-    script:
-    String unsortedBamsName = unsortedBam.toString()
-    if (unsortedBamsName.contains('spike')){
-    name = "${prefix}_spike"
-    } else {
-    name = "${prefix}"
-    }
-    """
-    samtools sort $unsortedBam -T ${name} -o ${name}_sorted.bam
-    samtools index ${name}_sorted.bam
-    samtools flagstat ${name}_sorted.bam > ${name}_sorted.flagstat
-    samtools idxstats ${name}_sorted.bam > ${name}_sorted.idxstats
-    samtools stats ${name}_sorted.bam > ${name}_sorted.stats
-    """
-  }
+  script:
+  String unsortedBamsName = unsortedBam.toString()
+  name = unsortedBamsName.contains('spike') ? "${prefix}_spike" : "${prefix}"
+  """
+  samtools sort $unsortedBam -@ ${task.cpus} -T ${name} -o ${name}_sorted.bam
+  samtools index ${name}_sorted.bam
+  samtools flagstat ${name}_sorted.bam > ${name}_sorted.flagstat
+  samtools idxstats ${name}_sorted.bam > ${name}_sorted.idxstats
+  samtools stats ${name}_sorted.bam > ${name}_sorted.stats
+  """
 }
 
 /*
- * Marking duplicates & filtering
+ * Marking duplicates
  */
 
-// Marking
 process markDuplicates{
   tag "${prefix}"
   publishDir path: "${params.outdir}/filtering/markedBams", mode: 'copy',
-        saveAs: {filename ->
-              if (!filename.endsWith(".bam") && (!filename.endsWith(".bam.bai"))) "samtools_stats/$filename"
-              else if (filename.endsWith(".bam") || (filename.endsWith(".bam.bai"))) filename
-              else null
+    saveAs: {filename ->
+             if (!filename.endsWith(".bam") && (!filename.endsWith(".bam.bai"))) "samtools_stats/$filename"
+             else if (filename.endsWith(".bam") || (filename.endsWith(".bam.bai"))) filename
+             else null
             }
 
   input:
-    set val(prefix), file(sortedBams) from chSortBam
+  set val(prefix), file(sortedBams) from chSortBam
 
   output:
-    set val(prefix), file("*.{bam,bam.bai}") into chMarkedBam, chMarkedPreseq
-    file "*.{flagstat,idxstats,stats}" into chMarkedBamSamstats
-    file "*.txt" into chMarkedBamPicstats
+  set val(prefix), file("*.{bam,bam.bai}") into chMarkedBam, chMarkedPreseq
+  set val(prefix), file("*.flagstat") into chMarkedFlagstat
+  file "*.{idxstats,stats}" into chMarkedStats
+  file "*.txt" into chMarkedPicstats
 
   script:
   """
@@ -743,379 +790,362 @@ process markDuplicates{
   """
 }
 
-// Preseq complexity analysis before filtering
-if(!params.skipPreseq) {
-  chMarkedPreseq
-    .filter{ it[0][-6..-1] != '_spike'}
-    .set{chMarkedPreseq}
 
-  process preseqAnalysis{
-    tag "${prefix}"
-    publishDir "${params.outdir}/preseq"
+/*
+ * Preseq (before alignment filtering)
+ */
 
-    input:
-    set val(prefix), file(bam) from chMarkedPreseq
+process preseq {
+  tag "${prefix}"
+  publishDir "${params.outdir}/preseq"
 
-    output:
-    file "*.ccurve.txt" into chPreseqStats
+  when:
+  !params.skipPreseq
 
-    script:
-    if (params.preseq_defect){
-      defectMode = '-D'
-    }
-    else{
-      defectMode = ''
-    }
-    """
-    preseq lc_extrap -v $defectMode -output ${prefix}.ccurve.txt -bam ${bam[0]}
-    """
-  }
+  input:
+  set val(prefix), file(bam) from chMarkedPreseq.filter{ it[0][-6..-1] != '_spike'}
+
+  output:
+  file "*.ccurve.txt" into chPreseqStats
+
+  script:
+  defectMode = params.preseq_defect ? '-D' : ''
+  """
+  preseq lc_extrap -v $defectMode -output ${prefix}.ccurve.txt -bam ${bam[0]}
+  """
 }
 
-// Filtering
-if (!params.skipFiltering){
-  process bamFiltering{
-    tag "${prefix}"
-    publishDir path: "${params.outdir}/filtering/filteredBams", mode: 'copy',
-          saveAs: {filename ->
-              if (!filename.endsWith(".bam") && (!filename.endsWith(".bam.bai"))) "samtools_stats/$filename"
-              else if (filename.endsWith("_filtered.bam") || (filename.endsWith("_filtered.bam.bai"))) filename
-              else null
+/*
+ * BAM Filtering
+ */
+
+process bamFiltering {
+  tag "${prefix}"
+  publishDir path: "${params.outdir}/filtering/filteredBams", mode: 'copy',
+    saveAs: {filename ->
+             if (!filename.endsWith(".bam") && (!filename.endsWith(".bam.bai"))) "samtools_stats/$filename"
+             else if (filename.endsWith("_filtered.bam") || (filename.endsWith("_filtered.bam.bai"))) filename
+             else null
             }
 
-    input:
-    set val(prefix), file(markedBam) from chMarkedBam
-    file bed from chGeneBed.collect()
-    file bamtoolsFilterConfig from chBamtoolsFilterConfig.collect()
+  when:
+  !params.skipFiltering
 
-    output:
-    set val(prefix), file("*.{bam,bam.bai}") into chFilteredBams
-    set val(prefix), file("*.flagstat") into chFilteredFlagstat
-    file "*.{idxstats,stats}" into chFilteredStats
+  input:
+  set val(prefix), file(markedBam) from chMarkedBam
+  file bed from chGeneBed.collect()
+  file bamtoolsFilterConfig from chBamtoolsFilterConfig.collect()
 
-    script:
-    filterParams = params.singleEnd ? "-F 0x004" : "-F 0x004 -F 0x0008 -f 0x001"
-    dupParams = params.keep_dups ? "" : "-F 0x0400"
-    multimapParams = params.keep_multi_map ? "" : "-q 1"
-    blacklistParams = params.blacklist ? "-L $bed" : ""
-    nameSortBam = params.singleEnd ? "" : "samtools sort -n -@ $task.cpus -o ${prefix}.bam -T $prefix ${prefix}_filtered.bam"
-    """
-    samtools view \\
-      $filterParams \\
-      $dupParams \\
-      -F 0x08 \\
-      $multimapParams \\
-      $blacklistParams \\
-      -b ${markedBam[0]} \\
-      | bamtools filter \\
-        -out ${prefix}_filtered.bam \\
-        -script $bamtoolsFilterConfig
-    samtools index ${prefix}_filtered.bam
-    samtools flagstat ${prefix}_filtered.bam > ${prefix}_filtered.flagstat
-    samtools idxstats ${prefix}_filtered.bam > ${prefix}_filtered.idxstats
-    samtools stats ${prefix}_filtered.bam > ${prefix}_filtered.stats
-    $nameSortBam
-    """
-  }
+  output:
+  set val(prefix), file("*.{bam,bam.bai}") into chFilteredBams
+  set val(prefix), file("*.flagstat") into chFilteredFlagstat
+  file "*.{idxstats,stats}" into chFilteredStats
+
+  script:
+  filterParams = params.singleEnd ? "-F 0x004" : "-F 0x004 -F 0x0008 -f 0x001"
+  dupParams = params.keepDups ? "" : "-F 0x0400"
+  mapQParams = params.mapQ ? "" : "-q ${params.mapQ}"
+  blacklistParams = params.blacklist ? "-L $bed" : ""
+  nameSortBam = params.singleEnd ? "" : "samtools sort -n -@ $task.cpus -o ${prefix}.bam -T $prefix ${prefix}_filtered.bam"
+  """
+  samtools view \\
+    $filterParams \\
+    $dupParams \\
+    -F 0x08 \\
+    $mapQParams \\
+    $blacklistParams \\
+    -b ${markedBam[0]} \\
+    | bamtools filter \\
+      -out ${prefix}_filtered.bam \\
+      -script $bamtoolsFilterConfig
+  samtools index ${prefix}_filtered.bam
+  samtools flagstat ${prefix}_filtered.bam > ${prefix}_filtered.flagstat
+  samtools idxstats ${prefix}_filtered.bam > ${prefix}_filtered.idxstats
+  samtools stats ${prefix}_filtered.bam > ${prefix}_filtered.stats
+  $nameSortBam
+  """
 }
+
 
 // Preparing channels for all subsequent processes using filtered bams
-if(!params.singleEnd){
-  process mergeBamRemoveOrphan {
-    tag "$prefix"
-    publishDir path: "${params.outdir}/filtering/filteredBams/mergedLibrary", mode: 'copy',
-      saveAs: { filename ->
-              if (filename.endsWith(".flagstat")) "samtools_stats/$filename"
-              else if (filename.endsWith(".idxstats")) "samtools_stats/$filename"
-              else if (filename.endsWith(".stats")) "samtools_stats/$filename"
-              else if (filename.endsWith("_sorted.bam")) filename
-              else if (filename.endsWith("_sorted.bam.bai")) filename
-              else null
-          }
+//if(!params.singleEnd){
+//  process mergeBamRemoveOrphan {
+//    tag "$prefix"
+//    publishDir path: "${params.outdir}/filtering/filteredBams/mergedLibrary", mode: 'copy',
+//      saveAs: { filename ->
+//              if (filename.endsWith(".flagstat")) "samtools_stats/$filename"
+//              else if (filename.endsWith(".idxstats")) "samtools_stats/$filename"
+//              else if (filename.endsWith(".stats")) "samtools_stats/$filename"
+//              else if (filename.endsWith("_sorted.bam")) filename
+//              else if (filename.endsWith("_sorted.bam.bai")) filename
+//              else null
+//          }
+//
+//    input:
+//    set val(prefix), file(bam) from chFilteredBams
+//
+//    output:
+//    set val(prefix), file("*_sorted.{bam,bam.bai}") into chFilteredBamsFinal, chGroupBamNameFeatCounts
+//    set val(prefix), file("*.flagstat") into chFilteredFlagstatFinal, chFilteredFlagstatSpikes, chFilteredFlagstatMqc
+//    file "*.{idxstats,stats}" into chFilteredStats
+//
+//    script:
+//    """
+//    bampe_rm_orphan.py ${bam[0]} ${prefix}.bam --only_fr_pairs
+//    samtools sort -@ $task.cpus -o ${prefix}_sorted.bam -T $prefix ${prefix}.bam
+//    samtools index ${prefix}_sorted.bam
+//    samtools flagstat ${prefix}_sorted.bam > ${prefix}_sorted.flagstat
+//    samtools idxstats ${prefix}_sorted.bam > ${prefix}_sorted.idxstats
+//    samtools stats ${prefix}_sorted.bam > ${prefix}_sorted.stats
+//    """
+//    }
+//} else {
+//}
 
-    input:
-    set val(prefix), file(bam) from chFilteredBams
-
-    output:
-    set val(prefix), file("*_sorted.{bam,bam.bai}") into chFilteredBamsFinal, chGroupBamNameFeatCounts
-    set val(prefix), file("*.flagstat") into chFilteredFlagstatFinal, chFilteredFlagstatSpikes, chFilteredFlagstatMqc
-    file "*.{idxstats,stats}" into chFilteredStatsFinal
-
-    script:
-    """
-    bampe_rm_orphan.py ${bam[0]} ${prefix}.bam --only_fr_pairs
-    samtools sort -@ $task.cpus -o ${prefix}_sorted.bam -T $prefix ${prefix}.bam
-    samtools index ${prefix}_sorted.bam
-    samtools flagstat ${prefix}_sorted.bam > ${prefix}_sorted.flagstat
-    samtools idxstats ${prefix}_sorted.bam > ${prefix}_sorted.idxstats
-    samtools stats ${prefix}_sorted.bam > ${prefix}_sorted.stats
-    """
-    }
-} else {
+if (!params.skipFiltering){
   chFilteredBams
-    .into{chFilteredBamsFinal;
-          chGroupBamNameFeatCounts;
-          chFilteredBamsSpikes}
+    .set{ chBams }
   chFilteredFlagstat
-    .into{chFilteredFlagstatFinal;
-          chFilteredFlagstatSpikes}
+    .set{ chFlagstat }
   chFilteredStats
-    .set{chFilteredStatsFinal}
+    .set{ chStats }
+}else{
+  chMarkedBams
+    .set{ chBams }
+  chMarkedFlagstat
+    .set{ chFlagstat }
+  chFilteredStats
+    .set{ chStats }
 }
 
-// When using spikes, separating spike alignments from reference ones after filtering
-if (params.spike){
-  chFilteredFlagstatSpikes
-    .filter{it[0][-6..-1] == '_spike'}
-    .set{chFilteredFlagstatSpikes}
 
-  chFilteredBamsSpikes
-    .filter{it[0][-6..-1] == '_spike'}
-    .set{chFilteredBamsSpikes}
+/*
+ * Separate sample BAMs and spike BAMs
+ */
 
-  process genBinsScaleFactor{
-    cache 'deep'
-    publishDir "${params.outdir}/bigwig/10kbins"
+chFlagstatChip=Channel.create()
+chFlagstatSpikes=Channel.create()
+chFlagstat.choice( chFlagstatSpikes, chFlagstatChip ) { it -> it[0][-6..-1] == '_spike' ? 0 : 1 }
 
-    input:
-    val filteredBamsAll from chFilteredBamsSpikes.toList()
+chBamsChip=Channel.create()
+chBamsSpikes=Channel.create()
+chBams.choice( chBamsSpikes, chBamsChip ) { it -> it[0][-6..-1] == '_spike' ? 0 : 1 }
 
-    output:
-    file '*.tab' into chDeseq2tab
+// Preparing all ChIP data for further analysis
+chBamsChip
+  .dump (tag:'cbams')
+  .into { chBamsMetrics; chBamsMacs1; chBamsMacs2; chBamsPPQT;
+          chBamsBigWig; chBamsBigWigSF; 
+          chBamsDeeptoolsCorBam; chBamsDeeptoolsCorBai; chBamsDeeptoolsCorSample;
+          chBamsForCount; chBamsCounts }
 
-    script:
-    allBams=""
-    for (List filteredBam : filteredBamsAll){
-      allBams+=filteredBam[1][0]
-      allBams+=" "
-    }
-    """
-    multiBamSummary bins -b $allBams --binSize 10000 -o results.npz --outRawCounts readCounts_10kbins.tab
-    """
-  }
+chFlagstatChip
+  .into { chFlagstatMacs; chFlagstatMqc }
 
-  process deseq2ScaleFactor{
-    cache 'deep'
-    publishDir "${params.outdir}/bigwig/scalefactors"
-
-    input:
-    file binsTab from chDeseq2tab
-
-    output:
-    file "*.sf" into chScaleFactor
-
-    script:
-    """
-    getDESeqSF.R '${binsTab}'
-    """
-  }
-}
-
-// Preparing all filtered aligned reads for further analysis
-chFilteredBamsFinal
-  .filter{ it[0][-6..-1] != '_spike' }
-  .into { chFilteredBamsMetrics;
-      chFilteredBamsMacs1;
-      chFilteredBamsMacs2;
-      chFilteredBamsPhantompeakqualtools;
-      chFilteredBamsDeeptoolsSingle;
-      chFilteredBamsDeeptoolsCorrel;
-      chFilteredBamsDeseq2;
-      chFilteredBamsCounts }
-
-chFilteredFlagstatFinal
-  .into { chFilteredFlagstatMacs;
-          chFilteredFlagstatMqc }
-
-chFilteredStatsFinal
-  .set { chFilteredStatsMqc }
+chStats
+  .set { chStatsMqc }
 
 
 /*
  * PhantomPeakQualTools QC
  */
 
-if (!params.skipPpqt){
-  process PPQT{
-    tag "${prefix}"
-    cache 'deep'
-    publishDir "${params.outdir}/ppqt", mode: "copy"
+process PPQT{
+  tag "${prefix}"
+  publishDir "${params.outdir}/ppqt", mode: "copy"
+
+  when:
+  !params.skipPPQT
+
+  input:
+  set val(prefix), file(bams) from chBamsPPQT
+  file sppCorrelationHeader from chPpqtCorHeader
+  file sppNSCHeader from chPpqtNSCHeader
+  file sppRSCHeader from chPpqtRSCHeader
+
+  output:
+  file '*.pdf' into chPpqtPlot
+  file '*.spp.out' into chPpqtOutMqc
+  file '*_mqc.tsv' into chPpqtCsvMqc
+
+  script:
+  """
+  RUN_SPP=`which run_spp.R`
+  Rscript -e "library(caTools); source(\\"\$RUN_SPP\\")" -c="${bams[0]}" -savp="${prefix}.spp.pdf" -savd="${prefix}.spp.Rdata" -out="${prefix}.spp.out" -p=$task.cpus
+  cp $sppCorrelationHeader ${prefix}_spp_correlation_mqc.tsv
+  Rscript -e "load('${prefix}.spp.Rdata'); write.table(crosscorr\\\$cross.correlation, file=\\"${prefix}_spp_correlation_mqc.tsv\\", sep=",", quote=FALSE, row.names=FALSE, col.names=FALSE,append=TRUE)"
+  awk -v OFS='\t' '{print "${prefix}", \$9}' ${prefix}.spp.out | cat $sppNSCHeader - > ${prefix}_spp_nsc_mqc.tsv
+  awk -v OFS='\t' '{print "${prefix}", \$10}' ${prefix}.spp.out | cat $sppRSCHeader - > ${prefix}_spp_rsc_mqc.tsv
+  """
+}
+
+
+/* 
+ * BigWig Tracks
+ */
+
+process bigWig {
+  tag "${prefix}"
+  publishDir "${params.outdir}/bigWig", mode: "copy"
+
+  input:
+  set val(prefix), file(filteredBams) from chBamsBigWig
+
+  output:
+  set val(prefix), file('*.bigwig') into chBigWig
+
+  script:
+  """
+  bamCoverage -b ${filteredBams[0]} -o ${prefix}.bigwig -p ${task.cpus}
+  """
+}
+
+// With Spikes
+if (params.spike){
+  process binSpikes {
+    publishDir "${params.outdir}/bigwig/10kbins"
 
     input:
-    set val(prefix), file(filteredBams) from chFilteredBamsPhantompeakqualtools
-    file sppCorrelationHeader from chPpqtCorHeader
-    file sppNSCHeader from chPpqtNSCHeader
-    file sppRSCHeader from chPpqtRSCHeader
+    val allBams from chBamsSpikes.collect()
 
     output:
-    file '*.pdf' into chPpqtPlot
-    file '*.spp.out' into chPpqtOutMqc
-    file '*_mqc.tsv' into chPpqtCsvMqc
+    file "*.tab" into chDeseq2tab
 
     script:
     """
-    RUN_SPP=`which run_spp.R`
-    Rscript -e "library(caTools); source(\\"\$RUN_SPP\\")" -c="${filteredBams[0]}" -savp="${prefix}.spp.pdf" -savd="${prefix}.spp.Rdata" -out="${prefix}.spp.out" -p=$task.cpus
-    cp $sppCorrelationHeader ${prefix}_spp_correlation_mqc.tsv
-    Rscript -e "load('${prefix}.spp.Rdata'); write.table(crosscorr\\\$cross.correlation, file=\\"${prefix}_spp_correlation_mqc.tsv\\", sep=",", quote=FALSE, row.names=FALSE, col.names=FALSE,append=TRUE)"
-    awk -v OFS='\t' '{print "${prefix}", \$9}' ${prefix}.spp.out | cat $sppNSCHeader - > ${prefix}_spp_nsc_mqc.tsv
-    awk -v OFS='\t' '{print "${prefix}", \$10}' ${prefix}.spp.out | cat $sppRSCHeader - > ${prefix}_spp_rsc_mqc.tsv
+    multiBamSummary bins -b $allBams --binSize 10000 -o results.npz --outRawCounts readCounts_10kbins.tab
     """
   }
-}
 
-/*
- * BigWig generation
- */
-if (params.spike){
-  chScaleFactor
+  process getDeseqScaleFactor{
+    publishDir "${params.outdir}/bigwig/scalefactors"
+
+    input:
+    file binsTab from chDeseq2tab
+
+    output:
+    file "*.sf" into chTabSF
+
+    script:
+    """
+    getDESeqSF.R '${binsTab}'
+    """
+  }
+
+  chTabSF
     .splitCsv(header:false, sep:',')
     .map { row -> [row[0], row[1]]}
     .set{chScaleFactor}
 
-  chFilteredBamsDeeptoolsSingle
-    .filter{it[0][-6..-1] != '_spike'}
+  chBamsBigWigSF
     .combine(chScaleFactor)
     .filter{it[0] == it[2]}
     .map { it -> it[0,1,3]}
-    .set{chFilteredBamsDeeptoolsSingle}
+    .set{chBigWigScaleFactor}
 
   process bigWigGenerationScaled{
     tag "${prefix}"
-    cache 'deep'
     publishDir "${params.outdir}/bigWig", mode: "copy"
 
     input:
-    set val(prefix), file(filteredBams), val(normFactor) from chFilteredBamsDeeptoolsSingle
+    set val(prefix), file(filteredBams), val(normFactor) from chBigWigScaleFactor
 
     output:
-    set val(prefix), file('*_bw.bigwig') into chBigWig
+    set val(prefix), file('*.bigwig') into chBigWigSF
 
     script:
     """
-    bamCoverage -b ${filteredBams[0]} -o ${prefix}_bw.bigwig -p ${task.cpus} --scaleFactor ${normFactor}
-    """
-  }
-} else {
-  process bigWigGeneration{
-    tag "${prefix}"
-    cache 'deep'
-    publishDir "${params.outdir}/bigWig", mode: "copy"
-
-    input:
-    set val(prefix), file(filteredBams) from chFilteredBamsDeeptoolsSingle
-
-    output:
-    set val(prefix), file('*_bw.bigwig') into chBigWig
-
-    script:
-    """
-    bamCoverage -b ${filteredBams[0]} -o ${prefix}_bw.bigwig -p ${task.cpus}
+    bamCoverage -b ${filteredBams[0]} -o ${prefix}_spikes.bigwig -p ${task.cpus} --scaleFactor ${normFactor}
     """
   }
 }
+
 
 /*
  * DeepTools QC
  */
 
-if (!params.skipDeepTools){
-  process deepToolsSingleQC{
-    tag "${prefix}"
-    cache 'deep'
-    publishDir "${params.outdir}/deepTools/singleBam", mode: "copy"
+process deepToolsComputeMatrix{
+  tag "${prefix}"
+  publishDir "${params.outdir}/deepTools/singleBam", mode: "copy"
 
-    input:
-    set val(prefix), file(bigwig) from chBigWig
-    file geneBed from chGeneBedDeeptools.collect()
+  when:
+  !params.skipDeepTools
 
-    output:
-    set val(prefix), file("*.{gz,pdf}") into chDeeptoolsSingle
-    set val(prefix), file("*_corrected.tab") into chDeeptoolsSingleMqc
-    script:
+  input:
+  set val(prefix), file(bigwig) from chBigWig
+  file geneBed from chGeneBedDeeptools.collect()
 
-    """
-    computeMatrix scale-regions -R $geneBed -S ${bigwig} \\
-                  -o ${prefix}_matrix.mat.gz \\
-                  --outFileNameMatrix ${prefix}.computeMatrix.vals.mat.gz \\
-                  --downstream 1000 --upstream 1000 --skipZeros\\
-                  -p ${task.cpus}
+  output:
+  set val(prefix), file("*.{gz,pdf}") into chDeeptoolsSingle
+  set val(prefix), file("*_corrected.tab") into chDeeptoolsSingleMqc
+  script:
+  """
+  computeMatrix scale-regions -R $geneBed -S ${bigwig} \\
+                -o ${prefix}_matrix.mat.gz \\
+                --outFileNameMatrix ${prefix}.computeMatrix.vals.mat.gz \\
+                --downstream 1000 --upstream 1000 --skipZeros\\
+                -p ${task.cpus}
 
-    plotProfile -m ${prefix}_matrix.mat.gz -o ${prefix}_bams_profile.pdf \\
-          --outFileNameData ${prefix}.plotProfile.tab
-    sed -e 's/.0\t/\t/g' ${prefix}.plotProfile.tab | sed -e 's@.0\$@@g' > ${prefix}_plotProfile_corrected.tab
-    """
-  }
-
-  process deepToolsCorrelQC{
-    cache 'deep'
-    publishDir "${params.outdir}/deepTools/multipleBams"
-
-    input:
-    val filteredBamsAll from chFilteredBamsDeeptoolsCorrel.toList()
-
-    output:
-    file "bams_correlation.pdf" into chDeeptoolsCorrel
-    file "bams_coverage.pdf" into chDeeptoolsCoverage
-    file "bams_fingerprint.pdf" into chDeeptoolsFingerprint
-    file "bams_correlation.tab" into chDeeptoolsCorrelMqc
-    file "bams_coverage_raw.txt" into chDeeptoolsCovMqc
-    file "bams_fingerprint*" into chDeeptoolsFingerprintMqc
-
-    script:
-    allBams=""
-    allPrefixes=""
-    for (List filteredBam : filteredBamsAll){
-      allPrefixes+=filteredBam[0]
-      allPrefixes+= " "
-      allBams+=filteredBam[1][0]
-      allBams+=" "
-    }
-    """
-    multiBamSummary bins -b $allBams -o bams_summary.npz  -p ${task.cpus}
-    plotCorrelation -in bams_summary.npz -o bams_correlation.pdf \\
-            -c spearman -p heatmap -l $allPrefixes \\
-            --outFileCorMatrix bams_correlation.tab
-
-    plotCoverage -b $allBams -o bams_coverage.pdf -p ${task.cpus} -l $allPrefixes  --outRawCounts bams_coverage_raw.txt
-    plotFingerprint -b $allBams -plot bams_fingerprint.pdf -p ${task.cpus} -l $allPrefixes --outRawCounts bams_fingerprint_raw.txt --outQualityMetrics bams_fingerprint_qmetrics.tab
-    """
-  }
+  plotProfile -m ${prefix}_matrix.mat.gz -o ${prefix}_bams_profile.pdf \\
+        --outFileNameData ${prefix}.plotProfile.tab
+  sed -e 's/.0\t/\t/g' ${prefix}.plotProfile.tab | sed -e 's@.0\$@@g' > ${prefix}_plotProfile_corrected.tab
+  """
 }
+
+process deepToolsCorrelationQC{
+  publishDir "${params.outdir}/deepTools/multipleBams"
+
+  input:
+  file(allBams) from chBamsDeeptoolsCorBam.map{it[1][0]}.collect()
+  file(allBai) from chBamsDeeptoolsCorBai.map{it[1][1]}.collect()
+  val (allPrefix) from chBamsDeeptoolsCorSample.map{it[0]}.collect()
+
+  output:
+  file "bams_correlation.pdf" into chDeeptoolsCorrel
+  file "bams_coverage.pdf" into chDeeptoolsCoverage
+  file "bams_fingerprint.pdf" into chDeeptoolsFingerprint
+  file "bams_correlation.tab" into chDeeptoolsCorrelMqc
+  file "bams_coverage_raw.txt" into chDeeptoolsCovMqc
+  file "bams_fingerprint*" into chDeeptoolsFingerprintMqc
+
+  when:
+  allPrefix.size() > 2 && !params.skipDeepTools
+
+  script:
+  """
+  multiBamSummary bins -b $allBams -o bams_summary.npz  -p ${task.cpus}
+  plotCorrelation -in bams_summary.npz -o bams_correlation.pdf \\
+          -c spearman -p heatmap -l $allPrefix \\
+          --outFileCorMatrix bams_correlation.tab
+
+  plotCoverage -b $allBams -o bams_coverage.pdf -p ${task.cpus} -l $allPrefix --outRawCounts bams_coverage_raw.txt
+  plotFingerprint -b $allBams -plot bams_fingerprint.pdf -p ${task.cpus} -l $allPrefix --outRawCounts bams_fingerprint_raw.txt --outQualityMetrics bams_fingerprint_qmetrics.tab
+  """
+}
+
+
+/*#########################################################################
+  /!\ From this point, 'design' is now mandatory /!\
+###########################################################################*/
 
 /*
  * Peak calling index build
  */
 
-if (!params.noInput && params.design){
+if (params.design){
   chFilteredBamsMacs1
     .join(chFilteredFlagstatMacs)
-    .combine(chFilteredBamsMacs2)
+    .combine(chNoInput.concat(chFilteredBamsMacs2))
     .set { chFilteredBamsMacs1 }
 
   chDesignControl
     .combine(chFilteredBamsMacs1)
     .filter { it[0] == it[5] && it[1] == it[8] }
     .map { it ->  it[2..-1] }
-    .into { chGroupBamMacsSharp;
-            chGroupBamMacsBroad;
-            chGroupBamMacsVeryBroad;
-            chGroupBamFeatCounts;
-          }
-} else if (params.noInput && params.design) {
-  chDesignControl
-    .combine(chFilteredBamsMacs1)
-    .filter { it[0] == it[5]}
-    .join(chFilteredFlagstatMacs)
-    .map { it ->  it[2..-1] }
-    .into { chGroupBamMacsSharp;
-            chGroupBamMacsBroad;
-            chGroupBamMacsVeryBroad;
-            chGroupBamFeatCounts
-          }
-}
+    .dump (tag:'peakCall')
+    .into { chGroupBamMacsSharp; chGroupBamMacsBroad; chGroupBamMacsVeryBroad; chGroupBamFeatCounts}
 
-if (params.design){
   chGroupBamMacsSharp
     .filter { it[2] == 'sharp' }
     .set { chGroupBamMacsSharp }
@@ -1127,279 +1157,186 @@ if (params.design){
   chGroupBamMacsVeryBroad
     .filter { it[2] == 'very-broad' }
     .set { chGroupBamMacsVeryBroad }
+}else{
+  chGroupBamMacsSharp=Channel.empty()
+  chGroupBamMacsBroad=Channel.empty()
+  chGroupBamMacsVeryBroad=Channel.empty()
 }
+
 /*
- * Peak calling WITH Input
+ * Peak calling 
  */
 
-if (!params.skipPeakcalling && !params.noInput && params.design){
-  // SHARP PEAKS
-  process sharpMACS2{
-    tag "${sampleID} - ${controlID}"
-    publishDir path: "${params.outdir}/peakCalling/sharp", mode: 'copy',
-          saveAs: { filename ->
+//MACS2 SHARP
+process sharpMACS2{
+  tag "${sampleID} - ${controlID}"
+  publishDir path: "${params.outdir}/peakCalling/sharp", mode: 'copy',
+    saveAs: { filename ->
             if (filename.endsWith(".tsv")) "stats/$filename"
             else if (filename.endsWith(".igv.txt")) null
             else filename
-          }
-    cache 'deep'
+            }
+ 
+  when:
+  !params.skipPeakCalling
 
-    input:
-    set val(sampleName), val(replicate), val(peaktype), val(sampleID), file(sampleBam), file(sampleFlagstat), val(controlID), file(controlBam) from chGroupBamMacsSharp
-    file peakCountHeader from chPeakCountHeader
-    file fripScoreHeader from chFripScoreHeader
+  input:
+  set val(sampleName), val(replicate), val(peaktype), val(sampleID), file(sampleBam), file(sampleFlagstat), val(controlID), file(controlBam) from chGroupBamMacsSharp
+  file peakCountHeader from chPeakCountHeader.collect()
+  file fripScoreHeader from chFripScoreHeader.collect()
 
-    output:
-    set val(sampleID), file("*.{bed,xls,gappedPeak,bdg}") into chMacsOutputSharp
-    set val(sampleName), val(replicate), val(peaktype), val(sampleID), val(controlID), file("*.narrowPeak") into chMacsHomerSharp,
-                                                                                                                 chMacsQcSharp,
-                                                                                                                 chMacsIdrSharp
-    //file "*igv.txt" into chMacs_igv_sharp
-    file "*_mqc.tsv" into chMacsCountsSharp
+  output:
+  set val(sampleID), file("*.{bed,xls,gappedPeak,bdg}") into chMacsOutputSharp
+  set val(sampleName), val(replicate), val(peaktype), val(sampleID), val(controlID), file("*.narrowPeak") into chMacsHomerSharp, chMacsQcSharp, chMacsIdrSharp
+  //file "*igv.txt" into chMacs_igv_sharp
+  file "*_mqc.tsv" into chMacsCountsSharp
 
-    script:
-    format = params.singleEnd ? "BAM" : "BAMPE"
-    peaktypeMacs = "narrowPeak"
-    """
-    macs2 callpeak \\
-      -t ${sampleBam[0]} \\
-      -c ${controlBam[0]} \\
-      -f $format \\
-      -g $params.macsGsize \\
-      -n $sampleID \\
-      --keep-dup all
+  script:
+  format = params.singleEnd ? "BAM" : "BAMPE"
+  ctrl = controlID != 'NO_INPUT' ? "-c ${controlBam[0]}" : ''
+  peaktypeMacs = "narrowPeak"
+  """
+  macs2 callpeak \\
+    -t ${sampleBam[0]} \\
+    ${ctrl} \\
+    -f $format \\
+    -g $params.macsGsize \\
+    -n $sampleID \\
+    --keep-dup all
+  cat ${sampleID}_peaks.$peaktypeMacs | wc -l | awk -v OFS='\t' '{ print "${sampleID}", \$1 }' | cat $peakCountHeader - > ${sampleID}_peaks.count_mqc.tsv
+  READS_IN_PEAKS=\$(intersectBed -a ${sampleBam[0]} -b ${sampleID}_peaks.$peaktypeMacs -bed -c -f 0.20 | awk -F '\t' '{sum += \$NF} END {print sum}')
+  grep 'mapped (' $sampleFlagstat | awk -v a="\$READS_IN_PEAKS" -v OFS='\t' '{print "${sampleID}", a/\$1}' | cat $fripScoreHeader - > ${sampleID}_peaks.FRiP_mqc.tsv
+  find * -type f -name "*.$peaktypeMacs" -exec echo -e "peakCalling/sharp/"{}"\\t0,0,178" \\; > ${sampleID}_peaks.igv.txt
+  """
+ }
+
+//MACS2 BROAD
+process broadMACS2{
+  tag "${sampleID} - ${controlID}"
+  publishDir path: "${params.outdir}/peakCalling/broad", mode: 'copy',
+    saveAs: { filename ->
+            if (filename.endsWith(".tsv")) "stats/$filename"
+            else if (filename.endsWith(".igv.txt")) null
+            else filename
+            }
+   
+  when:
+  params.skipPeakCalling
+
+  input:
+  set val(sampleName), val(replicate), val(peaktype), val(sampleID), file(sampleBam), file(sampleFlagstat), val(controlID), file(controlBam) from chGroupBamMacsBroad
+  file peakCountHeader from chPeakCountHeader.collect()
+  file fripScoreHeader from chFripScoreHeader.collect()
+
+  output:
+  set val(sampleID), file("*.{bed,xls,gappedPeak,bdg}") into chMacsOutputBroad
+  set val(sampleName), val(replicate), val(peaktype), val(sampleID), val(controlID), file("*.broadPeak") into chMacsHomerBroad, chMacsQcBroad, chMacsIdrBroad
+  //file "*igv.txt" into chMacs_igv_broad
+  file "*_mqc.tsv" into chMacsCountsBroad
+
+  script:
+  broad = "--broad --broad-cutoff ${params.broad_cutoff}"
+  format = params.singleEnd ? "BAM" : "BAMPE"
+  ctrl = controlID != 'NO_INPUT' ? "-c ${controlBam[0]}" : ''
+  peaktypeMacs = "broadPeak"
+  """
+  macs2 callpeak \\
+    -t ${sampleBam[0]} \\
+    ${ctrl} \\
+    ${broad} \\
+    -f $format \\
+    -g $params.macsGsize \\
+    -n $sampleID \\
+    --keep-dup all
     cat ${sampleID}_peaks.$peaktypeMacs | wc -l | awk -v OFS='\t' '{ print "${sampleID}", \$1 }' | cat $peakCountHeader - > ${sampleID}_peaks.count_mqc.tsv
     READS_IN_PEAKS=\$(intersectBed -a ${sampleBam[0]} -b ${sampleID}_peaks.$peaktypeMacs -bed -c -f 0.20 | awk -F '\t' '{sum += \$NF} END {print sum}')
     grep 'mapped (' $sampleFlagstat | awk -v a="\$READS_IN_PEAKS" -v OFS='\t' '{print "${sampleID}", a/\$1}' | cat $fripScoreHeader - > ${sampleID}_peaks.FRiP_mqc.tsv
-    find * -type f -name "*.$peaktypeMacs" -exec echo -e "peakCalling/sharp/"{}"\\t0,0,178" \\; > ${sampleID}_peaks.igv.txt
-    """
+    find * -type f -name "*.$peaktypeMacs" -exec echo -e "peakCalling/broad/"{}"\\t0,0,178" \\; > ${sampleID}_peaks.igv.txt
+  """
+}
+
+//EPIC2 VERY BROAD
+process veryBroadEpic2{
+  tag "${sampleID} - ${controlID}"
+  publishDir path: "${params.outdir}/peakCalling/very_broad", mode: 'copy',
+    saveAs: { filename ->
+            if (filename.endsWith(".tsv")) "stats/$filename"
+            else if (filename.endsWith(".igv.txt")) null
+            else filename
+            }
+ 
+  when:
+  !skipPeakCalling
+
+  input:
+  set val(sampleName), val(replicate), val(peaktype), val(sampleID), file(sampleBam), file(sampleFlagstat), val(controlID), file(controlBam) from chGroupBamMacsVeryBroad
+  file peakCountHeader from chPeakCountHeader
+  file fripScoreHeader from chFripScoreHeader
+
+  output:
+  // set val(sampleID), file("*.{bed,xls,gappedPeak,bdg}") into chMacs_output_vbroad ===>> Mandatory data for MQC in Sharp&Broad MACS2
+  set val(sampleName), val(replicate), val(peaktype), val(sampleID), val(controlID), file("*.broadPeak") into chMacsHomerVbroad, chMacsQcVbroad, chMacsIdrVbroad
+  //file "*igv.txt" into chMacs_igv_vbroad
+  file "*_mqc.tsv" into chMacsCountsVbroad
+
+  script:
+  peaktypeEpic = "broadPeak"
+  ctrl = controlID != 'NO_INPUT' ? "-c ${controlBam[0]}" : ''
+  """
+  epic2 -t ${sampleBam[0]} \\
+    ${ctrl} \\
+    -gn ${params.genome} \\
+    -kd -a \\
+    -o ${sampleID}_peaks.$peaktypeEpic
+  cat ${sampleID}_peaks.$peaktypeEpic | wc -l | awk -v OFS='\t' '{ print "${sampleID}", \$1 }' | cat $peakCountHeader - > ${sampleID}_peaks.count_mqc.tsv
+  READS_IN_PEAKS=\$(intersectBed -a ${sampleBam[0]} -b ${sampleID}_peaks.$peaktypeEpic -bed -c -f 0.20 | awk -F '\t' '{sum += \$NF} END {print sum}')
+  grep 'mapped (' $sampleFlagstat | awk -v a="\$READS_IN_PEAKS" -v OFS='\t' '{print "${sampleID}", a/\$1}' | cat $fripScoreHeader - > ${sampleID}_peaks.FRiP_mqc.tsv
+  find * -type f -name "*.$peaktypeEpic" -exec echo -e "peakCalling/very_broad/"{}"\\t0,0,178" \\; > ${sampleID}_peaks.igv.txt
+  """
+}
+
+/*
+ * Peaks Annotation
+ */
+
+
+if (!params.skipPeakAnno && params.design){
+  if (params.design){
+  chMacsHomerSharp
+    .mix(chMacsHomerBroad, chMacsHomerVbroad)
+    .set{chMacs_homer}
   }
 
-  // BROAD PEAKS
-  process broadMACS2{
+  process peakAnnoHomer{
     tag "${sampleID} - ${controlID}"
-    publishDir path: "${params.outdir}/peakCalling/broad", mode: 'copy',
-          saveAs: { filename ->
-            if (filename.endsWith(".tsv")) "stats/$filename"
-            else if (filename.endsWith(".igv.txt")) null
-            else filename
-          }
-    cache 'deep'
-
-    when:
-    params.design
+    publishDir path: "${params.outdir}/peak_annotation", mode: 'copy'
 
     input:
-    set val(sampleName), val(replicate), val(peaktype), val(sampleID), file(sampleBam), file(sampleFlagstat), val(controlID), file(controlBam) from chGroupBamMacsBroad
-    file peakCountHeader from chPeakCountHeader
-    file fripScoreHeader from chFripScoreHeader
+    set val(sampleName), val(replicate), val(peaktype), val(sampleID), val(controlID), file (peakfile) from chMacs_homer
+    file gtfFile from chGtfHomer.collect()
+    file fastaFile from chFastaHomer.collect()
 
     output:
-    set val(sampleID), file("*.{bed,xls,gappedPeak,bdg}") into chMacsOutputBroad
-    set val(sampleName), val(replicate), val(peaktype), val(sampleID), val(controlID), file("*.broadPeak") into chMacsHomerBroad,
-                                                                                                                chMacsQcBroad,
-                                                                                                                chMacsIdrBroad
-    //file "*igv.txt" into chMacs_igv_broad
-    file "*_mqc.tsv" into chMacsCountsBroad
+    file "*.txt" into chHomerPeakAnnotated
 
     script:
-    broad = "--broad --broad-cutoff ${params.broad_cutoff}"
-    format = params.singleEnd ? "BAM" : "BAMPE"
-    peaktypeMacs = "broadPeak"
     """
-    macs2 callpeak \\
-      -t ${sampleBam[0]} \\
-      -c ${controlBam[0]} \\
-      $broad \\
-      -f $format \\
-      -g $params.macsGsize \\
-      -n $sampleID \\
-      --keep-dup all
-      cat ${sampleID}_peaks.$peaktypeMacs | wc -l | awk -v OFS='\t' '{ print "${sampleID}", \$1 }' | cat $peakCountHeader - > ${sampleID}_peaks.count_mqc.tsv
-      READS_IN_PEAKS=\$(intersectBed -a ${sampleBam[0]} -b ${sampleID}_peaks.$peaktypeMacs -bed -c -f 0.20 | awk -F '\t' '{sum += \$NF} END {print sum}')
-      grep 'mapped (' $sampleFlagstat | awk -v a="\$READS_IN_PEAKS" -v OFS='\t' '{print "${sampleID}", a/\$1}' | cat $fripScoreHeader - > ${sampleID}_peaks.FRiP_mqc.tsv
-      find * -type f -name "*.$peaktypeMacs" -exec echo -e "peakCalling/broad/"{}"\\t0,0,178" \\; > ${sampleID}_peaks.igv.txt
-    """
-  }
-
-  // VERY BROAD PEAKS
-  process veryBroadEpic2{
-    tag "${sampleID} - ${controlID}"
-    publishDir path: "${params.outdir}/peakCalling/very_broad", mode: 'copy',
-          saveAs: { filename ->
-            if (filename.endsWith(".tsv")) "stats/$filename"
-            else if (filename.endsWith(".igv.txt")) null
-            else filename
-          }
-    cache 'deep'
-
-    when:
-    params.design
-
-    input:
-    set val(sampleName), val(replicate), val(peaktype), val(sampleID), file(sampleBam), file(sampleFlagstat), val(controlID), file(controlBam) from chGroupBamMacsVeryBroad
-    file peakCountHeader from chPeakCountHeader
-    file fripScoreHeader from chFripScoreHeader
-
-    output:
-    // set val(sampleID), file("*.{bed,xls,gappedPeak,bdg}") into chMacs_output_vbroad ===>> Mandatory data for MQC in Sharp&Broad MACS2
-    set val(sampleName), val(replicate), val(peaktype), val(sampleID), val(controlID), file("*.broadPeak") into chMacsHomerVbroad,
-                                                                                                                chMacsQcVbroad,
-                                                                                                                chMacsIdrVbroad
-    //file "*igv.txt" into chMacs_igv_vbroad
-    file "*_mqc.tsv" into chMacsCountsVbroad
-
-    script:
-    peaktypeEpic = "broadPeak"
-    """
-    epic2 -t ${sampleBam[0]} \\
-      -c ${controlBam[0]} \\
-      -gn ${params.genome} \\
-      -kd -a \\
-      -o ${sampleID}_peaks.$peaktypeEpic
-    cat ${sampleID}_peaks.$peaktypeEpic | wc -l | awk -v OFS='\t' '{ print "${sampleID}", \$1 }' | cat $peakCountHeader - > ${sampleID}_peaks.count_mqc.tsv
-    READS_IN_PEAKS=\$(intersectBed -a ${sampleBam[0]} -b ${sampleID}_peaks.$peaktypeEpic -bed -c -f 0.20 | awk -F '\t' '{sum += \$NF} END {print sum}')
-    grep 'mapped (' $sampleFlagstat | awk -v a="\$READS_IN_PEAKS" -v OFS='\t' '{print "${sampleID}", a/\$1}' | cat $fripScoreHeader - > ${sampleID}_peaks.FRiP_mqc.tsv
-    find * -type f -name "*.$peaktypeEpic" -exec echo -e "peakCalling/very_broad/"{}"\\t0,0,178" \\; > ${sampleID}_peaks.igv.txt
-    """
-  }
-} else if (!params.skipPeakcalling && params.noInput && params.design){
-  // SHARP PEAKS
-  process sharpMACS2NoInput{
-    tag "${sampleID}"
-    publishDir path: "${params.outdir}/peakCalling/sharp", mode: 'copy',
-          saveAs: { filename ->
-            if (filename.endsWith(".tsv")) "stats/$filename"
-            else if (filename.endsWith(".igv.txt")) null
-            else filename
-          }
-    cache 'deep'
-
-    when:
-    params.design
-
-    input:
-    set val(sampleName), val(replicate), val(peaktype), val(sampleID), file(sampleBam), file(sampleFlagstat) from chGroupBamMacsSharp
-    file peakCountHeader from chPeakCountHeader
-    file fripScoreHeader from chFripScoreHeader
-
-    output:
-    set val(sampleID), file("*.{bed,xls,gappedPeak,bdg}") into chMacsOutputSharp
-    set val(sampleName), val(replicate), val(peaktype), val(sampleID), file("*.narrowPeak") into chMacsHomerSharp,
-                                                                                                 chMacsQcSharp,
-                                                                                                 chMacsIdrSharp
-    //file "*igv.txt" into chMacs_igv_sharp
-    file "*_mqc.tsv" into chMacsCountsSharp
-
-    script:
-    format = params.singleEnd ? "BAM" : "BAMPE"
-    peaktypeMacs = "narrowPeak"
-    """
-    macs2 callpeak \\
-      -t ${sampleBam[0]} \\
-      -f $format \\
-      -g $params.macsGsize \\
-      -n $sampleID \\
-      --keep-dup all
-    cat ${sampleID}_peaks.$peaktypeMacs | wc -l | awk -v OFS='\t' '{ print "${sampleID}", \$1 }' | cat $peakCountHeader - > ${sampleID}_peaks.count_mqc.tsv
-    READS_IN_PEAKS=\$(intersectBed -a ${sampleBam[0]} -b ${sampleID}_peaks.$peaktypeMacs -bed -c -f 0.20 | awk -F '\t' '{sum += \$NF} END {print sum}')
-    grep 'mapped (' $sampleFlagstat | awk -v a="\$READS_IN_PEAKS" -v OFS='\t' '{print "${sampleID}", a/\$1}' | cat $fripScoreHeader - > ${sampleID}_peaks.FRiP_mqc.tsv
-    find * -type f -name "*.$peaktypeMacs" -exec echo -e "peakCalling/sharp/"{}"\\t0,0,178" \\; > ${sampleID}_peaks.igv.txt
-    """
-  }
-
-  // BROAD PEAKS
-  process broadMACS2NoInput{
-    tag "${sampleID}"
-    publishDir path: "${params.outdir}/peakCalling/broad", mode: 'copy',
-          saveAs: { filename ->
-            if (filename.endsWith(".tsv")) "stats/$filename"
-            else if (filename.endsWith(".igv.txt")) null
-            else filename
-          }
-    cache 'deep'
-
-    when:
-    params.design
-
-    input:
-    set val(sampleName), val(replicate), val(peaktype), val(sampleID), file(sampleBam), file(sampleFlagstat) from chGroupBamMacsBroad
-    file peakCountHeader from chPeakCountHeader
-    file fripScoreHeader from chFripScoreHeader
-
-    output:
-    set val(sampleID), file("*.{bed,xls,gappedPeak,bdg}") into chMacsOutputBroad
-    set val(sampleName), val(replicate), val(peaktype), val(sampleID), file("*.broadPeak") into chMacsHomerBroad,
-                                                                                                chMacsQcBroad,
-                                                                                                chMacsIdrBroad
-    //file "*igv.txt" into chMacs_igv_broad
-    file "*_mqc.tsv" into chMacsCountsBroad
-
-    script:
-    broad = "--broad --broad-cutoff ${params.broad_cutoff}"
-    format = params.singleEnd ? "BAM" : "BAMPE"
-    peaktypeMacs = "broadPeak"
-    """
-    macs2 callpeak \\
-      -t ${sampleBam[0]} \\
-      $broad \\
-      -f $format \\
-      -g $params.macsGsize \\
-      -n $sampleID \\
-      --keep-dup all
-      cat ${sampleID}_peaks.$peaktypeMacs | wc -l | awk -v OFS='\t' '{ print "${sampleID}", \$1 }' | cat $peakCountHeader - > ${sampleID}_peaks.count_mqc.tsv
-      READS_IN_PEAKS=\$(intersectBed -a ${sampleBam[0]} -b ${sampleID}_peaks.$peaktypeMacs -bed -c -f 0.20 | awk -F '\t' '{sum += \$NF} END {print sum}')
-      grep 'mapped (' $sampleFlagstat | awk -v a="\$READS_IN_PEAKS" -v OFS='\t' '{print "${sampleID}", a/\$1}' | cat $fripScoreHeader - > ${sampleID}_peaks.FRiP_mqc.tsv
-      find * -type f -name "*.$peaktypeMacs" -exec echo -e "peakCalling/broad/"{}"\\t0,0,178" \\; > ${sampleID}_peaks.igv.txt
-    """
-  }
-
-  // VERY BROAD PEAKS
-  process veryBroadEpic2NoInput{
-    tag "${sampleID}"
-    publishDir path: "${params.outdir}/peakCalling/very_broad", mode: 'copy',
-          saveAs: { filename ->
-            if (filename.endsWith(".tsv")) "stats/$filename"
-            else if (filename.endsWith(".igv.txt")) null
-            else filename
-          }
-    cache 'deep'
-
-    when:
-    params.design
-
-    input:
-    set val(sampleName), val(replicate), val(peaktype), val(sampleID), file(sampleBam), file(sampleFlagstat) from chGroupBamMacsVeryBroad
-    file peakCountHeader from chPeakCountHeader
-    file fripScoreHeader from chFripScoreHeader
-
-    output:
-    // set val(sampleID), file("*.{bed,xls,gappedPeak,bdg}") into chMacs_output_vbroad ===>> Mandatory data for MQC in Sharp&Broad MACS2
-    set val(sampleName), val(replicate), val(peaktype), val(sampleID), file("*.broadPeak") into chMacsHomerVbroad,
-                                                                                                chMacsQcVbroad,
-                                                                                                chMacsIdrVbroad
-    //file "*igv.txt" into chMacs_igv_vbroad
-    file "*_mqc.tsv" into chMacsCountsVbroad
-
-    script:
-    peaktypeEpic = "broadPeak"
-
-    """
-    epic2 -t ${sampleBam[0]} \\
-      -gn ${params.genome} \\
-      -kd -a \\
-      -o ${sampleID}_peaks.$peaktypeEpic
-    cat ${sampleID}_peaks.$peaktypeEpic | wc -l | awk -v OFS='\t' '{ print "${sampleID}", \$1 }' | cat $peakCountHeader - > ${sampleID}_peaks.count_mqc.tsv
-    READS_IN_PEAKS=\$(intersectBed -a ${sampleBam[0]} -b ${sampleID}_peaks.$peaktypeEpic -bed -c -f 0.20 | awk -F '\t' '{sum += \$NF} END {print sum}')
-    grep 'mapped (' $sampleFlagstat | awk -v a="\$READS_IN_PEAKS" -v OFS='\t' '{print "${sampleID}", a/\$1}' | cat $fripScoreHeader - > ${sampleID}_peaks.FRiP_mqc.tsv
-    find * -type f -name "*.$peaktypeEpic" -exec echo -e "peakCalling/very_broad/"{}"\\t0,0,178" \\; > ${sampleID}_peaks.igv.txt
+    annotatePeaks.pl $peakfile \\
+          $fastaFile \\
+          -gtf $gtfFile \\
+          -cpu ${task.cpus} \\
+          > ${sampleID}_annotated_peaks.txt
     """
   }
 }
+
+
+/*
+ * Replicates
+ */
 
 /*
  * Irreproducible Discovery Rate
- */
 
 if (!params.skipIdr && params.replicates  && params.design){
   chMacsIdrSharp
@@ -1431,140 +1368,85 @@ if (!params.skipIdr && params.replicates  && params.design){
     """
     replicate_idr.py -sn ${sampleNameAll} -pf ${peakFilesAll}
     """
-
   }
 }
-
-/*
- * Peak annotation
- */
-
-// HOMER
+*/
 
 
-if (!params.skipPeakanno && !params.noInput && params.design){
-  if (params.design){
-  chMacsHomerSharp
-    .mix(chMacsHomerBroad, chMacsHomerVbroad)
-    .set{chMacs_homer}
-  }
+//
+// Peak calling & annotation QC
+//
+//if (!params.skipPeakQC && !params.noInput && params.design){
+//  if (params.design){
+//    chMacsQcSharp
+//      .mix(chMacsQcBroad)
+//      .set{chMacsQc}
+//  }
 
-  process peakAnnoHomer{
-    tag "${sampleID} - ${controlID}"
-    publishDir path: "${params.outdir}/peak_annotation", mode: 'copy'
+//  process peakQC{
+//    publishDir "${params.outdir}/peak_QC/", mode: 'copy'
+//
+//    input:
+//    file peaks from chMacsQc.collect{ it[-1] }
+//    file annotations from chHomerPeakAnnotated.collect()
+//    file peakHeader from chPeakAnnotationHeader
+//
+//    output:
+//    file "*.{txt,pdf}" into chMacsQcOutput
+//    file "*.tsv" into chPeakMqc
+//
+//    script:
+//    """
+//    plot_macs_qc.r \\
+//      -i ${peaks.join(',')} \\
+//      -s ${peaks.join(',').replaceAll("_peaks.narrowPeak","").replaceAll("_peaks.broadPeak","")} \\
+//      -o ./ \\
+//      -p peak
+//    plot_homer_annotatepeaks.r \\
+//      -i ${annotations.join(',')} \\
+//      -s ${annotations.join(',').replaceAll("_annotated_peaks.txt","")} \\
+//      -o ./ \\
+//      -p annotatePeaks
+//    cat $peakHeader annotatePeaks.summary.txt > annotatedPeaks.summary_mqc.tsv
+//    """
+//  }
+//} else if (!params.skipPeakQC && params.noInput && params.design){
+//  process peakQCNoInput{
+//    publishDir "${params.outdir}/peak_QC/", mode: 'copy'
+//
+//   input:
+//    file peaks from chMacsQc.collect{ it[-1] }
+//    file annotations from chHomerPeakAnnotated.collect()
+//    file peakHeader from chPeakAnnotationHeader
+//
+//    output:
+//    file "*.{txt,pdf}" into chMacsQcOutput
+//    file "*.tsv" into chPeakMqc
+//
+//    script:
+//    """
+//    plot_macs_qc.r \\
+//      -i ${peaks.join(',')} \\
+//      -s ${peaks.join(',').replaceAll("_peaks.narrowPeak","").replaceAll("_peaks.broadPeak","")} \\
+//      -o ./ \\
+//      -p peak
+//    plot_homer_annotatepeaks.r \\
+//      -i ${annotations.join(',')} \\
+//      -s ${annotations.join(',').replaceAll("_annotated_peaks.txt","")} \\
+//      -o ./ \\
+//      -p annotatePeaks
+//    cat $peakHeader annotatePeaks.summary.txt > annotatedPeaks.summary_mqc.tsv
+//    """
+//  }
+//}
 
-    input:
-    set val(sampleName), val(replicate), val(peaktype), val(sampleID), val(controlID), file (peakfile) from chMacs_homer
-    file gtfFile from chGtfHomer.collect()
-    file fastaFile from chFastaHomer.collect()
 
-    output:
-    file "*.txt" into chHomerPeakAnnotated
 
-    script:
-    """
-    annotatePeaks.pl $peakfile \\
-          $fastaFile \\
-          -gtf $gtfFile \\
-          -cpu ${task.cpus} \\
-          > ${sampleID}_annotated_peaks.txt
-    """
-  }
-} else if (!params.skipPeakanno && params.noInput && params.design){
-  process peakAnnoHomerNoInput{
-    tag "${sampleID}"
-    publishDir path: "${params.outdir}/peak_annotation", mode: 'copy'
 
-    input:
-    set val(sampleName), val(replicate), val(peaktype), val(sampleID), file (peakfile) from chMacs_homer
-    file gtfFile from chGtfHomer.collect()
-    file fastaFile from chFastaHomer.collect()
-
-    output:
-    file "*.txt" into chHomerPeakAnnotated
-
-    script:
-    """
-    annotatePeaks.pl $peakfile \\
-          $fastaFile \\
-          -gtf $gtfFile \\
-          -cpu ${task.cpus} \\
-          > ${sampleID}_annotated_peaks.txt
-    """
-  }
-}
-
-/*
- * Peak calling & annotation QC
- */
-
-if (!params.skipPeakQC && !params.noInput && params.design){
-  if (params.design){
-    chMacsQcSharp
-      .mix(chMacsQcBroad)
-      .set{chMacsQc}
-  }
-
-  process peakQC{
-    publishDir "${params.outdir}/peak_QC/", mode: 'copy'
-
-    input:
-    file peaks from chMacsQc.collect{ it[-1] }
-    file annotations from chHomerPeakAnnotated.collect()
-    file peakHeader from chPeakAnnotationHeader
-
-    output:
-    file "*.{txt,pdf}" into chMacsQcOutput
-    file "*.tsv" into chPeakMqc
-
-    script:
-    """
-    plot_macs_qc.r \\
-      -i ${peaks.join(',')} \\
-      -s ${peaks.join(',').replaceAll("_peaks.narrowPeak","").replaceAll("_peaks.broadPeak","")} \\
-      -o ./ \\
-      -p peak
-    plot_homer_annotatepeaks.r \\
-      -i ${annotations.join(',')} \\
-      -s ${annotations.join(',').replaceAll("_annotated_peaks.txt","")} \\
-      -o ./ \\
-      -p annotatePeaks
-    cat $peakHeader annotatePeaks.summary.txt > annotatedPeaks.summary_mqc.tsv
-    """
-  }
-} else if (!params.skipPeakQC && params.noInput && params.design){
-  process peakQCNoInput{
-    publishDir "${params.outdir}/peak_QC/", mode: 'copy'
-
-    input:
-    file peaks from chMacsQc.collect{ it[-1] }
-    file annotations from chHomerPeakAnnotated.collect()
-    file peakHeader from chPeakAnnotationHeader
-
-    output:
-    file "*.{txt,pdf}" into chMacsQcOutput
-    file "*.tsv" into chPeakMqc
-
-    script:
-    """
-    plot_macs_qc.r \\
-      -i ${peaks.join(',')} \\
-      -s ${peaks.join(',').replaceAll("_peaks.narrowPeak","").replaceAll("_peaks.broadPeak","")} \\
-      -o ./ \\
-      -p peak
-    plot_homer_annotatepeaks.r \\
-      -i ${annotations.join(',')} \\
-      -s ${annotations.join(',').replaceAll("_annotated_peaks.txt","")} \\
-      -o ./ \\
-      -p annotatePeaks
-    cat $peakHeader annotatePeaks.summary.txt > annotatedPeaks.summary_mqc.tsv
-    """
-  }
-}
 
 /*
  * Feature counts
- */
+
 
 if (!params.skipFeatCounts){
   chGroupBamFeatCounts
@@ -1595,123 +1477,131 @@ if (!params.skipFeatCounts){
     """
   }
 }
+*/
+
+
+
+
+
 
 /*
  * MultiQC
  */
-if(!params.skipMultiqc){
-  // Retrieve software from environment
-  process getSoftwareVersions{
-    publishDir path: "${params.outdir}/software_versions", mode: "copy"
 
+process getSoftwareVersions{
+  publishDir path: "${params.outdir}/software_versions", mode: "copy"
 
-    output:
-      file 'software_versions_mqc.yaml' into softwareVersionsYaml
+  when:
+  !params.skipMultiQC
 
-    script:
-      """
-      echo $workflow.manifest.version &> v_pipeline.txt
-      echo $workflow.nextflow.version &> v_nextflow.txt
-      fastqc --version &> v_fastqc.txt
-      multiqc --version &> v_multiqc.txt
-      echo \$(bwa 2>&1) &> v_bwa.txt
-      bowtie2 --version &> v_bowtie2.txt
-      STAR --version &> v_star.txt
-      samtools --version &> v_samtools.txt
-      bedtools --version &> v_bedtools.txt
-      echo \$(bamtools --version 2>&1) > v_bamtools.txt
-      echo \$(picard MarkDuplicates --version 2>&1) &> v_picard.txt
-      preseq &> v_preseq.txt
-      echo \$(plotFingerprint --version 2>&1) > v_deeptools.txt || true
-      R --version &> v_R.txt
-      echo \$(macs2 --version 2>&1) &> v_macs2.txt
-      epic2 --version &> v_epic2.txt
-      idr --version &> v_idr.txt
-      scrape_software_versions.py &> software_versions_mqc.yaml
-      """
+  output:
+    file 'software_versions_mqc.yaml' into softwareVersionsYaml
 
-  }
+  script:
+  """
+  echo $workflow.manifest.version &> v_pipeline.txt
+  echo $workflow.nextflow.version &> v_nextflow.txt
+  fastqc --version &> v_fastqc.txt
+  multiqc --version &> v_multiqc.txt
+  echo \$(bwa 2>&1) &> v_bwa.txt
+  bowtie2 --version &> v_bowtie2.txt
+  STAR --version &> v_star.txt
+  samtools --version &> v_samtools.txt
+  bedtools --version &> v_bedtools.txt
+  echo \$(bamtools --version 2>&1) > v_bamtools.txt
+  echo \$(picard MarkDuplicates --version 2>&1) &> v_picard.txt
+  preseq &> v_preseq.txt
+  echo \$(plotFingerprint --version 2>&1) > v_deeptools.txt || true
+  R --version &> v_R.txt
+  echo \$(macs2 --version 2>&1) &> v_macs2.txt
+  epic2 --version &> v_epic2.txt
+  idr --version &> v_idr.txt
+  scrape_software_versions.py &> software_versions_mqc.yaml
+  """
+}
 
-  // Workflow summary
-  process workflowSummaryMqc {
+process workflowSummaryMqc {
 
-    output:
-    file 'workflow_summary_mqc.yaml' into workflowSummaryYaml
+  when:
+  !params.skipMultiQC
 
-    exec:
-    def yaml_file = task.workDir.resolve('workflow_summary_mqc.yaml')
-    yaml_file.text  = """
-    id: 'summary'
-    description: " - this information is collected when the pipeline is started."
-    section_name: 'Workflow Summary'
-    section_href: 'https://gitlab.curie.fr/rnaseq'
-    plot_type: 'html'
-    data: |
+  output:
+  file 'workflow_summary_mqc.yaml' into workflowSummaryYaml
+
+  exec:
+  def yaml_file = task.workDir.resolve('workflow_summary_mqc.yaml')
+  yaml_file.text  = """
+  id: 'summary'
+  description: " - this information is collected when the pipeline is started."
+  section_name: 'Workflow Summary'
+  section_href: 'https://gitlab.curie.fr/rnaseq'
+  plot_type: 'html'
+  data: |
         <dl class=\"dl-horizontal\">
   ${summary.collect { k,v -> "            <dt>$k</dt><dd><samp>${v ?: '<span style=\"color:#999999;\">N/A</a>'}</samp></dd>" }.join("\n")}
         </dl>
-    """.stripIndent()
-
-  }
-
-
-  process multiqc {
-    publishDir "${params.outdir}/MultiQC", mode: 'copy'
-
-    input:
-      file splan from chSplan.collect()
-      file metadata from chMetadata.ifEmpty([])
-      file multiqcConfig from chMultiqcConfig
-      file ('software_versions/*') from softwareVersionsYaml.collect()
-      file ('workflow_summary/*') from workflowSummaryYaml.collect()
-
-      file ('fastQC/*') from chFastqcResults.collect().ifEmpty([])
-
-      file ('/filtering/markedBams/samtools_stats/*') from chMarkedBamSamstats.collect().ifEmpty([])
-      file ('/filtering/markedBams/samtools_stats/*') from chMarkedBamPicstats.collect().ifEmpty([])
-      file ('/filtering/filteredBams/samtools_stats/*') from chFilteredFlagstatMqc.collect().ifEmpty([])
-      file ('/filtering/filteredBams/samtools_stats/*') from chFilteredStatsMqc.collect().ifEmpty([])
-
-      file ('preseq/*') from chPreseqStats.collect().ifEmpty([])
-
-      file ('ppqt/*.spp.out') from chPpqtOutMqc.collect().ifEmpty([])
-      file ('ppqt/*_mqc.tsv') from chPpqtCsvMqc.collect().ifEmpty([])
-
-      file ('deepTools/singleBam/*') from chDeeptoolsSingle.collect().ifEmpty([])
-      file ('deepTools/singleBam/*_corrected.tab') from chDeeptoolsSingleMqc.collect().ifEmpty([])
-      file ("deepTools/multipleBams/bams_correlation.tab") from chDeeptoolsCorrelMqc.collect().ifEmpty([])
-      file ("deepTools/multipleBams/bams_coverage_raw.txt") from chDeeptoolsCovMqc.collect().ifEmpty([])
-      file ("deepTools/multipleBams/bams_fingerprint_*") from chDeeptoolsFingerprintMqc.collect().ifEmpty([])
-
-      file ('peakCalling/sharp/*.xls') from chMacsOutputSharp.collect().ifEmpty([])
-      file ('peakCalling/broad/*.xls') from chMacsOutputBroad.collect().ifEmpty([])
-      file ('peakCalling/sharp/*') from chMacsCountsSharp.collect().ifEmpty([])
-      file ('peakCalling/broad/*') from chMacsCountsBroad.collect().ifEmpty([])
-      // file ('peakCalling/very_broad/*') from chMacsCountsVbroad.collect().ifEmpty([])
-
-      file('peak_QC/*') from chPeakMqc.collect().ifEmpty([])
-
-      file('featCounts/*') from chFeatCountsMqc.collect().ifEmpty([])
-
-
-    output:
-      file splan
-      file "*multiqc_report.html" into multiqc_report
-      file "*_data"
-
-    script:
-    rtitle = customRunName ? "--title \"$customRunName\"" : ''
-    rfilename = customRunName ? "--filename " + customRunName.replaceAll('\\W','_').replaceAll('_+','_') + "_multiqc_report" : ''
-    metadata_opts = params.metadata ? "--metadata ${metadata}" : ""
-    splan_opts = params.samplePlan ? "--splan ${params.samplePlan}" : ""
-    modules_list = "-m custom_content -m fastqc -m samtools -m picard -m preseq -m phantompeakqualtools -m deeptools -m macs2 -m homer -m featureCounts"
-
-    """
-    mqc_header.py --name "Chip-seq" --version ${workflow.manifest.version} ${metadata_opts} > multiqc-config-header.yaml
-    multiqc . -f $rtitle $rfilename -c multiqc-config-header.yaml $modules_list -c $multiqcConfig -s
-    """
-  }
+  """.stripIndent()
 }
+
+
+process multiqc {
+  publishDir "${params.outdir}/MultiQC", mode: 'copy'
+
+  when:
+  !params.skipMultiQC
+
+  input:
+  file splan from chSplan.collect()
+  file metadata from chMetadata.ifEmpty([])
+  file multiqcConfig from chMultiqcConfig
+  file ('software_versions/*') from softwareVersionsYaml.collect()
+  file ('workflow_summary/*') from workflowSummaryYaml.collect()
+
+  file ('fastQC/*') from chFastqcResults.collect().ifEmpty([])
+
+  file ('/filtering/stats/*') from chMarkedStats.collect().ifEmpty([])
+  file ('/filtering/stats/*') from chMarkedPicstats.collect().ifEmpty([])
+  file ('/filtering/stats/*') from chFlagstatMqc.collect().ifEmpty([])
+  file ('/filtering/stats/*') from chStatsMqc.collect().ifEmpty([])
+
+  file ('preseq/*') from chPreseqStats.collect().ifEmpty([])
+
+  file ('ppqt/*.spp.out') from chPpqtOutMqc.collect().ifEmpty([])
+  file ('ppqt/*_mqc.tsv') from chPpqtCsvMqc.collect().ifEmpty([])
+
+  //file ('deepTools/*') from chDeeptoolsSingle.collect().ifEmpty([])
+  //file ('deepTools/*_corrected.tab') from chDeeptoolsSingleMqc.collect().ifEmpty([])
+  //file ("deepTools/bams_correlation.tab") from chDeeptoolsCorrelMqc.collect().ifEmpty([])
+  //file ("deepTools/bams_coverage_raw.txt") from chDeeptoolsCovMqc.collect().ifEmpty([])
+  //file ("deepTools/bams_fingerprint_*") from chDeeptoolsFingerprintMqc.collect().ifEmpty([])
+
+  file ('peakCalling/sharp/*.xls') from chMacsOutputSharp.collect().ifEmpty([])
+  file ('peakCalling/broad/*.xls') from chMacsOutputBroad.collect().ifEmpty([])
+  file ('peakCalling/sharp/*') from chMacsCountsSharp.collect().ifEmpty([])
+  file ('peakCalling/broad/*') from chMacsCountsBroad.collect().ifEmpty([])
+  //file ('peakCalling/very_broad/*') from chMacsCountsVbroad.collect().ifEmpty([])
+
+  //file('peak_QC/*') from chPeakMqc.collect().ifEmpty([])
+  //file('featCounts/*') from chFeatCountsMqc.collect().ifEmpty([])
+
+  output:
+  file splan
+  file "*multiqc_report.html" into multiqc_report
+  file "*_data"
+
+  script:
+  rtitle = customRunName ? "--title \"$customRunName\"" : ''
+  rfilename = customRunName ? "--filename " + customRunName.replaceAll('\\W','_').replaceAll('_+','_') + "_multiqc_report" : ''
+  metadata_opts = params.metadata ? "--metadata ${metadata}" : ""
+  splan_opts = params.samplePlan ? "--splan ${params.samplePlan}" : ""
+  modules_list = "-m custom_content -m fastqc -m preseq -m phantompeakqualtools -m deeptools -m macs2 -m homer -m featureCounts"
+// -m samtools -m picard
+  """
+  mqc_header.py --name "Chip-seq" --version ${workflow.manifest.version} ${metadata_opts} > multiqc-config-header.yaml
+  multiqc . -f $rtitle $rfilename -c multiqc-config-header.yaml $modules_list -c $multiqcConfig -s
+  """
+}
+
 
 /* Creates a file at the end of workflow execution */
 workflow.onComplete {
