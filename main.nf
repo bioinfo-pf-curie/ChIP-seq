@@ -1395,8 +1395,6 @@ process IDR{
 }
 
 
-
-
 //
 // Peak calling & annotation QC
 //
