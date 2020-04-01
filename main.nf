@@ -133,6 +133,7 @@ if (params.spike && params.spike != 'spike'){
   } else {
     exit 1, "Spike-in fasta file not found: ${params.spikeFasta}"
   }
+  println "Fasta ok"
 }
 
 //Bwa-mem Index
@@ -149,21 +150,22 @@ if (params.bwaIndex){
   exit 1, "BWA index file not found: ${params.bwaIndex}"
 }
 
-//if (params.spike && params.spike != 'spike'){
+if (params.spike && params.spike != 'spike'){
   params.spikeBwaIndex = params.spike ? params.genomes[ params.spike ].bwaIndex ?: false : false
   if (params.spikeBwaIndex){
     lastPath = params.spikeFasta.lastIndexOf(File.separator)
-    bwaDir =  params.spikeBwaIndex.substring(0,lastPath+1)
+    bwaDirSpike =  params.spikeBwaIndex.substring(0,lastPath+1)
     spikeBwaBase = params.spikeBwaIndex.substring(lastPath+1)
     Channel
-      .fromPath(bwaDir, checkIfExists: true)
+      .fromPath(bwaDirSpike, checkIfExists: true)
       .ifEmpty {exit 1, "Spike BWA index file not found: ${params.spikeBwaIndex}"}
       .set { chSpikeBwaIndex }
   } else {
     chSpikeBwaIndex=Channel.empty()
     //exit 1, "Spike BWA index file not found: ${params.spikeBwaIndex}"
   }
-//}
+  println "Bwa OK"
+}
 
 //Bowtie2 indexes
 params.bt2Index = genomeRef ? params.genomes[ genomeRef ].bowtie2Index ?: false : false
@@ -179,21 +181,22 @@ if (params.bt2Index){
   exit 1, "Bowtie2 index file not found: ${params.bt2Index}"
 }
 
-//if (params.spike && params.spike != 'spike'){
-      params.spikeBt2Index = params.spike ? params.genomes[ params.spike ].bowtie2Index ?: false : false
+if (params.spike && params.spike != 'spike'){
+  params.spikeBt2Index = params.spike ? params.genomes[ params.spike ].bowtie2Index ?: false : false
   if (params.spikeBt2Index){
     lastPath = params.spikeFasta.lastIndexOf(File.separator)
-    bt2Dir =  params.spikeBt2Index.substring(0,lastPath+1)
+    bt2DirSpike =  params.spikeBt2Index.substring(0,lastPath+1)
     spikeBt2Base = params.spikeBt2Index.substring(lastPath+1)
     Channel
-      .fromPath(bt2Dir, checkIfExists: true)
+      .fromPath(bt2DirSpike, checkIfExists: true)
       .ifEmpty {exit 1, "Spike Bowtie2 index file not found: ${params.spikeBt2Index}"}
       .set { chSpikeBt2Index }
   } else {
     chSpikeBt2Index=Channel.empty()
     //exit 1, "Spike bowtie2 index file not found: ${params.spikeBt2Index}"
   }
-//}
+  println "Bt2 OK"
+}
 
 //Star indexes
 params.starIndex = genomeRef ? params.genomes[ genomeRef ].starIndex ?: false : false
@@ -209,21 +212,22 @@ if (params.starIndex){
   exit 1, "STAR index file not found: ${params.starIndex}"
 }
 
-//if (params.spike && params.spike != 'spike'){
+if (params.spike && params.spike != 'spike'){
   params.spikeStarIndex = params.spike ? params.genomes[ params.spike ].starIndex ?: false : false
   if (params.spikeStarIndex){
-    lastPath = params.spike.lastIndexOf(File.separator)
-    starDir =  params.spikeStarIndex.substring(0,lastPath+1)
+    lastPath = params.spikeFasta.lastIndexOf(File.separator)
+    starDirSpike =  params.spikeStarIndex.substring(0,lastPath+1)
     spikeStarBase = params.spikeStarIndex.substring(lastPath+1)
     Channel
-      .fromPath(starDir, checkIfExists: true)
+      .fromPath(starDirSpike, checkIfExists: true)
       .ifEmpty {exit 1, "Spike STAR index file not found: ${params.spikeStarIndex}"}
       .set { chSpikeStarIndex }
   } else {
     chSpikeStarIndex = Channel.empty()
     //exit 1, "Spike STAR index file not found: ${params.spikeStarIndex}"
   }
-//}
+  println "starOk"
+}
 
 
 // Other inputs
@@ -251,6 +255,10 @@ if (params.spike && params.spike != 'spike'){
       .fromPath(params.spikeGeneBed, checkIfExists: true)
       .set{chSpikeGeneBed}
   }
+  else{
+  exit 1, "BED file not specified!"
+  }
+  println "bed ok"
 }
 
 //PPQT headers
@@ -533,7 +541,7 @@ process bwaMem{
   alnMult = params.spike == 'spike' ? '-a' : ''
   """
   bwa mem -t ${task.cpus} $alnMult $bwaIndex${bwaBase} $reads \\
-  | samtools view -b -h -o ${prefix}.bam
+  | samtools view -b -h -F 256 -o ${prefix}.bam
   """
 }
 
@@ -557,7 +565,7 @@ process bowtie2{
   alnMult = params.spike ? alnMult = '-k 3' : ''
   """
   bowtie2 -p ${task.cpus} $alnMult -x $bt2Index/${bt2Base} $readCommand \\
-  | samtools view -b -h -o ${prefix}.bam
+  | samtools view -b -h -F 256 -F 2048 -o ${prefix}.bam
   """
 }
 
@@ -594,7 +602,7 @@ if (params.aligner == "bowtie2"){
 /*
  * SPIKES GENOME
  */
-
+if(params.spike && params.spike != 'spike'){
 // BWA-MEM
 process spikeBwaMem{
   tag "${prefix}"
@@ -614,7 +622,7 @@ process spikeBwaMem{
   spikeprefix = "${prefix}_spike"
   """
   bwa mem -t ${task.cpus} $spikeBwaIndex${spikeBwaBase} $reads \\
-  | samtools view -b -h -o ${spikeprefix}.bam
+  | samtools view -b -h -F 256 -F 2048 -o ${spikeprefix}.bam
   """
 }
 
@@ -664,7 +672,7 @@ process spikeStar{
   | samtools view -b -h -o ${spikeprefix}.bam
   """
 }
-
+}
 
 // Split Reference and Spike genomes
 if(params.spike && params.spike != 'spike'){
@@ -677,21 +685,27 @@ if(params.spike && params.spike != 'spike'){
     chSpikeAlignReads = chSpikeAlignReadsStar
   }
 
+  chAlignReads
+    .combine(chSpikeAlignReads)
+    .filter{ it[0] == it[2][0..-7] }
+    .map{ it[0,1,3] }    
+    .set{chAllReads}
+
   // Merging, if necessary reference aligned reads and spike aligned reads
   process compareRefSpike{
     tag "${prefixRef}"
     publishDir "${params.outdir}/alignment/compareRefSpike"
 
     input:
-      set val(prefixRef), file(unsortedBamRef) from chAlignReads
-      set val(prefixSpike), file(unsortedBamSpike) from chSpikeAlignReads
+      set val(prefixRef), file(unsortedBamRef), file(unsortedBamSpike) from chAllReads
 
     output:
       set val(prefixRef), file('*_ref.bam') into chAlignedReads
-      set val(prefixSpike), file('*_spikein.bam') into chSpikeAlignedReads
+      set val(prefixSpike), file('*Spikein.bam') into chSpikeAlignedReads
       file ('*.txt') into chLogCompare
 
     script:
+    prefixSpike = prefixRef + 'Spike'
     """
     samtools sort $unsortedBamRef -n -T ${prefixRef} -o ${prefixRef}_sorted.bam
     samtools sort $unsortedBamSpike -n -T ${prefixSpike} -o ${prefixSpike}_sorted.bam
@@ -943,11 +957,11 @@ if (!params.skipFiltering){
 
 chFlagstatChip=Channel.create()
 chFlagstatSpikes=Channel.create()
-chFlagstat.choice( chFlagstatSpikes, chFlagstatChip ) { it -> it[0][-6..-1] == '_spike' ? 0 : 1 }
+chFlagstat.choice( chFlagstatSpikes, chFlagstatChip ) { it -> it[0][-5..-1] == 'Spike' ? 0 : 1 }
 
 chBamsChip=Channel.create()
 chBamsSpikes=Channel.create()
-chBams.choice( chBamsSpikes, chBamsChip ) { it -> it[0][-6..-1] == '_spike' ? 0 : 1 }
+chBams.choice( chBamsSpikes, chBamsChip ) { it -> it[0][-5..-1] == 'Spike' ? 0 : 1 }
 
 // Preparing all ChIP data for further analysis
 chBamsChip
@@ -1020,12 +1034,15 @@ process bigWig {
 
 // With Spikes
 if (params.spike){
+  chBamsSpikes
+    .into{chBamsSpikesBam;chBamsSpikesBai}
   process binSpikes {
     publishDir "${params.outdir}/bigwig/10kbins"
 
     input:
-    val allBams from chBamsSpikes.collect()
-
+    file(allBams) from chBamsSpikesBam.map{it[1][0]}.collect()
+    file(allBai) from chBamsSpikesBai.map{it[1][1]}.collect()
+ 
     output:
     file "*.tab" into chDeseq2tab
 
@@ -1057,6 +1074,7 @@ if (params.spike){
 
   chBamsBigWigSF
     .combine(chScaleFactor)
+    .view()
     .filter{it[0] == it[2]}
     .map { it -> it[0,1,3]}
     .set{chBigWigScaleFactor}
@@ -1667,10 +1685,6 @@ workflow.onComplete {
   def output_tf = new File( output_d, "pipeline_report.txt" )
   output_tf.withWriter { w -> w << report_txt }
 
-  /*oncomplete file*/
-
-  File woc = new File("${params.outdir}/workflow.oncomplete.txt")
-  Map endSummary = [:]
   endSummary['Completed on'] = workflow.complete
   endSummary['Duration']     = workflow.duration
   endSummary['Success']      = workflow.success
