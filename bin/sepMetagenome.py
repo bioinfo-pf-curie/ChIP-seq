@@ -69,7 +69,7 @@ def calc_scores(list_alignments,comparison):
             elif ((alignment.flag >= 4) and (str(bin(alignment.flag))[-3] == '1')):
                 scores.append(1000)
             elif (comparison == 1):
-                scores.append(abs(alignment.get_tag("AS")))
+                scores.append(abs(alignment.mapping_quality))
             elif (comparison == 2):
                 scores.append(alignment.get_tag("NM"))
     return scores
@@ -181,7 +181,7 @@ def sepMetagenome(inputBam, outputBamRef, outputBamSpike, singleEnd):
         'ambiguous': 0,
     }
 
-    comparison = 2
+    comparison = 1
     prev_alignments = []
 
     for alignment in samInput.fetch(until_eof = True):

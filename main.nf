@@ -561,10 +561,10 @@ process bowtie2{
   set val(prefix), file("*.bam") into chAlignReadsBowtie2
 
   script:
-  readCommand = params.singleEnd ? "-1 ${reads[0]}" : "-1 ${reads[0]} -2 ${reads[1]}"
+  readCommand = params.singleEnd ? "-U ${reads[0]}" : "-1 ${reads[0]} -2 ${reads[1]}"
   alnMult = params.spike ? alnMult = '-k 3' : ''
   """
-  bowtie2 -p ${task.cpus} $alnMult -x $bt2Index/${bt2Base} $readCommand \\
+  bowtie2 -p ${task.cpus} $alnMult -x $bt2Index${bt2Base} $readCommand \\
   | samtools view -b -h -F 256 -F 2048 -o ${prefix}.bam
   """
 }
@@ -729,13 +729,13 @@ if(params.spike && params.spike != 'spike'){
 
     output:
       set val(prefix), file('*_ref.bam') into chAlignedReads
-      set val(prefix), file('*_spike.bam') into chSpikeAlignedReads
+      set val(prefix), file('*Spike.bam') into chSpikeAlignedReads
       file ('*.txt') into chLogSep
 
     script:
     """
     samtools sort $unsortedBam -n -T ${prefix} -o ${prefix}_sorted.bam
-    sepMetagenome.py -I ${prefix}_sorted.bam -OR ${prefix}_ref.bam -OS ${prefix}_spike.bam -SE ${params.singleEnd}
+    sepMetagenome.py -I ${prefix}_sorted.bam -OR ${prefix}_ref.bam -OS ${prefix}Spike.bam -SE ${params.singleEnd}
     """
   }
 
@@ -773,7 +773,7 @@ process bamSort{
 
   script:
   String unsortedBamsName = unsortedBam.toString()
-  name = unsortedBamsName.contains('spike') ? "${prefix}_spike" : "${prefix}"
+  name = unsortedBamsName.contains('Spike') ? "${prefix}Spike" : "${prefix}"
   """
   samtools sort $unsortedBam -@ ${task.cpus} -T ${name} -o ${name}_sorted.bam
   samtools index ${name}_sorted.bam
@@ -1069,6 +1069,7 @@ if (params.spike){
 
   chTabSF
     .splitCsv(header:false, sep:',')
+    .view()
     .map { row -> [row[0], row[1]]}
     .set{chScaleFactor}
 
