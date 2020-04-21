@@ -70,8 +70,6 @@ def calc_scores(list_alignments,comparison):
                 scores.append(1000)
             elif (comparison == 1):
                 scores.append(abs(alignment.mapping_quality))
-            elif (comparison == 2):
-                scores.append(alignment.get_tag("NM"))
     return scores
 
 

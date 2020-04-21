@@ -1,0 +1,9 @@
+Sample	phantompeakqualtools_mqc-generalstats-phantompeakqualtools-Estimated_Fragment_Length_bp	phantompeakqualtools_mqc-generalstats-phantompeakqualtools-NSC	phantompeakqualtools_mqc-generalstats-phantompeakqualtools-RSC	FastQC_mqc-generalstats-fastqc-percent_duplicates	FastQC_mqc-generalstats-fastqc-percent_gc	FastQC_mqc-generalstats-fastqc-avg_sequence_length	FastQC_mqc-generalstats-fastqc-percent_fails	FastQC_mqc-generalstats-fastqc-total_sequences
+1.spp.out	160	1.091038	0.3916004					
+2.spp.out	150	1.792452	1.330325					
+3.spp.out	160	1.056099	0.9455708					
+4.spp.out	165	1.022526	0.3712225					
+A949C02.R1.fastq.gz				8.199129647596806	42.0	50.91314731684298	0.0	24582050.0
+A949C05.R1.fastq.gz				12.543980412299774	45.0	50.91624990132773	0.0	25336400.0
+A949C08.R1.fastq.gz				28.34540501606442	43.0	50.91566085914607	9.090909090909092	23747254.0
+A949C11.R1.fastq.gz				21.61423538756661	43.0	50.914774622524966	0.0	26138881.0

@@ -643,9 +643,9 @@ process spikeBowtie2{
 
   script:
   spikeprefix = "${prefix}_spike"
-  readCommand = params.singleEnd ? "-1 ${reads[0]}" : "-1 ${reads[0]} -2 ${reads[1]}"
+  readCommand = params.singleEnd ? "-U ${reads[0]}" : "-1 ${reads[0]} -2 ${reads[1]}"
   """
-  bowtie2 -p ${task.cpus} -x $spikeBt2Index/${spikeBt2Base} $readcommand \\
+  bowtie2 -p ${task.cpus} -x $spikeBt2Index/${spikeBt2Base} $readCommand \\
   | samtools view -b -h -o ${spikeprefix}.bam
   """
  }

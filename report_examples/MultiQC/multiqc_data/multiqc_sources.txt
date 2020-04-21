@@ -1,0 +1,17 @@
+Module	Section	Sample Name	Source
+phantompeakqualtools	all_sections	1.spp.out	/bioinfo/users/vlaroche/Documents/chip-seq/work/07/fb3f0cadeea3c520073d691b43c5da/ppqt/1.spp.out
+phantompeakqualtools	all_sections	2.spp.out	/bioinfo/users/vlaroche/Documents/chip-seq/work/07/fb3f0cadeea3c520073d691b43c5da/ppqt/2.spp.out
+phantompeakqualtools	all_sections	3.spp.out	/bioinfo/users/vlaroche/Documents/chip-seq/work/07/fb3f0cadeea3c520073d691b43c5da/ppqt/3.spp.out
+phantompeakqualtools	all_sections	4.spp.out	/bioinfo/users/vlaroche/Documents/chip-seq/work/07/fb3f0cadeea3c520073d691b43c5da/ppqt/4.spp.out
+FastQC	all_sections	A949C05.R1.fastq.gz	/bioinfo/users/vlaroche/Documents/chip-seq/work/07/fb3f0cadeea3c520073d691b43c5da/fastQC/A949C05.R1_fastqc.zip
+FastQC	all_sections	A949C08.R1.fastq.gz	/bioinfo/users/vlaroche/Documents/chip-seq/work/07/fb3f0cadeea3c520073d691b43c5da/fastQC/A949C08.R1_fastqc.zip
+FastQC	all_sections	A949C02.R1.fastq.gz	/bioinfo/users/vlaroche/Documents/chip-seq/work/07/fb3f0cadeea3c520073d691b43c5da/fastQC/A949C02.R1_fastqc.zip
+FastQC	all_sections	A949C11.R1.fastq.gz	/bioinfo/users/vlaroche/Documents/chip-seq/work/07/fb3f0cadeea3c520073d691b43c5da/fastQC/A949C11.R1_fastqc.zip
+Preseq	all_sections	A949C11.ccurve.txt	/bioinfo/users/vlaroche/Documents/chip-seq/work/07/fb3f0cadeea3c520073d691b43c5da/preseq/A949C11.ccurve.txt
+Preseq	all_sections	A949C05.ccurve.txt	/bioinfo/users/vlaroche/Documents/chip-seq/work/07/fb3f0cadeea3c520073d691b43c5da/preseq/A949C05.ccurve.txt
+Preseq	all_sections	A949C11SpikeSpike.ccurve.txt	/bioinfo/users/vlaroche/Documents/chip-seq/work/07/fb3f0cadeea3c520073d691b43c5da/preseq/A949C11SpikeSpike.ccurve.txt
+Preseq	all_sections	A949C02SpikeSpike.ccurve.txt	/bioinfo/users/vlaroche/Documents/chip-seq/work/07/fb3f0cadeea3c520073d691b43c5da/preseq/A949C02SpikeSpike.ccurve.txt
+Preseq	all_sections	A949C02.ccurve.txt	/bioinfo/users/vlaroche/Documents/chip-seq/work/07/fb3f0cadeea3c520073d691b43c5da/preseq/A949C02.ccurve.txt
+Preseq	all_sections	A949C08.ccurve.txt	/bioinfo/users/vlaroche/Documents/chip-seq/work/07/fb3f0cadeea3c520073d691b43c5da/preseq/A949C08.ccurve.txt
+Preseq	all_sections	A949C08SpikeSpike.ccurve.txt	/bioinfo/users/vlaroche/Documents/chip-seq/work/07/fb3f0cadeea3c520073d691b43c5da/preseq/A949C08SpikeSpike.ccurve.txt
+Preseq	all_sections	A949C05SpikeSpike.ccurve.txt	/bioinfo/users/vlaroche/Documents/chip-seq/work/07/fb3f0cadeea3c520073d691b43c5da/preseq/A949C05SpikeSpike.ccurve.txt
