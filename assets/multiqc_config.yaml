@@ -97,17 +97,17 @@ sp:
 ###############################
 ## Modules 
 
-module_order:
-  - fastqc
-  - samtools:
-    path_filters_exclude:
-      - '*_spike*'
-  - picard:
-    path_filters_exclude:
-      - '*_spike*'
-  - preseq
-  - deeptools
-  - featureCounts
+#module_order:
+#  - fastqc
+#  - samtools:
+#    path_filters_exclude:
+#      - '*_spike*'
+#  - picard:
+#    path_filters_exclude:
+#      - '*_spike*'
+#  - preseq
+#  - deeptools
+#  - featureCounts
 
 report_section_order:
   strand_shift_correlation:
