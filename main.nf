@@ -1603,8 +1603,8 @@ process multiqc {
 
   file ('preseq/*') from chPreseqStats.collect().ifEmpty([])
 
-  file ('ppqt/*.spp.out') from chPpqtOutMqc.collect().ifEmpty([])
-  file ('ppqt/*_mqc.tsv') from chPpqtCsvMqc.collect().ifEmpty([])
+  file ('ppqt/*') from chPpqtOutMqc.collect().ifEmpty([])
+  file ('ppqt/*') from chPpqtCsvMqc.collect().ifEmpty([])
 
   file ('deepTools/*') from chDeeptoolsSingle.collect().ifEmpty([])
   file ('deepTools/*_corrected.tab') from chDeeptoolsSingleMqc.collect().ifEmpty([])
@@ -1612,8 +1612,8 @@ process multiqc {
   file ("deepTools/bams_coverage_raw.txt") from chDeeptoolsCovMqc.collect().ifEmpty([])
   file ("deepTools/bams_fingerprint_*") from chDeeptoolsFingerprintMqc.collect().ifEmpty([])
 
-  file ('peakCalling/sharp/*.xls') from chMacsOutputSharp.collect().ifEmpty([])
-  file ('peakCalling/broad/*.xls') from chMacsOutputBroad.collect().ifEmpty([])
+  file ('peakCalling/sharp/*') from chMacsOutputSharp.collect().ifEmpty([])
+  file ('peakCalling/broad/*') from chMacsOutputBroad.collect().ifEmpty([])
   file ('peakCalling/sharp/*') from chMacsCountsSharp.collect().ifEmpty([])
   file ('peakCalling/broad/*') from chMacsCountsBroad.collect().ifEmpty([])
   //file ('peakCalling/very_broad/*') from chMacsCountsVbroad.collect().ifEmpty([])
@@ -1686,6 +1686,9 @@ workflow.onComplete {
   def output_tf = new File( output_d, "pipeline_report.txt" )
   output_tf.withWriter { w -> w << report_txt }
 
+  /*oncomplete file*/
+  File woc = new File("${params.outdir}/workflow.oncomplete.txt")
+  Map endSummary = [:]
   endSummary['Completed on'] = workflow.complete
   endSummary['Duration']     = workflow.duration
   endSummary['Success']      = workflow.success
