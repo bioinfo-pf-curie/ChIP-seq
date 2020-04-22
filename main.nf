@@ -1631,10 +1631,9 @@ process multiqc {
   rfilename = customRunName ? "--filename " + customRunName.replaceAll('\\W','_').replaceAll('_+','_') + "_multiqc_report" : ''
   metadata_opts = params.metadata ? "--metadata ${metadata}" : ""
   splan_opts = params.samplePlan ? "--splan ${params.samplePlan}" : ""
-  modules_list = "-m custom_content -m fastqc -m preseq -m phantompeakqualtools -m deeptools -m macs2 -m homer -m featureCounts"
-// -m samtools -m picard
+  modules_list = "-m custom_content -m fastqc -m preseq -m phantompeakqualtools -m deeptools -m macs2 -m homer -m featureCounts -m samtools -m picard"
   """
-  mqc_header.py --name "Chip-seq" --version ${workflow.manifest.version} ${metadata_opts} > multiqc-config-header.yaml
+  mqc_header.py --name "ChIP-seq" --version ${workflow.manifest.version} ${metadata_opts} ${splan_opts} > multiqc-config-header.yaml
   multiqc . -f $rtitle $rfilename -c multiqc-config-header.yaml $modules_list -c $multiqcConfig -s
   """
 }
