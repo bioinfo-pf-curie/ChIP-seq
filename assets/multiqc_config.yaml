@@ -97,29 +97,19 @@ sp:
 ###############################
 ## Modules 
 
-#module_order:
-#  - fastqc
-#  - samtools:
-#    path_filters_exclude:
-#      - '*_spike*'
-#  - picard:
-#    path_filters_exclude:
-#      - '*_spike*'
-#  - preseq
-#  - deeptools
-#  - featureCounts
+module_order:
+   - fastqc
+   - bowtie2
+   - star
+   - picard
+   - preseq
+   - phantompeakqualtools 
+   - macs2
+   - deeptools
+   - homer
+   - featureCounts
 
 report_section_order:
-  strand_shift_correlation:
-      order: -1200
-  NSC_coefficient:
-      order: -1300
-  RSC_coefficient:
-      order: -1400
-  peak_count:
-      order: -1000
-  frip_score:
-      order: -1100
   peak_annotation:
       order: -1500
 #############################

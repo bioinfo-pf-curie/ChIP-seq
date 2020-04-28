@@ -559,13 +559,14 @@ process bowtie2{
 
   output:
   set val(prefix), file("*.bam") into chAlignReadsBowtie2
+  set val(prefix), file("*.log") into chBowtie2Mqc
 
   script:
   readCommand = params.singleEnd ? "-U ${reads[0]}" : "-1 ${reads[0]} -2 ${reads[1]}"
   alnMult = params.spike ? alnMult = '-k 3' : ''
   """
-  bowtie2 -p ${task.cpus} $alnMult -x $bt2Index${bt2Base} $readCommand \\
-  | samtools view -b -h -F 256 -F 2048 -o ${prefix}.bam
+  bowtie2 -p ${task.cpus} $alnMult -x $bt2Index${bt2Base} $readCommand 1> sample.sam 2> ${prefix}.log  
+  samtools view -b -h -F 256 -F 2048 sample.sam > ${prefix}.bam
   """
 }
 
@@ -640,13 +641,14 @@ process spikeBowtie2{
 
   output:
   set val(spikeprefix), file("*.bam") into chSpikeAlignReadsBowtie2
+  set val(spikeprefix), file("*.log") into chSpikeBowtie2Mqc
 
   script:
   spikeprefix = "${prefix}_spike"
   readCommand = params.singleEnd ? "-U ${reads[0]}" : "-1 ${reads[0]} -2 ${reads[1]}"
   """
-  bowtie2 -p ${task.cpus} -x $spikeBt2Index/${spikeBt2Base} $readCommand \\
-  | samtools view -b -h -o ${spikeprefix}.bam
+  bowtie2 -p ${task.cpus} -x $spikeBt2Index${spikeBt2Base} $readCommand 1> sample.sam 2> ${spikeprefix}.log
+  samtools view -b -h -F 256 -F 2048 sample.sam > ${spikeprefix}.bam
   """
  }
  
@@ -899,14 +901,14 @@ process bamFiltering {
 
 if (!params.skipFiltering){
   chFilteredBams
-    .set{ chBams }
+    .into{ chBams; chGroupBamNameFeatCounts }
   chFilteredFlagstat
     .set{ chFlagstat }
   chFilteredStats
     .set{ chStatsMqc }
 }else{
   chMarkedBams
-    .set{ chBams }
+    .set{ chBams; chGroupBamNameFeatCounts }
   chMarkedFlagstat
     .set{ chFlagstat }
   chMarkedStats
@@ -1442,7 +1444,7 @@ process IDR{
 
 /*
  * Feature counts
-
+ */
 
 if (!params.skipFeatCounts){
   chGroupBamFeatCounts
@@ -1473,7 +1475,7 @@ if (!params.skipFeatCounts){
     """
   }
 }
-*/
+
 
 
 
@@ -1553,12 +1555,10 @@ process multiqc {
   file ('software_versions/*') from softwareVersionsYaml.collect()
   file ('workflow_summary/*') from workflowSummaryYaml.collect()
 
-  file ('fastQC/*') from chFastqcResults.collect().ifEmpty([])
+  file ('rawReads/*') from chFastqcResults.collect().ifEmpty([])
 
-  file ('/filtering/stats/*') from chMarkedStats.collect().ifEmpty([])
-  file ('/filtering/stats/*') from chMarkedPicstats.collect().ifEmpty([])
-  file ('/filtering/stats/*') from chFlagstatMqc.collect().ifEmpty([])
-  file ('/filtering/stats/*') from chStatsMqc.collect().ifEmpty([])
+  file ('alignement/reference/*') from chBowtie2Mqc.collect().ifEmpty([])
+  file ('alignement/spike/*') from chSpikeBowtie2Mqc.collect().ifEmpty([])
 
   file ('preseq/*') from chPreseqStats.collect().ifEmpty([])
 
@@ -1578,7 +1578,8 @@ process multiqc {
   //file ('peakCalling/very_broad/*') from chMacsCountsVbroad.collect().ifEmpty([])
 
   //file('peak_QC/*') from chPeakMqc.collect().ifEmpty([])
-  //file('featCounts/*') from chFeatCountsMqc.collect().ifEmpty([])
+  
+  file('featCounts/*') from chFeatCountsMqc.collect().ifEmpty([])
 
   output:
   file splan
@@ -1589,8 +1590,8 @@ process multiqc {
   rtitle = customRunName ? "--title \"$customRunName\"" : ''
   rfilename = customRunName ? "--filename " + customRunName.replaceAll('\\W','_').replaceAll('_+','_') + "_multiqc_report" : ''
   metadataOpts = params.metadata ? "--metadata ${metadata}" : ""
-  splanOpts = params.samplePlan ? "--splan ${params.samplePlan}" : ""
-  modules_list = "-m custom_content -m fastqc -m preseq -m phantompeakqualtools -m deeptools -m macs2 -m homer -m featureCounts -m samtools -m picard"
+  splanOpts = params.samplePlan ? "" : ""
+  modules_list = "-m custom_content -m fastqc -m bowtie2 -m preseq -m phantompeakqualtools -m deeptools -m macs2 -m homer -m featureCounts"
   """
   mqc_header.py --name "ChIP-seq" --version ${workflow.manifest.version} ${metadataOpts} ${splanOpts} > multiqc-config-header.yaml
   multiqc . -f $rtitle $rfilename -c multiqc-config-header.yaml $modules_list -c $multiqcConfig -s
