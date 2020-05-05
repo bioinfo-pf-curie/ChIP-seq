@@ -1335,7 +1335,7 @@ chPeaksMacsSharp
 
 process peakAnnoHomer{
   tag "${sampleID}"
-  publishDir path: "${params.outdir}/peak_annotation", mode: 'copy'
+  publishDir path: "${params.outdir}/peakAnnotation/", mode: 'copy'
 
   when:
   !params.skipPeakAnno
@@ -1346,7 +1346,7 @@ process peakAnnoHomer{
   file fastaFile from chFastaHomer.collect()
 
   output:
-  file "*.txt" into chHomerPeakAnnotated
+  file "*.txt" into chHomerMqc
 
   script:
   """
@@ -1469,17 +1469,10 @@ process IDR{
 
 /*
  * Feature counts
- */
+
 
 if (!params.skipFeatCounts){
-  chGroupBamFeatCounts
-    .map { it -> [ it[3], [ it[0], it[1], it[2] ] ] }
-    .join(chGroupBamNameFeatCounts)
-    .map { it -> [ it[1][0], it[1][1], it[1][2], it[2] ] }
-    .groupTuple()
-    .map { it -> [ it[0], it[3].flatten().sort() ] }
-    .set { chGroupBamFeatCounts }
-
+    
   process featureCounts{
     tag "${sampleName}"
     publishDir "${params.outdir}/featCounts/${sampleName}"
@@ -1500,7 +1493,7 @@ if (!params.skipFeatCounts){
     """
   }
 }
-
+*/
 
 
 
@@ -1603,11 +1596,11 @@ process multiqc {
   file ('peakCalling/sharp/*') from chMacsCountsSharp.collect().ifEmpty([])
   file ('peakCalling/broad/*') from chMacsCountsBroad.collect().ifEmpty([])
   //file ('peakCalling/very_broad/*') from chMacsCountsVbroad.collect().ifEmpty([])
+  
+  file ('peakAnnotation/') from chHomerMqc.collect().ifEmpty([])
 
   //file('peak_QC/*') from chPeakMqc.collect().ifEmpty([])
   
-  file('featCounts/*') from chFeatCountsMqc.collect().ifEmpty([])
-
   output:
   file splan
   file "*multiqc_report.html" into multiqc_report
@@ -1618,7 +1611,7 @@ process multiqc {
   rfilename = customRunName ? "--filename " + customRunName.replaceAll('\\W','_').replaceAll('_+','_') + "_multiqc_report" : ''
   metadataOpts = params.metadata ? "--metadata ${metadata}" : ""
   splanOpts = params.samplePlan ? "" : ""
-  modules_list = "-m custom_content -m fastqc -m bowtie2 -m preseq -m picard -m phantompeakqualtools -m deeptools -m macs2 -m homer -m featureCounts"
+  modules_list = "-m custom_content -m fastqc -m bowtie2 -m preseq -m picard -m phantompeakqualtools -m deeptools -m macs2 -m homer"
   """
   mqc_header.py --name "ChIP-seq" --version ${workflow.manifest.version} ${metadataOpts} ${splanOpts} > multiqc-config-header.yaml
   multiqc . -f $rtitle $rfilename -c multiqc-config-header.yaml $modules_list -c $multiqcConfig -s
