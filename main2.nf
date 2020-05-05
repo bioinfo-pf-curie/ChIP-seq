@@ -559,7 +559,7 @@ process bowtie2{
 
   output:
   set val(prefix), file("*.bam") into chAlignReadsBowtie2
-  set val(prefix), file("*.log") into chBowtie2Mqc
+  file("*.log") into chBowtie2Mqc
 
   script:
   readCommand = params.singleEnd ? "-U ${reads[0]}" : "-1 ${reads[0]} -2 ${reads[1]}"
@@ -641,7 +641,7 @@ process spikeBowtie2{
 
   output:
   set val(spikeprefix), file("*.bam") into chSpikeAlignReadsBowtie2
-  set val(spikeprefix), file("*.log") into chSpikeBowtie2Mqc
+  file("*.log") into chSpikeBowtie2Mqc
 
   script:
   spikeprefix = "${prefix}_spike"
@@ -1211,7 +1211,7 @@ process sharpMACS2{
   file fripScoreHeader from chFripScoreHeaderSharp.collect()
 
   output:
-  set val(sampleID), file("*.xls") into chMacsOutputSharp
+  file("*.xls") into chMacsOutputSharp
   set val(group), val(replicate), val(peaktype), val(sampleID), file("*.narrowPeak") into chPeaksMacsSharp
   //file "*igv.txt" into chMacs_igv_sharp
   file "*_mqc.tsv" into chMacsCountsSharp
@@ -1254,7 +1254,7 @@ process broadMACS2{
   file fripScoreHeader from chFripScoreHeaderBroad.collect()
 
   output:
-  set val(sampleID), file("*.xls") into chMacsOutputBroad
+  file("*.xls") into chMacsOutputBroad
   set val(group), val(replicate), val(peaktype), val(sampleID), file("*.broadPeak") into chPeaksMacsBroad
   //file "*igv.txt" into chMacs_igv_broad
   file "*_mqc.tsv" into chMacsCountsBroad
@@ -1299,7 +1299,7 @@ process veryBroadEpic2{
   file fripScoreHeader from chFripScoreHeaderVeryBroad.collect()
 
   output:
-  // set val(sampleID), file("*.xls") into chMacs_output_vbroad ===>> Mandatory data for MQC in Sharp&Broad MACS2
+  // set file("*.xls") into chMacs_output_vbroad ===>> Mandatory data for MQC in Sharp&Broad MACS2
   set val(group), val(replicate), val(peaktype), val(sampleID), file("*.broadPeak") into chPeaksEpic
   //file "*igv.txt" into chMacs_igv_vbroad
   file "*_mqc.tsv" into chMacsCountsVbroad
@@ -1368,7 +1368,6 @@ chIDRpeaks
   .map { it -> [it[0],it[4]] }
   .groupTuple()
   .dump (tag:'rep')
-  .view()
   .set{ chPeaksPerGroup }
 
 process IDR{
@@ -1457,11 +1456,6 @@ if (!params.skipFeatCounts){
   }
 }
 */
-
-
-
-
-
 
 /*
  * MultiQC
