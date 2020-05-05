@@ -278,9 +278,9 @@ Channel
   .fromPath("$baseDir/assets/frip_score_header.txt")
   .into{ chFripScoreHeaderSharp; chFripScoreHeaderBroad; chFripScoreHeaderVeryBroad }
 
-//Channel
-//  .fromPath("$baseDir/assets/peak_annotation_header.txt")
-//  .set{ chPeakAnnotationHeader }
+Channel
+  .fromPath("$baseDir/assets/peak_annotation_header.txt")
+  .set{ chPeakAnnotationHeader }
 
 
 //Filtering
@@ -1213,7 +1213,6 @@ process sharpMACS2{
   output:
   set val(sampleID), file("*.xls") into chMacsOutputSharp
   set val(group), val(replicate), val(peaktype), val(sampleID), file("*.narrowPeak") into chPeaksMacsSharp
-  //set val(group), val(replicate), val(peaktype), val(sampleID), val(controlID), file("*.narrowPeak") into chMacsHomerSharp, chMacsQcSharp, chMacsIdrSharp
   //file "*igv.txt" into chMacs_igv_sharp
   file "*_mqc.tsv" into chMacsCountsSharp
 
@@ -1257,7 +1256,6 @@ process broadMACS2{
   output:
   set val(sampleID), file("*.xls") into chMacsOutputBroad
   set val(group), val(replicate), val(peaktype), val(sampleID), file("*.broadPeak") into chPeaksMacsBroad
-  //set val(group), val(replicate), val(peaktype), val(sampleID), val(controlID), file("*.broadPeak") into chMacsHomerBroad, chMacsQcBroad, chMacsIdrBroad
   //file "*igv.txt" into chMacs_igv_broad
   file "*_mqc.tsv" into chMacsCountsBroad
 
@@ -1303,7 +1301,6 @@ process veryBroadEpic2{
   output:
   // set val(sampleID), file("*.xls") into chMacs_output_vbroad ===>> Mandatory data for MQC in Sharp&Broad MACS2
   set val(group), val(replicate), val(peaktype), val(sampleID), file("*.broadPeak") into chPeaksEpic
-  //set val(group), val(replicate), val(peaktype), val(sampleID), val(controlID), file("*.broadPeak") into chMacsHomerVbroad, chMacsQcVbroad, chMacsIdrVbroad
   //file "*igv.txt" into chMacs_igv_vbroad
   file "*_mqc.tsv" into chMacsCountsVbroad
 
@@ -1326,7 +1323,7 @@ process veryBroadEpic2{
 // Join the results of all peaks callers
 chPeaksMacsSharp
   .mix(chPeaksMacsBroad, chPeaksEpic)
-  .into{ chPeaksHomer; chIDRpeaks; chIDRid }
+  .into{ chPeaksHomer; chIDRpeaks; chIDRid; chPeakQC }
 
 
 /*
@@ -1371,6 +1368,7 @@ chIDRpeaks
   .map { it -> [it[0],it[4]] }
   .groupTuple()
   .dump (tag:'rep')
+  .view()
   .set{ chPeaksPerGroup }
 
 process IDR{
@@ -1400,76 +1398,41 @@ process IDR{
 }
 
 
-//
-// Peak calling & annotation QC
-//
-//if (!params.skipPeakQC && !params.noInput && params.design){
-//  if (params.design){
-//    chMacsQcSharp
-//      .mix(chMacsQcBroad)
-//      .set{chMacsQc}
-//  }
-//  process peakQC{
-//    publishDir "${params.outdir}/peak_QC/", mode: 'copy'
-//
-//    input:
-//    file peaks from chMacsQc.collect{ it[-1] }
-//    file annotations from chHomerPeakAnnotated.collect()
-//    file peakHeader from chPeakAnnotationHeader
-//
-//    output:
-//    file "*.{txt,pdf}" into chMacsQcOutput
-//    file "*.tsv" into chPeakMqc
-//
-//    script:
-//    """
-//    plot_macs_qc.r \\
-//      -i ${peaks.join(',')} \\
-//      -s ${peaks.join(',').replaceAll("_peaks.narrowPeak","").replaceAll("_peaks.broadPeak","")} \\
-//      -o ./ \\
-//      -p peak
-//    plot_homer_annotatepeaks.r \\
-//      -i ${annotations.join(',')} \\
-//      -s ${annotations.join(',').replaceAll("_annotated_peaks.txt","")} \\
-//      -o ./ \\
-//      -p annotatePeaks
-//    cat $peakHeader annotatePeaks.summary.txt > annotatedPeaks.summary_mqc.tsv
-//    """
-//  }
-//} else if (!params.skipPeakQC && params.noInput && params.design){
-//  process peakQCNoInput{
-//    publishDir "${params.outdir}/peak_QC/", mode: 'copy'
-//
-//   input:
-//    file peaks from chMacsQc.collect{ it[-1] }
-//    file annotations from chHomerPeakAnnotated.collect()
-//    file peakHeader from chPeakAnnotationHeader
-//
-//    output:
-//    file "*.{txt,pdf}" into chMacsQcOutput
-//    file "*.tsv" into chPeakMqc
-//
-//    script:
-//    """
-//    plot_macs_qc.r \\
-//      -i ${peaks.join(',')} \\
-//      -s ${peaks.join(',').replaceAll("_peaks.narrowPeak","").replaceAll("_peaks.broadPeak","")} \\
-//      -o ./ \\
-//      -p peak
-//    plot_homer_annotatepeaks.r \\
-//      -i ${annotations.join(',')} \\
-//      -s ${annotations.join(',').replaceAll("_annotated_peaks.txt","")} \\
-//      -o ./ \\
-//      -p annotatePeaks
-//    cat $peakHeader annotatePeaks.summary.txt > annotatedPeaks.summary_mqc.tsv
-//    """
-//  }
-//}
+/*
+ * Peak calling & annotation QC
+ */
+if (!params.skipPeakQC && params.design){
+  process peakQC{
+    publishDir "${params.outdir}/peakQC/", mode: 'copy'
 
+    input:
+    file peaks from chPeakQC.collect{ it[-1] }
+    file annotations from chHomerMqc.collect()
+    file peakHeader from chPeakAnnotationHeader
+
+    output:
+    file "*.{txt,pdf}" into chMacsQcOutput
+    file "*.tsv" into chPeakMqc
+
+    script:
+    """
+    plot_macs_qc.r \\
+      -i ${peaks.join(',')} \\
+      -s ${peaks.join(',').replaceAll("_peaks.narrowPeak","").replaceAll("_peaks.broadPeak","")} \\
+      -o ./ \\
+      -p peak
+    plot_homer_annotatepeaks.r \\
+      -i ${annotations.join(',')} \\
+      -s ${annotations.join(',').replaceAll("_annotated_peaks.txt","")} \\
+      -o ./ \\
+      -p annotatePeaks
+    cat $peakHeader annotatePeaks.summary.txt > annotatedPeaks.summary_mqc.tsv
+    """
+  }
+}
 
 /*
  * Feature counts
-
 
 if (!params.skipFeatCounts){
     
@@ -1597,9 +1560,7 @@ process multiqc {
   file ('peakCalling/broad/*') from chMacsCountsBroad.collect().ifEmpty([])
   //file ('peakCalling/very_broad/*') from chMacsCountsVbroad.collect().ifEmpty([])
   
-  file ('peakAnnotation/') from chHomerMqc.collect().ifEmpty([])
-
-  //file('peak_QC/*') from chPeakMqc.collect().ifEmpty([])
+  file('peakQC/*') from chPeakMqc.collect().ifEmpty([])
   
   output:
   file splan
