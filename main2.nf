@@ -224,7 +224,7 @@ if (params.spike && params.spike != 'spike'){
       .set { chSpikeStarIndex }
   } else {
     chSpikeStarIndex = Channel.empty()
-    //exit 1, "Spike STAR index file not found: ${params.spikeStarIndex}"
+    exit 1, "Spike STAR index file not found: ${params.spikeStarIndex}"
   }
   println "starOk"
 }
@@ -756,7 +756,7 @@ if(params.spike && params.spike != 'spike'){
  */
 
 process bamSort{
-  tag "${name}"
+  tag "${prefix}"
   publishDir path: "${params.outdir}/alignedReads/sortedBams", mode: 'copy',
     saveAs: {filename ->
              if (!filename.endsWith(".bam") && (!filename.endsWith(".bam.bai"))) "samtools_stats/$filename"
@@ -770,17 +770,15 @@ process bamSort{
   set val(prefix), file(unsortedBam) from chAlignedReads
 
   output:
-  set val(name), file('*.{bam,bam.bai}') into chSortBam
+  set val(prefix), file('*.{bam,bam.bai}') into chSortBam
 
   script:
-  String unsortedBamsName = unsortedBam.toString()
-  name = unsortedBamsName.contains('Spike') ? "${prefix}Spike" : "${prefix}"
   """
-  samtools sort $unsortedBam -@ ${task.cpus} -T ${name} -o ${name}_sorted.bam
-  samtools index ${name}_sorted.bam
-  samtools flagstat ${name}_sorted.bam > ${name}_sorted.flagstat
-  samtools idxstats ${name}_sorted.bam > ${name}_sorted.idxstats
-  samtools stats ${name}_sorted.bam > ${name}_sorted.stats
+  samtools sort $unsortedBam -@ ${task.cpus} -T ${prefix} -o ${prefix}_sorted.bam
+  samtools index ${prefix}_sorted.bam
+  samtools flagstat ${prefix}_sorted.bam > ${prefix}_sorted.flagstat
+  samtools idxstats ${prefix}_sorted.bam > ${prefix}_sorted.idxstats
+  samtools stats ${prefix}_sorted.bam > ${prefix}_sorted.stats
   """
 }
 
@@ -836,7 +834,7 @@ process preseq {
   !params.skipPreseq
 
   input:
-  set val(prefix), file(bam) from chMarkedPreseq.filter{ it[0][-6..-1] != '_spike'}
+  set val(prefix), file(bam) from chMarkedPreseq.filter{ it[0][-5..-1] != 'Spike'}
 
   output:
   file "*.ccurve.txt" into chPreseqStats
@@ -951,7 +949,7 @@ process PPQT{
   !params.skipPPQT
 
   input:
-  set val(prefix), file(bams) from chBamsPPQT
+  set val(prefix), file(bams) from chBamsPPQT.filter{ it[0][-5..-1] != 'Spike'}
   file sppCorrelationHeader from chPpqtCorHeader
   file sppNSCHeader from chPpqtNSCHeader
   file sppRSCHeader from chPpqtRSCHeader
@@ -1030,13 +1028,11 @@ if (params.spike){
 
   chTabSF
     .splitCsv(header:false, sep:',')
-    .view()
     .map { row -> [row[0], row[1]]}
     .set{chScaleFactor}
 
   chBamsBigWigSF
     .combine(chScaleFactor)
-    .view()
     .filter{it[0] == it[2]}
     .map { it -> it[0,1,3]}
     .set{chBigWigScaleFactor}
@@ -1062,7 +1058,7 @@ if (params.spike){
 /*
  * DeepTools QC
  */
-
+if(params.spike == false){
 process deepToolsComputeMatrix{
   tag "${prefix}"
   publishDir "${params.outdir}/deepTools/singleBam", mode: "copy"
@@ -1089,6 +1085,35 @@ process deepToolsComputeMatrix{
         --outFileNameData ${prefix}.plotProfile.tab
   sed -e 's/.0\t/\t/g' ${prefix}.plotProfile.tab | sed -e 's@.0\$@@g' > ${prefix}_plotProfile_corrected.tab
   """
+}
+} else {
+process deepToolsComputeMatrixScaled{
+  tag "${prefix}"
+  publishDir "${params.outdir}/deepTools/singleBam", mode: "copy"
+
+  when:
+  !params.skipDeepTools
+
+  input:
+  set val(prefix), file(bigwig) from chBigWigSF
+  file geneBed from chGeneBedDeeptools.collect()
+
+  output:
+  set val(prefix), file("*.{gz,pdf}") into chDeeptoolsSingle
+  set val(prefix), file("*_corrected.tab") into chDeeptoolsSingleMqc
+  script:
+  """
+  computeMatrix scale-regions -R $geneBed -S ${bigwig} \\
+                -o ${prefix}_matrix.mat.gz \\
+                --outFileNameMatrix ${prefix}.computeMatrix.vals.mat.gz \\
+                --downstream 1000 --upstream 1000 --skipZeros\\
+                -p ${task.cpus}
+
+  plotProfile -m ${prefix}_matrix.mat.gz -o ${prefix}_bams_profile.pdf \\
+        --outFileNameData ${prefix}.plotProfile.tab
+  sed -e 's/.0\t/\t/g' ${prefix}.plotProfile.tab | sed -e 's@.0\$@@g' > ${prefix}_plotProfile_corrected.tab
+  """
+}
 }
 
 process deepToolsCorrelationQC{
@@ -1186,7 +1211,7 @@ process sharpMACS2{
   file fripScoreHeader from chFripScoreHeaderSharp.collect()
 
   output:
-  set val(sampleID), file("*.{bed,xls,gappedPeak,bdg}") into chMacsOutputSharp
+  set val(sampleID), file("*.xls") into chMacsOutputSharp
   set val(group), val(replicate), val(peaktype), val(sampleID), file("*.narrowPeak") into chPeaksMacsSharp
   //set val(group), val(replicate), val(peaktype), val(sampleID), val(controlID), file("*.narrowPeak") into chMacsHomerSharp, chMacsQcSharp, chMacsIdrSharp
   //file "*igv.txt" into chMacs_igv_sharp
@@ -1230,7 +1255,7 @@ process broadMACS2{
   file fripScoreHeader from chFripScoreHeaderBroad.collect()
 
   output:
-  set val(sampleID), file("*.{bed,xls,gappedPeak,bdg}") into chMacsOutputBroad
+  set val(sampleID), file("*.xls") into chMacsOutputBroad
   set val(group), val(replicate), val(peaktype), val(sampleID), file("*.broadPeak") into chPeaksMacsBroad
   //set val(group), val(replicate), val(peaktype), val(sampleID), val(controlID), file("*.broadPeak") into chMacsHomerBroad, chMacsQcBroad, chMacsIdrBroad
   //file "*igv.txt" into chMacs_igv_broad
@@ -1276,7 +1301,7 @@ process veryBroadEpic2{
   file fripScoreHeader from chFripScoreHeaderVeryBroad.collect()
 
   output:
-  // set val(sampleID), file("*.{bed,xls,gappedPeak,bdg}") into chMacs_output_vbroad ===>> Mandatory data for MQC in Sharp&Broad MACS2
+  // set val(sampleID), file("*.xls") into chMacs_output_vbroad ===>> Mandatory data for MQC in Sharp&Broad MACS2
   set val(group), val(replicate), val(peaktype), val(sampleID), file("*.broadPeak") into chPeaksEpic
   //set val(group), val(replicate), val(peaktype), val(sampleID), val(controlID), file("*.broadPeak") into chMacsHomerVbroad, chMacsQcVbroad, chMacsIdrVbroad
   //file "*igv.txt" into chMacs_igv_vbroad
@@ -1560,6 +1585,8 @@ process multiqc {
   file ('alignement/reference/*') from chBowtie2Mqc.collect().ifEmpty([])
   file ('alignement/spike/*') from chSpikeBowtie2Mqc.collect().ifEmpty([])
 
+  file ('picard/*') from chMarkedPicstats.collect().ifEmpty([])
+
   file ('preseq/*') from chPreseqStats.collect().ifEmpty([])
 
   file ('ppqt/*') from chPpqtOutMqc.collect().ifEmpty([])
@@ -1591,7 +1618,7 @@ process multiqc {
   rfilename = customRunName ? "--filename " + customRunName.replaceAll('\\W','_').replaceAll('_+','_') + "_multiqc_report" : ''
   metadataOpts = params.metadata ? "--metadata ${metadata}" : ""
   splanOpts = params.samplePlan ? "" : ""
-  modules_list = "-m custom_content -m fastqc -m bowtie2 -m preseq -m phantompeakqualtools -m deeptools -m macs2 -m homer -m featureCounts"
+  modules_list = "-m custom_content -m fastqc -m bowtie2 -m preseq -m picard -m phantompeakqualtools -m deeptools -m macs2 -m homer -m featureCounts"
   """
   mqc_header.py --name "ChIP-seq" --version ${workflow.manifest.version} ${metadataOpts} ${splanOpts} > multiqc-config-header.yaml
   multiqc . -f $rtitle $rfilename -c multiqc-config-header.yaml $modules_list -c $multiqcConfig -s

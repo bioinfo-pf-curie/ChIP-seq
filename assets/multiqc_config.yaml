@@ -110,8 +110,24 @@ module_order:
    - featureCounts
 
 report_section_order:
+  NSC_coefficient:
+      order: -1000
+  RSC_coefficient:
+      order: -1100
+  strand_shift_correlation:
+      order: -1200
+  peak_count:
+      order: -1300
+  frip_score:
+      order: -1400
   peak_annotation:
       order: -1500
+  featurecounts:
+      order: -1800
+  Chip-seq_pipeline_software_versions:
+      order: -1900
+  summary:
+      order: -2000
 #############################
 ## Display
 

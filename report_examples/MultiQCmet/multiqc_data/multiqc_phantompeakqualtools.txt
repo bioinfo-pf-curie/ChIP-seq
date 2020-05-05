@@ -1,5 +1,0 @@
-Sample	Estimated_Fragment_Length_bp	NSC	RSC
-1.spp.out	160	1.091038	0.3916004
-2.spp.out	150	1.792452	1.330325
-3.spp.out	160	1.056099	0.9455708
-4.spp.out	165	1.022526	0.3712225
