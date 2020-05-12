@@ -1038,7 +1038,7 @@ if (params.spike){
 
   chBamsBigWigSF
     .combine(chScaleFactor)
-    .filter{it[0] == it[2]}
+    .filter{it[0] == it[2][0..-6]}
     .map { it -> it[0,1,3]}
     .set{chBigWigScaleFactor}
 
@@ -1143,6 +1143,7 @@ process deepToolsCorrelationQC{
   script:
   allPrefix = allPrefix.toString().replace("[","")
   allPrefix = allPrefix.replace(","," ")
+  allPrefix = allPrefix.replace("]","")
   """
   multiBamSummary bins -b $allBams -o bams_summary.npz  -p ${task.cpus}
   plotCorrelation -in bams_summary.npz -o bams_correlation.pdf \\
