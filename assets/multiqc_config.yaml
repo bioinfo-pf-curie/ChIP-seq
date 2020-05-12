@@ -3,96 +3,147 @@
 #
 #################################################################
 
+skip_generalstats: true
 read_count_multiplier: 0.000001
 read_count_prefix: 'M'
 read_count_desc: 'millions'
 
 ###################################
 ## Custom content
-# custom_data:
-#     my_stats:
-#         file_format: 'csv'
-#         section_name: 'General Metrics'
-#         description: ' of sequenced data. Note that in the context of paired-end data, the number pairs are reported (as reads).'
-#         plot_type: 'table'
-#         pconfig:
-#             namespace: 'stats'
-#             id: 'stats'
-#             title: 'General Statistics'
-#             save_file: true
-#             col1_header: 'Sample ID'
-#         headers:
-#             Sample_name:
-#               title: 'Sample Name'
-#               scale: false
-#               format: '{:.0f}'
-#               placement: 2000
-#             Number_of_reads:
-#               title: 'Total Reads'
-#               scale: 'YlGnBu'
-#               format: '{:,.0f}'
-#               placement: 4000
-#             Number_of_aligned_reads:
-#               title: 'Aligned Reads'
-#               scale: 'RdYlGn'
-#               format: '{:,.0f}'
-#               hidden: true
-#               placement: 7000
-#             Percent_of_aligned_reads:
-#               title: 'Aligned Reads (%)'
-#               min: 0
-#               max: 100
-#               scale: 'RdYlGn'
-#               suffix: '%'
-#               format: '{:,.1f}'
-#               placement: 8000
-#             Number_of_uniquely_aligned_reads:
-#               title: 'Unique Reads'
-#               scale: 'RdYlGn'
-#               format: '{:,.0f}'
-#               hidden: true
-#               placement: 9000
-#             Percent_uniquely_aligned_reads:
-#               title: 'Unique Reads (%)'
-#               min: 0
-#               max: 100
-#               scale: 'RdYlGn'
-#               suffix: '%'
-#               format: '{:,.1f}'
-#               placement: 10000
-#             Number_of_multiple_aligned_reads:
-#               title: 'Multiple Reads'
-#               scale: 'RdYlGn-rev'
-#               format: '{:,.0f}'
-#               hidden: true
-#               placement: 11000
-#             Percent_multiple_aligned:
-#               title: 'Multiple Reads (%)'
-#               min: 0
-#               max: 100
-#               scale: 'RdYlGn-rev'
-#               suffix: '%'
-#               format: '{:,.1f}'
-#               placement: 12000
-#             Number_of_duplicates:
-#               title: 'Duplicates'
-#               scale: 'RdYlGn-rev'
-#               format: '{:,.0f}'
-#               hidden: true
-#               placement: 13000
-#             Percent_duplicates:
-#               title: 'Duplicates (%)'
-#               min: 0
-#               max: 100
-#               scale: 'RdYlGn-rev'
-#               suffix: '%'
-#               format: '{:,.1f}'
-#               placement: 14000
-
+custom_data:
+    my_stats:
+        file_format: 'csv'
+        section_name: 'General Metrics'
+        description: ' of sequenced data. Note that in the context of paired-end data, the number pairs are reported (as reads). Low NSC and RSC values can be due to failed and poor quality ChIP, low read sequence quality and hence lots of mismappings, shallow sequencing depth or a combination of these. Also, datasets with few binding sites (< 200) which could be due to biological reasons (i.e. a factor that truly binds only a few sites in a particular tissue type) would output low NSC and RSC scores.'
+        plot_type: 'table'
+        pconfig:
+            namespace: 'stats'
+            id: 'stats'
+            title: 'General Statistics'
+            save_file: true
+            col1_header: 'Sample_ID'
+        headers:
+            Sample_name:
+              title: 'Sample Name'
+              scale: false
+              format: '{:.0f}'
+              placement: 1000
+            Number_of_reads:
+              title: 'Total reads'
+              scale: 'YlGnBu'
+              format: '{:,.0f}'
+              placement: 2000
+            Fragment_length:
+              title: 'Fragment length'
+              scale: 'RdYlGn-rev'
+              format: '{:,.0f}'
+              placement: 3000
+            Number_of_uniquely_mapped_reads:
+              title: 'Mapped unique reads'
+              scale: 'RdYlGn-rev'
+              format: '{:,.0f}'
+              hidden: true
+              placement: 4000
+            Percentage_of_uniquely_mapped_reads:
+              title: 'Percentage mapped unique reads'
+              min: 0
+              max: 100
+              scale: 'RdYlGn-rev'
+              format: '{:,.1f}'
+              suffix: '%'
+              placement: 5000
+            Number_of_multiple_mapped_reads:
+              title: 'Mapped multiple reads'
+              scale: 'RdYlGn-rev'
+              format: '{:,.0f}'
+              hidden: true
+              placement: 6000
+            Percentage_of_multiple_mapped_reads:
+              title: 'Percentage mapped multiple reads'
+              min: 0
+              max: 100
+              scale: 'RdYlGn-rev'
+              format: '{:,.1f}'
+              suffix: '%'
+              placement: 7000
+            Number_of_multiple_mapped_reads:
+              title: 'Mapped multiple reads'
+              scale: 'RdYlGn-rev'
+              format: '{:,.0f}'
+              hidden: true
+              placement: 6000
+            Number_of_duplicates:
+              title: 'Duplicate reads'
+              scale: 'RdYlGn-rev'
+              format: '{:,.0f}'
+              hidden: true
+              placement: 8000
+            Percentage_of_duplicates:
+              title: 'Percentage of duplicates'
+              min: 0
+              max: 100
+              scale: 'RdYlGn-rev'
+              format: '{:,.1f}'
+              suffix: '%'
+              placement: 9000
+            Normalized_strand_correlation:
+              title: 'Normalized strand correlation'
+              scale: 'RdYlGn-rev'
+              format: '{:,.0f}'
+              placement: 10000
+            Relative_strand_correlation:
+              title: 'Relative strand correlation'
+              scale: 'RdYlGn-rev'
+              format: '{:,.0f}'
+              placement: 11000
+            Fraction_of_reads_in_peaks:
+              title: 'Fraction of reads in peaks'
+              scale: 'RdYlGn-rev'
+              format: '{:,.0f}'
+              placement: 12000
 
 sp:
-   my_stats:
+  my_stats:
       fn: '*.stats'
+
+table_cond_formatting_rules:
+    Percentage_of_uniquely_mapped_reads:
+        pass:
+          - gt: 80
+        warn:
+          - lt: 80
+        fail:
+          - lt: 50
+    Percentage_of_duplicates:
+        pass:
+          - lt: 25
+        warn:
+          - gt: 25
+        fail:
+          - gt: 50
+    Normalized_strand_correlation:
+        pass:
+          - gt: 1.1
+        warn:
+          - gt: 1.03
+        fail:
+          - lt: 1.03
+    Relative_strand_correlation:
+        pass:
+          - gt: 0.8
+        warn:
+          - gt: 0.5
+        fail:
+          - lt: 0.5
+    Fraction_of_reads_in_peaks:
+        pass:
+          - gt: 0.01
+        fail:
+          - lt: 0.01
+
+
+
+
 
 ###############################
 ## Modules 
@@ -107,7 +158,6 @@ module_order:
    - macs2
    - deeptools
    - homer
-   - featureCounts
 
 report_section_order:
   NSC_coefficient:
@@ -122,12 +172,26 @@ report_section_order:
       order: -1400
   peak_annotation:
       order: -1500
-  featurecounts:
-      order: -1800
-  Chip-seq_pipeline_software_versions:
+  deeptools_correlation:
+      order: -1600
+  deeptools_fingerprint:
+      order: -1700
+  read_distribution_profile_plot:
       order: -1900
-  summary:
+  Chip-seq_pipeline_software_versions:
       order: -2000
+  summary:
+      order: -2100
+
+#############################
+## Removed plots
+remove_sections :
+  - fastqc_sequence_counts
+  - fastqc_per_sequence_quality_scores
+  - fastqc_overrepresented_sequences
+  - fastqc_status_checks
+  - plotFingerprint
+
 #############################
 ## Display
 

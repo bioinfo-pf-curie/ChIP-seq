@@ -452,7 +452,7 @@ if (params.design){
   Channel
     .fromPath(params.design)
     .ifEmpty { exit 1, "Design file not found: ${params.design}" }
-    .into { chDesignCheck; chDesignControl }
+    .into { chDesignCheck; chDesignControl; chDesignMqc }
 
   chDesignControl
     .splitCsv(header:false, sep:',')
@@ -1083,7 +1083,7 @@ process deepToolsComputeMatrix{
   computeMatrix scale-regions -R $geneBed -S ${bigwig} \\
                 -o ${prefix}_matrix.mat.gz \\
                 --outFileNameMatrix ${prefix}.computeMatrix.vals.mat.gz \\
-                --downstream 1000 --upstream 1000 --skipZeros\\
+                --downstream 1000 --upstream 1000 --skipZeros --binsize 100\\
                 -p ${task.cpus}
 
   plotProfile -m ${prefix}_matrix.mat.gz -o ${prefix}_bams_profile.pdf \\
@@ -1111,18 +1111,21 @@ process deepToolsComputeMatrixScaled{
   computeMatrix scale-regions -R $geneBed -S ${bigwig} \\
                 -o ${prefix}_matrix.mat.gz \\
                 --outFileNameMatrix ${prefix}.computeMatrix.vals.mat.gz \\
-                --downstream 1000 --upstream 1000 --skipZeros\\
+                --downstream 1000 --upstream 1000 --skipZeros --binsize 100\\
                 -p ${task.cpus}
 
   plotProfile -m ${prefix}_matrix.mat.gz -o ${prefix}_bams_profile.pdf \\
         --outFileNameData ${prefix}.plotProfile.tab
   sed -e 's/.0\t/\t/g' ${prefix}.plotProfile.tab | sed -e 's@.0\$@@g' > ${prefix}_plotProfile_corrected.tab
   """
-}
+  }
 }
 
 process deepToolsCorrelationQC{
   publishDir "${params.outdir}/deepTools/multipleBams"
+
+  when:
+  allPrefix.size() > 2 && !params.skipDeepTools
 
   input:
   file(allBams) from chBamsDeeptoolsCorBam.map{it[1][0]}.collect()
@@ -1137,10 +1140,9 @@ process deepToolsCorrelationQC{
   file "bams_coverage_raw.txt" into chDeeptoolsCovMqc
   file "bams_fingerprint*" into chDeeptoolsFingerprintMqc
 
-  when:
-  allPrefix.size() > 2 && !params.skipDeepTools
-
   script:
+  allPrefix = allPrefix.toString().replace("[","")
+  allPrefix = allPrefix.replace(","," ")
   """
   multiBamSummary bins -b $allBams -o bams_summary.npz  -p ${task.cpus}
   plotCorrelation -in bams_summary.npz -o bams_correlation.pdf \\
@@ -1532,6 +1534,8 @@ process multiqc {
   file splan from chSplan.collect()
   file metadata from chMetadata.ifEmpty([])
   file multiqcConfig from chMultiqcConfig
+  file design from chDesignMqc.collect().ifEmpty([])
+
   file ('software_versions/*') from softwareVersionsYaml.collect()
   file ('workflow_summary/*') from workflowSummaryYaml.collect()
 
@@ -1573,6 +1577,7 @@ process multiqc {
   splanOpts = params.samplePlan ? "" : ""
   modules_list = "-m custom_content -m fastqc -m bowtie2 -m preseq -m picard -m phantompeakqualtools -m deeptools -m macs2 -m homer"
   """
+  stats2multiqc.sh ${splan} ${design} ${params.aligner} ${params.singleEnd}
   mqc_header.py --name "ChIP-seq" --version ${workflow.manifest.version} ${metadataOpts} ${splanOpts} > multiqc-config-header.yaml
   multiqc . -f $rtitle $rfilename -c multiqc-config-header.yaml $modules_list -c $multiqcConfig -s
   """
