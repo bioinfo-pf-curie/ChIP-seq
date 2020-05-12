@@ -185,9 +185,11 @@ remove_sections :
   - fastqc_overrepresented_sequences
   - fastqc_status_checks
   - plotFingerprint
-  - NSC_coefficient
-  - RSC_coefficient
-  - frip_score
+
+fn_ignore_files:
+  - '*_spp_nsc_*'
+  - '*_spp_rsc_*'
+  - '*FRiP*'
 
 #############################
 ## Display
