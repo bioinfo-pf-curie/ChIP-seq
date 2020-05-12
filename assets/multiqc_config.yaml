@@ -34,18 +34,18 @@ custom_data:
               format: '{:,.0f}'
               placement: 2000
             Fragment_length:
-              title: 'Fragment length'
+              title: 'Frag. length'
               scale: 'YlGnGn'
               format: '{:,.0f}'
               placement: 3000
             Number_of_uniquely_mapped_reads:
-              title: 'Mapped unique reads'
+              title: 'Nb. mapped unique reads'
               scale: 'RdYlGn'
               format: '{:,.0f}'
               hidden: true
               placement: 4000
             Percentage_of_uniquely_mapped_reads:
-              title: 'Percentage mapped unique reads'
+              title: 'Mapped unique reads'
               min: 0
               max: 100
               scale: 'RdYlGn'
@@ -53,13 +53,13 @@ custom_data:
               suffix: '%'
               placement: 5000
             Number_of_multiple_mapped_reads:
-              title: 'Mapped multiple reads'
+              title: 'Nb. mapped multiple reads'
               scale: 'RdYlGn'
               format: '{:,.0f}'
               hidden: true
               placement: 6000
             Percentage_of_multiple_mapped_reads:
-              title: 'Percentage mapped multiple reads'
+              title: 'Mapped multiple reads'
               min: 0
               max: 100
               scale: 'RdYlGn'
@@ -81,14 +81,14 @@ custom_data:
               suffix: '%'
               placement: 9000
             Normalized_strand_correlation:
-              title: 'Normalized strand correlation'
-              min: 0
-              max: 2
+              title: 'NSC'
+              min: 0.8
+              max: 3
               scale: 'RdYlGn'
               format: '{:,.2f}'
               placement: 10000
             Relative_strand_correlation:
-              title: 'Relative strand correlation'
+              title: 'RSC'
               min: 0
               max: 2
               scale: 'RdYlGn'
@@ -97,7 +97,7 @@ custom_data:
             Fraction_of_reads_in_peaks:
               min: 0
               max: 1
-              title: 'Fraction of reads in peaks'
+              title: 'FRiP'
               scale: 'RdYlGn'
               format: '{:,.2f}'
               placement: 12000
