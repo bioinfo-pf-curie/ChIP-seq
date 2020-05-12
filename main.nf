@@ -1083,7 +1083,7 @@ process deepToolsComputeMatrix{
   computeMatrix scale-regions -R $geneBed -S ${bigwig} \\
                 -o ${prefix}_matrix.mat.gz \\
                 --outFileNameMatrix ${prefix}.computeMatrix.vals.mat.gz \\
-                --downstream 1000 --upstream 1000 --skipZeros --binsize 100\\
+                --downstream 1000 --upstream 1000 --skipZeros --binSize 100\\
                 -p ${task.cpus}
 
   plotProfile -m ${prefix}_matrix.mat.gz -o ${prefix}_bams_profile.pdf \\
@@ -1111,7 +1111,7 @@ process deepToolsComputeMatrixScaled{
   computeMatrix scale-regions -R $geneBed -S ${bigwig} \\
                 -o ${prefix}_matrix.mat.gz \\
                 --outFileNameMatrix ${prefix}.computeMatrix.vals.mat.gz \\
-                --downstream 1000 --upstream 1000 --skipZeros --binsize 100\\
+                --downstream 1000 --upstream 1000 --skipZeros --binSize 100\\
                 -p ${task.cpus}
 
   plotProfile -m ${prefix}_matrix.mat.gz -o ${prefix}_bams_profile.pdf \\
