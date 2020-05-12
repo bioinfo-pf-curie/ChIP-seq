@@ -19,9 +19,10 @@ do
   if [ $aligner == "bowtie2" ]; then
     nb_reads=$(grep "reads;" alignement/reference/$sample.log | sed 's/ .*//')
     nb_uniq_reads=$(grep "exactly" alignement/reference/$sample.log | awk '{print $1}')
-    perc_uniq_reads=$(grep "exactly" alignement/reference/$sample.log | awk '{print $1}')
+    perc_uniq_reads=$(grep "exactly" alignement/reference/$sample.log | awk '{print substr($2, 2, length($2) - 2)}')
     nb_mult_reads=$(grep ">1" alignement/reference/$sample.log | awk '{print $1}')
-    perc_mult_reads=$(grep ">1" alignement/reference/$sample.log | awk '{print $1}')
+    perc_mult_reads=$(grep ">1" alignement/reference/$sample.log | awk '{print substr($2, 2, length($2) - 2)}'
+)
   fi
   
 #PICARD

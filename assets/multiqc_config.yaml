@@ -30,17 +30,17 @@ custom_data:
               placement: 1000
             Number_of_reads:
               title: 'Total reads'
-              scale: 'YlGnBu'
+              scale: 'RdYlGn'
               format: '{:,.0f}'
               placement: 2000
             Fragment_length:
               title: 'Fragment length'
-              scale: 'RdYlGn-rev'
+              scale: 'YlGnGn'
               format: '{:,.0f}'
               placement: 3000
             Number_of_uniquely_mapped_reads:
               title: 'Mapped unique reads'
-              scale: 'RdYlGn-rev'
+              scale: 'RdYlGn'
               format: '{:,.0f}'
               hidden: true
               placement: 4000
@@ -48,13 +48,13 @@ custom_data:
               title: 'Percentage mapped unique reads'
               min: 0
               max: 100
-              scale: 'RdYlGn-rev'
+              scale: 'RdYlGn'
               format: '{:,.1f}'
               suffix: '%'
               placement: 5000
             Number_of_multiple_mapped_reads:
               title: 'Mapped multiple reads'
-              scale: 'RdYlGn-rev'
+              scale: 'RdYlGn'
               format: '{:,.0f}'
               hidden: true
               placement: 6000
@@ -62,19 +62,13 @@ custom_data:
               title: 'Percentage mapped multiple reads'
               min: 0
               max: 100
-              scale: 'RdYlGn-rev'
+              scale: 'RdYlGn'
               format: '{:,.1f}'
               suffix: '%'
               placement: 7000
-            Number_of_multiple_mapped_reads:
-              title: 'Mapped multiple reads'
-              scale: 'RdYlGn-rev'
-              format: '{:,.0f}'
-              hidden: true
-              placement: 6000
             Number_of_duplicates:
               title: 'Duplicate reads'
-              scale: 'RdYlGn-rev'
+              scale: 'RdYlGn'
               format: '{:,.0f}'
               hidden: true
               placement: 8000
@@ -82,24 +76,30 @@ custom_data:
               title: 'Percentage of duplicates'
               min: 0
               max: 100
-              scale: 'RdYlGn-rev'
+              scale: 'RdYlVBu'
               format: '{:,.1f}'
               suffix: '%'
               placement: 9000
             Normalized_strand_correlation:
               title: 'Normalized strand correlation'
-              scale: 'RdYlGn-rev'
-              format: '{:,.0f}'
+              min: 0
+              max: 2
+              scale: 'RdYlGn'
+              format: '{:,.2f}'
               placement: 10000
             Relative_strand_correlation:
               title: 'Relative strand correlation'
-              scale: 'RdYlGn-rev'
-              format: '{:,.0f}'
+              min: 0
+              max: 2
+              scale: 'RdYlGn'
+              format: '{:,.2f}'
               placement: 11000
             Fraction_of_reads_in_peaks:
+              min: 0
+              max: 1
               title: 'Fraction of reads in peaks'
-              scale: 'RdYlGn-rev'
-              format: '{:,.0f}'
+              scale: 'RdYlGn'
+              format: '{:,.2f}'
               placement: 12000
 
 sp:
