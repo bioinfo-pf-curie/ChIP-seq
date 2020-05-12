@@ -42,6 +42,6 @@ do
   fi
 
 #To file
-  echo -e ${sample},${sname},${frag_length},${nb_reads},${nb_uniq_reads},${perc_uniq_reads},${nb_mult_reads},${perc_mult_reads},${nb_dups},${perc_dups},${nsc},${rsc},${frip} >> mqc.stats
+  echo -e ${sample},${sname},${nb_reads},${frag_length},${nb_uniq_reads},${perc_uniq_reads},${nb_mult_reads},${perc_mult_reads},${nb_dups},${perc_dups},${nsc},${rsc},${frip} >> mqc.stats
 done
 
