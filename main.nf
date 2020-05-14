@@ -536,12 +536,16 @@ process bwaMem{
 
   output:
   set val(prefix), file("*.bam") into chAlignReadsBwa
+  file("*.log") into chBwaMqc
 
   script:
   alnMult = params.spike == 'spike' ? '-a' : ''
   """
   bwa mem -t ${task.cpus} $alnMult $bwaIndex${bwaBase} $reads \\
   | samtools view -b -h -F 256 -o ${prefix}.bam
+  samtools view -F 0x4 -F 0x100 -c ${prefix}.bam > log.tmp 
+  samtools view -q 1 -F 0x4 -F 0x100 ${prefix}.bam | grep -v XA:Z | grep -v SA:Z | wc -l >> log.tmp
+  bwamem_log.sh $prefix
   """
 }
 
@@ -584,11 +588,14 @@ process star{
 
   output:
   set val(prefix), file('*.bam') into chAlignReadsStar
+  file ("*.log") into chStarMqc
 
   script:
   """
-  STAR --genomeDir $starIndex/${starBase} --runThreadN ${task.cpus} --readFilesIn $reads --outSAMtype BAM Unsorted --readFilesCommand zcat \\
-  | samtools view -b -h -o ${prefix}.bam
+  STAR --genomeDir $starIndex${starBase} --runThreadN ${task.cpus} --readFilesIn $reads --outSAMtype BAM Unsorted --readFilesCommand zcat 
+  samtools view -b -h Aligned.out.bam -o ${prefix}.bam
+  
+  mv Log.final.out ${prefix}.log
   """
 }
 
@@ -618,12 +625,16 @@ process spikeBwaMem{
 
   output:
   set val(spikeprefix), file("*_spike.bam") into chSpikeAlignReadsBwa
+  file("*.log") into chSpikeBwaMqc
 
   script:
   spikeprefix = "${prefix}_spike"
   """
   bwa mem -t ${task.cpus} $spikeBwaIndex${spikeBwaBase} $reads \\
   | samtools view -b -h -F 256 -F 2048 -o ${spikeprefix}.bam
+  samtools view -F 0x4 -F 0x100 -c ${spikeprefix}.bam > log.tmp
+  samtools view -q 1 -F 0x4 -F 0x100 ${spikeprefix}.bam | grep -v XA:Z | grep -v SA:Z | wc -l >> log.tmp
+  bwamem_log.sh $spikeprefix
   """
 }
 
@@ -666,12 +677,13 @@ process spikeStar{
 
   output:
   set val(spikeprefix), file('*.bam') into chSpikeAlignReadsStar
+  file ("*.log") into chSpikeStarMqc
 
   script:
   spikeprefix = "${prefix}_spike"
   """
-  STAR --genomeDir $spikeStarIndex/${spikeStarBase} --runThreadN ${task.cpus} --readFilesIn $reads --outSAMtype BAM Unsorted --readFilesCommand zcat \\
-  | samtools view -b -h -o ${spikeprefix}.bam
+  STAR --genomeDir $spikeStarIndex${spikeStarBase} --runThreadN ${task.cpus} --readFilesIn $reads --outSAMtype BAM Unsorted --readFilesCommand zcat | samtools view -b -h -o ${spikeprefix}.bam 
+  mv Log.final.out ${spikeprefix}.log
   """
 }
 } else {
@@ -679,6 +691,9 @@ chSpikeAlignReadsStar = Channel.empty()
 chSpikeAlignReadsBowtie2 = Channel.empty()
 chSpikeAlignReadsBwa = Channel.empty()
 chSpikeBowtie2Mqc = Channel.empty()
+chSpikeBwaMqc = Channel.empty()
+chSpikeStarMqc = Channel.empty()
+
 }
 
 // Split Reference and Spike genomes
@@ -1542,8 +1557,10 @@ process multiqc {
 
   file ('rawReads/*') from chFastqcResults.collect().ifEmpty([])
 
-  file ('alignement/reference/*') from chBowtie2Mqc.collect().ifEmpty([])
-  file ('alignement/spike/*') from chSpikeBowtie2Mqc.collect().ifEmpty([])
+  file ('alignment/reference/*') from chBwaMqc.collect().ifEmpty([])
+  file ('alignment/spike/*') from chSpikeBwaMqc.collect().ifEmpty([])
+  file ('alignment/reference/*') from chBowtie2Mqc.collect().ifEmpty([])
+  file ('alignment/spike/*') from chSpikeBowtie2Mqc.collect().ifEmpty([])
 
   file ('picard/*') from chMarkedPicstats.collect().ifEmpty([])
 

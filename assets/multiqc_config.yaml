@@ -123,18 +123,18 @@ table_cond_formatting_rules:
           - gt: 50
     Normalized_strand_correlation:
         pass:
-          - gt: 1.1
+          - gt: 1.05
         warn:
-          - gt: 1.03
+          - lt: 1.05
         fail:
-          - lt: 1.03
+          - lt: 1
     Relative_strand_correlation:
         pass:
           - gt: 0.8
         warn:
-          - gt: 0.5
+          - lt: 0.8
         fail:
-          - lt: 0.5
+          - lt: 0.3
     Fraction_of_reads_in_peaks:
         pass:
           - gt: 0.01

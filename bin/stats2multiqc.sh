@@ -17,11 +17,23 @@ do
 
 #ALIGNMENT
   if [ $aligner == "bowtie2" ]; then
-    nb_reads=$(grep "reads;" alignement/reference/$sample.log | sed 's/ .*//')
-    nb_uniq_reads=$(grep "exactly" alignement/reference/$sample.log | awk '{print $1}')
-    perc_uniq_reads=$(grep "exactly" alignement/reference/$sample.log | awk '{print substr($2, 2, length($2) - 3)}')
-    nb_mult_reads=$(grep ">1" alignement/reference/$sample.log | awk '{print $1}')
-    perc_mult_reads=$(grep ">1" alignement/reference/$sample.log | awk '{print substr($2, 2, length($2) - 3)}')
+    nb_reads=$(grep "reads;" alignment/reference/$sample.log | sed 's/ .*//')
+    nb_uniq_reads=$(grep "exactly" alignment/reference/$sample.log | awk '{print $1}')
+    perc_uniq_reads=$(grep "exactly" alignment/reference/$sample.log | awk '{print substr($2, 2, length($2) - 3)}')
+    nb_mult_reads=$(grep ">1" alignment/reference/$sample.log | awk '{print $1}')
+    perc_mult_reads=$(grep ">1" alignment/reference/$sample.log | awk '{print substr($2, 2, length($2) - 3)}')
+  elif [ $aligner == "bwa-mem" ]; then
+    nb_reads=$(grep 'Total' alignment/reference/$sample.log | awk '{print $4}')
+    nb_uniq_reads=$(grep 'Uniquely' alignment/reference/$sample.log | awk '{print $5}')
+    perc_uniq_reads=$(echo "scale=2 ; 100 * $nb_uniq_reads / $nb_reads" | bc)
+    nb_mult_reads=$(grep 'Multiply' alignment/reference/$sample.log | awk '{print $5}')
+    perc_mult_reads=$(echo "scale=2 ; 100 * $nb_mult_reads / $nb_reads" | bc)
+  elif [ $aligner == "star" ]; then
+    nb_reads=$(grep "Uniquely.*%" alignment/reference/$sample.log | awk '{print substr($NF, 1, length($NF)-1)}')  
+    nb_uniq_reads=$(grep "Uniquely.*number" alignment/reference/$sample.log | awk '{print $NF}')
+    perc_uniq_reads=$(grep "Uniquely.*number" alignment/reference/$sample.log | awk '{print $NF}')
+    nb_mult_reads=$(grep "Number.*multiple" alignment/reference/$sample.log | awk '{print $NF}')
+    perc_mult_reads=$(grep "%.*multiple" alignment/reference/$sample.log | awk '{print substr($NF, 1, length($NF)-1)}')
   fi
   
 #PICARD
