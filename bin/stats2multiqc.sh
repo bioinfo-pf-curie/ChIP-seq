@@ -50,7 +50,7 @@ do
   if [ -z "$peaktype" ]; then
     frip='NA'
   else
-    frip=$(grep "$sample" peakCalling/${peaktype}/stats/${sample}_peaks.FRiP_mqc.tsv | awk '{print $2}')
+    frip=$(grep "$sample" peakCalling/${peaktype}/${sample}_peaks.FRiP_mqc.tsv | awk '{print $2}')
   fi
 
 #To file
