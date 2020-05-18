@@ -1579,7 +1579,7 @@ process multiqc {
   file ('peakCalling/broad/*') from chMacsOutputBroad.collect().ifEmpty([])
   file ('peakCalling/sharp/*') from chMacsCountsSharp.collect().ifEmpty([])
   file ('peakCalling/broad/*') from chMacsCountsBroad.collect().ifEmpty([])
-  //file ('peakCalling/very_broad/*') from chMacsCountsVbroad.collect().ifEmpty([])
+  file ('peakCalling/very_broad/*') from chMacsCountsVbroad.collect().ifEmpty([])
   
   file('peakQC/*') from chPeakMqc.collect().ifEmpty([])
   
