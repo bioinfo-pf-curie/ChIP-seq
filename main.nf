@@ -1306,7 +1306,7 @@ process broadMACS2{
 //EPIC2 VERY BROAD
 process veryBroadEpic2{
   tag "${sampleID} - ${controlID}"
-  publishDir path: "${params.outdir}/peakCalling/veryBroad", mode: 'copy',
+  publishDir path: "${params.outdir}/peakCalling/very-broad", mode: 'copy',
     saveAs: { filename ->
             if (filename.endsWith(".tsv")) "stats/$filename"
             else if (filename.endsWith(".igv.txt")) null
