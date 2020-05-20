@@ -613,6 +613,8 @@ if (params.aligner == "bowtie2"){
   chAlignReads = chAlignReadsStar
 }
 
+
+
 /*
  * SPIKES GENOME
  */
@@ -899,7 +901,7 @@ process bamFiltering {
   input:
   set val(prefix), file(markedBam) from chMarkedBamsFilt
   file bed from chGeneBed.collect()
-  file bamtoolsFilterConfig from chBamtoolsFilterConfig.collect()
+  //file bamtoolsFilterConfig from chBamtoolsFilterConfig.collect()
 
   output:
   set val(prefix), file("*.{bam,bam.bai}") into chFilteredBams
@@ -909,7 +911,7 @@ process bamFiltering {
   script:
   filterParams = params.singleEnd ? "-F 0x004" : "-F 0x004 -F 0x0008 -f 0x001"
   dupParams = params.keepDups ? "" : "-F 0x0400"
-  mapQParams = params.mapQ ? "" : "-q ${params.mapQ}"
+  mapQParams = params.mapQ ? "-q ${params.mapQ}" : ""
   blacklistParams = params.blacklist ? "-L $bed" : ""
   nameSortBam = params.singleEnd ? "" : "samtools sort -n -@ $task.cpus -o ${prefix}.bam -T $prefix ${prefix}_filtered.bam"
   """
@@ -919,10 +921,7 @@ process bamFiltering {
     -F 0x08 \\
     $mapQParams \\
     $blacklistParams \\
-    -b ${markedBam[0]} \\
-    | bamtools filter \\
-      -out ${prefix}_filtered.bam \\
-      -script $bamtoolsFilterConfig
+    -b ${markedBam[0]} > ${prefix}_filtered.bam
   samtools index ${prefix}_filtered.bam
   samtools flagstat ${prefix}_filtered.bam > ${prefix}_filtered.flagstat
   samtools idxstats ${prefix}_filtered.bam > ${prefix}_filtered.idxstats
