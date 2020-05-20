@@ -190,6 +190,8 @@ fn_ignore_files:
   - '*_spp_nsc_*'
   - '*_spp_rsc_*'
   - '*FRiP*'
+  - '*count_mqc*'
+  - '*_sorted*'
 
 #############################
 ## Display
