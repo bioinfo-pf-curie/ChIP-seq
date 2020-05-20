@@ -541,8 +541,7 @@ process bwaMem{
   script:
   alnMult = params.spike == 'spike' ? '-a' : ''
   """
-  bwa mem -t ${task.cpus} $alnMult $bwaIndex${bwaBase} $reads \\
-  | samtools view -b -h -F 256 -o ${prefix}.bam
+  bwa mem -t ${task.cpus} $alnMult $bwaIndex${bwaBase} $reads | samtools view -b -h -F 256 -o ${prefix}.bam
   samtools view -F 0x4 -F 0x100 -c ${prefix}.bam > log.tmp 
   samtools view -q 1 -F 0x4 -F 0x100 ${prefix}.bam | grep -v XA:Z | grep -v SA:Z | wc -l >> log.tmp
   bwamem_log.sh $prefix
@@ -592,9 +591,16 @@ process star{
 
   script:
   """
-  STAR --genomeDir $starIndex${starBase} --runThreadN ${task.cpus} --readFilesIn $reads --outSAMtype BAM Unsorted --readFilesCommand zcat 
-  samtools view -b -h Aligned.out.bam -o ${prefix}.bam
-  
+  STAR --genomeDir $starIndex${starBase} \
+       --readFilesIn $reads \
+       --runThreadN ${task.cpus} \
+       --runMode alignReads \
+       --outSAMtype BAM Unsorted \
+       --readFilesCommand zcat \
+       --runDirPerm All_RWX \
+       --outTmpDir /local/scratch/rnaseq_\$(date +%d%s%S%N) \
+       --outSAMattrRGline ID:$prefix SM:$prefix LB:Illumina PL:Illumina
+  mv Aligned.out.bam ${prefix}.bam
   mv Log.final.out ${prefix}.log
   """
 }
