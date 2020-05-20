@@ -1,7 +1,7 @@
 #!/usr/bin/env nextflow
 
 /*
-Copyright Institut Curie 2019
+Copyright Institut Curie 2020
 This software is a computer program whose purpose is to analyze high-throughput sequencing data.
 You can use, modify and/ or redistribute the software under the terms of license (see the LICENSE file for more details).
 The software is distributed in the hope that it will be useful, but "AS IS" WITHOUT ANY WARRANTY OF ANY KIND.
@@ -95,15 +95,19 @@ def helpMessage() {
   """.stripIndent()
 }
 
-/*
- * SET UP CONFIGURATION VARIABLES
- */
-
 // Show help messsage
 if (params.help){
   helpMessage()
   exit 0
 }
+
+if (params.aligner != 'bwa-mem' && params.aligner != 'star' && params.aligner != 'bowtie2' ) {
+    exit 1, "Invalid aligner option: ${params.aligner}. Valid options: 'star', 'bowtie2' or 'bwa-mem'"
+}
+
+/*********************
+ * Fasta file
+ */
 
 // Configurable reference genomes
 if (params.spike == 'spike'){
@@ -113,124 +117,113 @@ else {
   genomeRef = params.genome
 }
 
+// Genome Fasta file
 params.fasta = genomeRef ? params.genomes[ genomeRef ].fasta ?: false : false
 if ( params.fasta ){
   Channel
     .fromPath(params.fasta, checkIfExists: true)
-    .into{chFastaHomer; chFastaBwa; chFastaBt2; chFastaStar}
+    .into{chFastaHomer}
 }
 else{
   exit 1, "Fasta file not found: ${params.fasta}"
 }
 
 
-if (params.spike && params.spike != 'spike'){
-  params.spikeFasta = params.spike ? params.genomes[ params.spike ].fasta ?: false : false
-  if ( params.spikeFasta ){
-    Channel
-      .fromPath(params.spikeFasta, checkIfExists: true)      
-      .into{chSpikeFaBwa; chSpikeFaBt2; chSpikeFaStar}
-  } else {
-    exit 1, "Spike-in fasta file not found: ${params.spikeFasta}"
-  }
-  println "Fasta ok"
-}
+/********************
+ * Bwa-mem Index
+ */
 
-//Bwa-mem Index
 params.bwaIndex = genomeRef ? params.genomes[ genomeRef ].bwaIndex ?: false : false
 if (params.bwaIndex){
-  lastPath = params.fasta.lastIndexOf(File.separator)
+  lastPath = params.bwaIndex.lastIndexOf(File.separator)
   bwaDir =  params.bwaIndex.substring(0,lastPath+1)
   bwaBase = params.bwaIndex.substring(lastPath+1)
   Channel
     .fromPath(bwaDir, checkIfExists: true)
     .ifEmpty {exit 1, "BWA index file not found: ${params.bwaIndex}"}
+    .combine( [ bwaBase ] )
     .set { chBwaIndex }
 } else {
   exit 1, "BWA index file not found: ${params.bwaIndex}"
 }
 
-if (params.spike && params.spike != 'spike'){
-  params.spikeBwaIndex = params.spike ? params.genomes[ params.spike ].bwaIndex ?: false : false
-  if (params.spikeBwaIndex){
-    lastPath = params.spikeFasta.lastIndexOf(File.separator)
-    bwaDirSpike =  params.spikeBwaIndex.substring(0,lastPath+1)
-    spikeBwaBase = params.spikeBwaIndex.substring(lastPath+1)
-    Channel
-      .fromPath(bwaDirSpike, checkIfExists: true)
-      .ifEmpty {exit 1, "Spike BWA index file not found: ${params.spikeBwaIndex}"}
-      .set { chSpikeBwaIndex }
-  } else {
-    chSpikeBwaIndex=Channel.empty()
-    //exit 1, "Spike BWA index file not found: ${params.spikeBwaIndex}"
-  }
-  println "Bwa OK"
+params.spikeBwaIndex = params.spike ? params.genomes[ params.spike ].bwaIndex ?: false : false
+params.spikeFasta = params.spike ? params.genomes[ params.spike ].fasta ?: false : false
+if (params.spikeBwaIndex){
+  lastPath = params.spikeBwaIndex.lastIndexOf(File.separator)
+  bwaDirSpike =  params.spikeBwaIndex.substring(0,lastPath+1)
+  spikeBwaBase = params.spikeBwaIndex.substring(lastPath+1)
+  Channel
+    .fromPath(bwaDirSpike, checkIfExists: true)
+    .ifEmpty {exit 1, "Spike BWA index file not found: ${params.spikeBwaIndex}"}
+    .combine( [ spikeBwaBase ] ) 
+    .set { chSpikeBwaIndex }
+  
+  chBwaIndex = chBwaIndex.concat(chSpikeBwaIndex)
 }
 
-//Bowtie2 indexes
+/*********************
+ * Bowtie2 indexes
+ */
+
 params.bt2Index = genomeRef ? params.genomes[ genomeRef ].bowtie2Index ?: false : false
 if (params.bt2Index){
-  lastPath = params.fasta.lastIndexOf(File.separator)
+  lastPath = params.bt2Index.lastIndexOf(File.separator)
   bt2Dir =  params.bt2Index.substring(0,lastPath+1)
   bt2Base = params.bt2Index.substring(lastPath+1)
   Channel
     .fromPath(bt2Dir, checkIfExists: true)
     .ifEmpty {exit 1, "Bowtie2 index file not found: ${params.bt2Index}"}
+    .combine( [ bt2Base ] ) 
     .set { chBt2Index }
 } else {
   exit 1, "Bowtie2 index file not found: ${params.bt2Index}"
 }
 
-if (params.spike && params.spike != 'spike'){
-  params.spikeBt2Index = params.spike ? params.genomes[ params.spike ].bowtie2Index ?: false : false
-  if (params.spikeBt2Index){
-    lastPath = params.spikeFasta.lastIndexOf(File.separator)
-    bt2DirSpike =  params.spikeBt2Index.substring(0,lastPath+1)
-    spikeBt2Base = params.spikeBt2Index.substring(lastPath+1)
-    Channel
-      .fromPath(bt2DirSpike, checkIfExists: true)
-      .ifEmpty {exit 1, "Spike Bowtie2 index file not found: ${params.spikeBt2Index}"}
-      .set { chSpikeBt2Index }
-  } else {
-    chSpikeBt2Index=Channel.empty()
-    //exit 1, "Spike bowtie2 index file not found: ${params.spikeBt2Index}"
-  }
-  println "Bt2 OK"
+params.spikeBt2Index = params.spike ? params.genomes[ params.spike ].bowtie2Index ?: false : false
+if (params.spikeBt2Index){
+  lastPath = params.spikeBt2Index.lastIndexOf(File.separator)
+  bt2DirSpike =  params.spikeBt2Index.substring(0,lastPath+1)
+  spikeBt2Base = params.spikeBt2Index.substring(lastPath+1)
+  Channel
+    .fromPath(bt2DirSpike, checkIfExists: true)
+    .ifEmpty {exit 1, "Spike Bowtie2 index file not found: ${params.spikeBt2Index}"}
+    .combine( [ spikeBt2Base ] ) 
+    .set { chSpikeBt2Index }
+
+  chBt2Index = chBt2Index.concat(chSpikeBt2Index)
 }
 
-//Star indexes
+/********************
+ * STAR indexes
+ */
+
 params.starIndex = genomeRef ? params.genomes[ genomeRef ].starIndex ?: false : false
 if (params.starIndex){
-  lastPath = params.fasta.lastIndexOf(File.separator)
-  starDir =  params.starIndex.substring(0,lastPath+1)
-  starBase = params.starIndex.substring(lastPath+1)
   Channel
-    .fromPath(starDir, checkIfExists: true)
+    .fromPath(params.starIndex, checkIfExists: true)
     .ifEmpty {exit 1, "STAR index file not found: ${params.starIndex}"}
+    .combine( [ genomeRef ] ) 
     .set { chStarIndex }
 } else {
   exit 1, "STAR index file not found: ${params.starIndex}"
 }
 
-if (params.spike && params.spike != 'spike'){
-  params.spikeStarIndex = params.spike ? params.genomes[ params.spike ].starIndex ?: false : false
-  if (params.spikeStarIndex){
-    lastPath = params.spikeFasta.lastIndexOf(File.separator)
-    starDirSpike =  params.spikeStarIndex.substring(0,lastPath+1)
-    spikeStarBase = params.spikeStarIndex.substring(lastPath+1)
-    Channel
-      .fromPath(starDirSpike, checkIfExists: true)
-      .ifEmpty {exit 1, "Spike STAR index file not found: ${params.spikeStarIndex}"}
-      .set { chSpikeStarIndex }
-  } else {
-    chSpikeStarIndex = Channel.empty()
-    exit 1, "Spike STAR index file not found: ${params.spikeStarIndex}"
-  }
-  println "starOk"
+params.spikeStarIndex = params.spike ? params.genomes[ params.spike ].starIndex ?: false : false
+if (params.spikeStarIndex){
+  Channel
+    .fromPath(params.spikeStarIndex, checkIfExists: true)
+    .ifEmpty {exit 1, "Spike STAR index file not found: ${params.spikeStarIndex}"}
+     .combine( [ params.spike ] )
+    .set { chSpikeStarIndex }
+
+  chStarIndex = chStarIndex.concat(chSpikeStarIndex)
 }
 
+/*********************
+ * Annotations
+ */
 
-// Other inputs
 params.gtf = genomeRef ? params.genomes[ genomeRef ].gtf ?: false : false
 if (params.gtf) {
   Channel
@@ -258,8 +251,12 @@ if (params.spike && params.spike != 'spike'){
   else{
   exit 1, "BED file not specified!"
   }
-  println "bed ok"
 }
+
+
+/***********************
+ * Header and conf
+ */
 
 //PPQT headers
 chPpqtCorHeader = file("$baseDir/assets/ppqt_cor_header.txt", checkIfExists: true)
@@ -284,12 +281,11 @@ Channel
 
 
 //Filtering
-if (params.singleEnd) {
-  chBamtoolsFilterConfig = Channel.fromPath(params.bamtoolsFilterSEConfig, checkIfExists: true)
-} else {
-  chBamtoolsFilterConfig = Channel.fromPath(params.bamtoolsFilterPEConfig, checkIfExists: true)
-}
-
+//if (params.singleEnd) {
+//  chBamtoolsFilterConfig = Channel.fromPath(params.bamtoolsFilterSEConfig, checkIfExists: true)
+//} else {
+//  chBamtoolsFilterConfig = Channel.fromPath(params.bamtoolsFilterPEConfig, checkIfExists: true)
+//}
 
 //Stage config files
 Channel
@@ -298,7 +294,6 @@ Channel
 Channel
   .fromPath(params.outputDoc, checkIfExists: true)
   .set{chOutputDocs}
-
 
 //Has the run name been specified by the user?
 //This has the bonus effect of catching both -name and --name
@@ -327,7 +322,9 @@ if (params.samplePlan) {
 else{
   summary['Reads']        = params.reads
 }
+summary['Design']       = params.design ?: "None"
 summary['Fasta Ref']    = params.fasta
+summary['Spikes']       = params.spikes
 summary['Data Type']    = params.singleEnd ? 'Single-End' : 'Paired-End'
 summary['Max Memory']   = params.max_memory
 summary['Max CPUs']     = params.max_cpus
@@ -402,7 +399,7 @@ else if(params.readPaths){
 }
 
 
-/*
+/**************************
  * Make sample plan if not available
  */
 
@@ -444,7 +441,7 @@ if (params.samplePlan){
    }
 }
 
-/*
+/******************************
  * Design file
  */
 
@@ -514,7 +511,7 @@ process fastQC{
 
   script:
   """
-  fastqc -q $reads -t 6
+  fastqc -q $reads -t ${task.cpus}
   """
 }
 
@@ -522,82 +519,80 @@ process fastQC{
  * Alignment on reference genome
  */
 
-// BWA-MEM
+/* BWA-MEM */
 process bwaMem{
-  tag "${prefix}"
-  publishDir "${params.outdir}/alignment/reference"
+  tag "${sample} on ${genomeBase}"
+  publishDir "${params.outdir}/alignment/${genomeBase}"
 
   when:
   !params.skipAlignment && params.aligner == "bwa-mem"
 
   input:
-  set val(prefix), file(reads) from rawReadsBWA
-  file bwaIndex from chBwaIndex.collect()
+  set val(sample), file(reads), file(index), val(genomeBase) from rawReadsBWA.combine(chBwaIndex)
 
   output:
-  set val(prefix), file("*.bam") into chAlignReadsBwa
+  set val(sample), file("*.bam") into chAlignReadsBwa
   file("*.log") into chBwaMqc
 
   script:
+  prefix = sample + "_" + genomeBase
   alnMult = params.spike == 'spike' ? '-a' : ''
   """
-  bwa mem -t ${task.cpus} $alnMult $bwaIndex${bwaBase} $reads | samtools view -b -h -F 256 -o ${prefix}.bam
-  samtools view -F 0x4 -F 0x100 -c ${prefix}.bam > log.tmp 
-  samtools view -q 1 -F 0x4 -F 0x100 ${prefix}.bam | grep -v XA:Z | grep -v SA:Z | wc -l >> log.tmp
-  bwamem_log.sh $prefix
+  bwa mem -t ${task.cpus} $alnMult ${index}/${genomeBase} $reads | samtools view -b -h -F 256 -o ${prefix}.bam
+  getBWAstats.sh ${prefix}.bam ${prefix}.log
   """
 }
 
-// BOWTIE2
+/* BOWTIE2 */
 process bowtie2{
-  tag "${prefix}"
-  publishDir "${params.outdir}/alignment/reference"
+  tag "${sample} on ${genomeBase}"
+  publishDir "${params.outdir}/alignment/${genomeBase}"
 
   when:
   !params.skipAlignment && params.aligner == "bowtie2"
 
   input:
-  set val(prefix), file(reads) from rawReadsBt2
-  file bt2Index from chBt2Index.collect()
+  set val(sample), file(reads), file(index), val(genomeBase) from rawReadsBt2.combine(chBt2Index)
 
   output:
-  set val(prefix), file("*.bam") into chAlignReadsBowtie2
+  set val(sample), file("*.bam") into chAlignReadsBowtie2
   file("*.log") into chBowtie2Mqc
 
   script:
+  prefix = sample + "_" + genomeBase
   readCommand = params.singleEnd ? "-U ${reads[0]}" : "-1 ${reads[0]} -2 ${reads[1]}"
-  alnMult = params.spike ? alnMult = '-k 3' : ''
+  alnMult = params.spike == 'spike' ? alnMult = '-k 3' : ''
   """
-  bowtie2 -p ${task.cpus} $alnMult -x $bt2Index${bt2Base} $readCommand 1> sample.sam 2> ${prefix}.log  
-  samtools view -b -h -F 256 -F 2048 sample.sam > ${prefix}.bam
+  bowtie2 -p ${task.cpus} $alnMult -x ${index}/${genomeBase} $readCommand | samtools view -bS - > ${prefix}.bam 2> ${prefix}.log
   """
 }
 
-// STAR
+/* STAR */
 process star{
-  tag "${prefix}"
-  publishDir "${params.outdir}/alignment/reference"
+  tag "${sample} on ${genomeBase}"
+  publishDir "${params.outdir}/alignment/${genomeBase}"
 
   when:
   !params.skipAlignment && params.aligner == "star"
 
   input:
-  set val(prefix), file(reads) from rawReadsSTAR
-  file starIndex from chStarIndex.collect()
+  set val(sample), file(reads), file(index), val(genomeBase) from rawReadsSTAR.combine(chStarIndex)
 
   output:
-  set val(prefix), file('*.bam') into chAlignReadsStar
+  set val(sample), file('*.bam') into chAlignReadsStar
   file ("*.log") into chStarMqc
 
   script:
+  prefix = sample + "_" + genomeBase
   """
-  STAR --genomeDir $starIndex${starBase} \
+  STAR --genomeDir $index \
        --readFilesIn $reads \
        --runThreadN ${task.cpus} \
        --runMode alignReads \
        --outSAMtype BAM Unsorted \
        --readFilesCommand zcat \
        --runDirPerm All_RWX \
+       --outSAMunmapped Within \
        --outTmpDir /local/scratch/rnaseq_\$(date +%d%s%S%N) \
        --outSAMattrRGline ID:$prefix SM:$prefix LB:Illumina PL:Illumina
   mv Aligned.out.bam ${prefix}.bam
@@ -614,178 +609,78 @@ if (params.aligner == "bowtie2"){
 }
 
 
-
-/*
- * SPIKES GENOME
+/****************
+ * Spike-in
  */
-if(params.spike && params.spike != 'spike'){
-// BWA-MEM
-process spikeBwaMem{
-  tag "${prefix}"
-  publishDir "${params.outdir}/alignment/spike/"
 
-  when:
-  !params.skipAlignment && params.aligner == "bwa-mem"
+if (params.spike && params.spike != 'spike'){
 
-  input:
-  set val(prefix), file(reads) from rawSpikeReadsBWA
-  file spikeBwaIndex from chSpikeBwaIndex.collect()
+   /* Split and rebuild Channel to be sure of order between bams */
+   chAlignRef = Channel.create()
+   chAlignSpike = Channel.create()
+   chAlignReads.choice( chAlignRef, chAlignSpike ){ it -> it[1] =~ params.genome ? 0 : 1 }
 
-  output:
-  set val(spikeprefix), file("*_spike.bam") into chSpikeAlignReadsBwa
-  file("*.log") into chSpikeBwaMqc
+   chCompAln = chAlignRef
+      .join(chAlignSpike)
 
-  script:
-  spikeprefix = "${prefix}_spike"
-  """
-  bwa mem -t ${task.cpus} $spikeBwaIndex${spikeBwaBase} $reads | samtools view -b -h -F 256 -F 2048 -o ${spikeprefix}.bam
-  samtools view -F 0x4 -F 0x100 -c ${spikeprefix}.bam > log.tmp
-  samtools view -q 1 -F 0x4 -F 0x100 ${spikeprefix}.bam | grep -v XA:Z | grep -v SA:Z | wc -l >> log.tmp
-  bwamem_log.sh $spikeprefix
-  """
-}
+   // Merging, if necessary reference aligned reads and spike aligned reads
+   process compareRefSpike{
+     tag "${sample}"
+     publishDir "${params.outdir}/alignment/compareRefSpike"
 
-// BOWTIE2
-process spikeBowtie2{
-  tag "${prefix}"
-  publishDir "${params.outdir}/alignment/spike/"
+     input:
+     set val(sample), file(unsortedBamRef), file(unsortedBamSpike) from chCompAln
 
-  when:
-  !params.skipAlignment && params.aligner == "bowtie2"
+     output:
+     set val(sample), file('*_ref.bam') into chRefBams
+     set val(sampleSpike), file('*_spike.bam') into chSpikeBams
+     file ('*.txt') into chLogCompare
 
-  input:
-  set val(prefix), file(reads) from rawSpikeReadsBt2
-  file spikeBt2Index from chSpikeBt2Index.collect()
+     script:
+     sampleSpike = sample + '_spike'
+     """
+     samtools sort $unsortedBamRef -n -@ ${task.cpus} -T ${sample}_ref -o ${sample}_ref_sorted.bam
+     samtools sort $unsortedBamSpike -n -@ ${task.cpus} -T ${sample}_spike -o ${sample}_spike_sorted.bam
+     compareAlignments.py -i ${sample}_ref_sorted.bam -s ${sample}_spike_sorted.bam -o ${sample}_ref.bam -os ${sample}_spike.bam -se ${params.singleEnd}
+     """
+   }
 
-  output:
-  set val(spikeprefix), file("*.bam") into chSpikeAlignReadsBowtie2
-  file("*.log") into chSpikeBowtie2Mqc
-
-  script:
-  spikeprefix = "${prefix}_spike"
-  readCommand = params.singleEnd ? "-U ${reads[0]}" : "-1 ${reads[0]} -2 ${reads[1]}"
-  """
-  bowtie2 -p ${task.cpus} -x $spikeBt2Index${spikeBt2Base} $readCommand 1> sample.sam 2> ${spikeprefix}.log
-  samtools view -b -h -F 256 -F 2048 sample.sam > ${spikeprefix}.bam
-  """
- }
- 
-// STAR
-process spikeStar{
-  tag "${prefix}"
-  publishDir "${params.outdir}/alignment/spike/"
-
-  when:
-  !params.skipAlignment && params.aligner == "star"
-
-  input:
-  set val(prefix), file(reads) from rawSpikeReadsSTAR
-  file spikeStarIndex from chSpikeStarIndex.collect()
-
-  output:
-  set val(spikeprefix), file('*.bam') into chSpikeAlignReadsStar
-  file ("*.log") into chSpikeStarMqc
-
-  script:
-  spikeprefix = "${prefix}_spike"
-  """
-  STAR --genomeDir $spikeStarIndex${spikeStarBase} \
-       --readFilesIn $reads \
-       --runThreadN ${task.cpus} \
-       --runMode alignReads \
-       --outSAMtype BAM Unsorted \
-       --readFilesCommand zcat \
-       --runDirPerm All_RWX \
-       --outTmpDir /local/scratch/rnaseq_\$(date +%d%s%S%N) \
-       --outSAMattrRGline ID:$prefix SM:$prefix LB:Illumina PL:Illumina
-  mv Aligned.out.bam ${spikeprefix}.bam
-  mv Log.final.out ${spikeprefix}.log
-  """
-  }
-} else {
-chSpikeAlignReadsStar = Channel.empty()
-chSpikeAlignReadsBowtie2 = Channel.empty()
-chSpikeAlignReadsBwa = Channel.empty()
-chSpikeBowtie2Mqc = Channel.empty()
-chSpikeBwaMqc = Channel.empty()
-chSpikeStarMqc = Channel.empty()
-
-}
-
-// Split Reference and Spike genomes
-if(params.spike && params.spike != 'spike'){
-
-  if (params.aligner == "bowtie2"){
-    chSpikeAlignReads = chSpikeAlignReadsBowtie2
-  }else if (params.aligner == "bwa-mem"){
-    chSpikeAlignReads = chSpikeAlignReadsBwa
-  }else if (params.aligner == "star"){
-    chSpikeAlignReads = chSpikeAlignReadsStar
-  }
-
-  chAlignReads
-    .combine(chSpikeAlignReads)
-    .filter{ it[0] == it[2][0..-7] }
-    .map{ it[0,1,3] }    
-    .set{chAllReads}
-
-  // Merging, if necessary reference aligned reads and spike aligned reads
-  process compareRefSpike{
-    tag "${prefixRef}"
-    publishDir "${params.outdir}/alignment/compareRefSpike"
-
-    input:
-      set val(prefixRef), file(unsortedBamRef), file(unsortedBamSpike) from chAllReads
-
-    output:
-      set val(prefixRef), file('*_ref.bam') into chAlignedReads
-      set val(prefixSpike), file('*Spikein.bam') into chSpikeAlignedReads
-      file ('*.txt') into chLogCompare
-
-    script:
-    prefixSpike = prefixRef + 'Spike'
-    """
-    samtools sort $unsortedBamRef -n -T ${prefixRef} -o ${prefixRef}_sorted.bam
-    samtools sort $unsortedBamSpike -n -T ${prefixSpike} -o ${prefixSpike}_sorted.bam
-    compareAlignments.py -IR ${prefixRef}_sorted.bam -IS ${prefixSpike}_sorted.bam -OR ${prefixRef}_ref.bam -OS ${prefixSpike}in.bam -SE ${params.singleEnd}
-    """
-  }
-  
-  chAlignedReads
-    .mix(chSpikeAlignedReads)
-    .dump (tag:'bams')
-    .set{chAlignedReads}
+  // concat spike and ref bams
+  chRefBams
+    .concat(chSpikeBams)
+    .set {chAllBams}
 
 } else if(params.spike && params.spike == 'spike'){
 
   process sepMetagenome{
-    tag "${prefix}"
+    tag "${sample}"
     publishDir "${params.outdir}/alignment/sepMetagenome"
 
     input:
-      set val(prefix), file(unsortedBam) from chAlignReads
+    set val(sample), file(unsortedBam) from chAlignReads
 
     output:
-      set val(prefix), file('*_ref.bam') into chAlignedReads
-      set val(prefix), file('*Spike.bam') into chSpikeAlignedReads
-      file ('*.txt') into chLogSep
+    set val(sample), file('*_ref.bam') into chRefBams
+    set val(sampleSpike), file('*_spike.bam') into chSpikeBams
+    file ('*.txt') into chLogSep
 
     script:
+    sampleSpike = sample + '_spike'
     """
     samtools sort $unsortedBam -n -T ${prefix} -o ${prefix}_sorted.bam
-    sepMetagenome.py -I ${prefix}_sorted.bam -OR ${prefix}_ref.bam -OS ${prefix}Spike.bam -SE ${params.singleEnd}
+    sepMetagenome.py -I ${prefix}_sorted.bam -OR ${prefix}_ref.bam -OS ${prefix}_spike.bam -SE ${params.singleEnd}
     """
   }
 
-  chAlignedReads
-    .mix(chSpikeAlignedReads)
-    .dump (tag:'bams')
-    .set{chAlignedReads}
-} else {
-  chAlignReads
-    .dump (tag:'bams')
-    .set{chAlignedReads}
+  // concat spike and ref bams
+  chRefBams
+    .concat(chSpikeBams)
+    .set {chAllBams}
+
+}else{
+  chAllBams = chAlignReads
 }
+
 
 /*
  * Sorting BAM files
@@ -803,10 +698,10 @@ process bamSort{
   !params.skipAlignment
 
   input:
-  set val(prefix), file(unsortedBam) from chAlignedReads
+  set val(prefix), file(unsortedBam) from chAllBams
 
   output:
-  set val(prefix), file('*.{bam,bam.bai}') into chSortBam
+  set val(prefix), file('*.{bam,bam.bai}') into chSortBams
 
   script:
   """
@@ -832,7 +727,7 @@ process markDuplicates{
             }
 
   input:
-  set val(prefix), file(sortedBams) from chSortBam
+  set val(prefix), file(sortedBams) from chSortBams
 
   output:
   set val(prefix), file("*.{bam,bam.bai}") into chMarkedBams, chMarkedBamsFilt, chMarkedPreseq
@@ -859,7 +754,7 @@ process markDuplicates{
 
 
 /*
- * Preseq (before alignment filtering)
+ * Preseq (before alignment filtering and only on ref mapped reads)
  */
 
 process preseq {
@@ -870,7 +765,7 @@ process preseq {
   !params.skipPreseq
 
   input:
-  set val(prefix), file(bam) from chMarkedPreseq.filter{ it[0][-5..-1] != 'Spike'}
+  set val(prefix), file(bam) from chMarkedPreseq.filter{ it[0][-5..-1] != "spike" }
 
   output:
   file "*.ccurve.txt" into chPreseqStats
@@ -953,11 +848,11 @@ if (!params.skipFiltering){
 
 chFlagstatChip=Channel.create()
 chFlagstatSpikes=Channel.create()
-chFlagstat.choice( chFlagstatSpikes, chFlagstatChip ) { it -> it[0][-5..-1] == 'Spike' ? 0 : 1 }
+chFlagstat.choice( chFlagstatSpikes, chFlagstatChip ) { it -> it[0] =~ 'spike' ? 0 : 1 }
 
 chBamsChip=Channel.create()
 chBamsSpikes=Channel.create()
-chBams.choice( chBamsSpikes, chBamsChip ) { it -> it[0][-5..-1] == 'Spike' ? 0 : 1 }
+chBams.choice( chBamsSpikes, chBamsChip ) { it -> it[0] =~ 'spike' ? 0 : 1 }
 
 // Preparing all ChIP data for further analysis
 chBamsChip
@@ -982,7 +877,7 @@ process PPQT{
   !params.skipPPQT
 
   input:
-  set val(prefix), file(bams) from chBamsPPQT.filter{ it[0][-5..-1] != 'Spike'}
+  set val(prefix), file(bams) from chBamsPPQT
   file sppCorrelationHeader from chPpqtCorHeader
   file sppNSCHeader from chPpqtNSCHeader
   file sppRSCHeader from chPpqtRSCHeader
@@ -1002,7 +897,6 @@ process PPQT{
   awk -v OFS='\t' '{print "${prefix}", \$10}' ${prefix}.spp.out | cat $sppRSCHeader - > ${prefix}_spp_rsc_mqc.tsv
   """
 }
-
 
 /* 
  * BigWig Tracks
@@ -1027,8 +921,9 @@ process bigWig {
 // With Spikes
 if (params.spike){
   chBamsSpikes
-    .into{chBamsSpikesBam;chBamsSpikesBai}
-  process binSpikes {
+    .into{chBamsSpikesBam; chBamsSpikesBai}
+
+  process getSpikeScalingFactor {
     publishDir "${params.outdir}/bigwig/10kbins"
 
     input:
@@ -1036,26 +931,12 @@ if (params.spike){
     file(allBai) from chBamsSpikesBai.map{it[1][1]}.collect()
  
     output:
-    file "*.tab" into chDeseq2tab
-
-    script:
-    """
-    multiBamSummary bins -b $allBams --binSize 10000 -o results.npz --outRawCounts readCounts_10kbins.tab
-    """
-  }
-
-  process getDeseqScaleFactor{
-    publishDir "${params.outdir}/bigwig/scalefactors"
-
-    input:
-    file binsTab from chDeseq2tab
-
-    output:
     file "*.sf" into chTabSF
 
     script:
     """
-    getDESeqSF.R '${binsTab}'
+    multiBamSummary bins -b $allBams --binSize 10000 -o results.npz --outRawCounts readCounts_10kbins.tab
+    getDESeqSF.R readCounts_10kbins.tab
     """
   }
 
@@ -1066,11 +947,11 @@ if (params.spike){
 
   chBamsBigWigSF
     .combine(chScaleFactor)
-    .filter{it[0] == it[2][0..-6]}
+    .filter{it[0] == it[2]}
     .map { it -> it[0,1,3]}
     .set{chBigWigScaleFactor}
 
-  process bigWigGenerationScaled{
+  process bigWigSpikeNorm{
     tag "${prefix}"
     publishDir "${params.outdir}/bigWig", mode: "copy"
 
@@ -1091,7 +972,7 @@ if (params.spike){
 /*
  * DeepTools QC
  */
-if(params.spike == false){
+
 process deepToolsComputeMatrix{
   tag "${prefix}"
   publishDir "${params.outdir}/deepTools/singleBam", mode: "copy"
@@ -1118,35 +999,6 @@ process deepToolsComputeMatrix{
         --outFileNameData ${prefix}.plotProfile.tab
   sed -e 's/.0\t/\t/g' ${prefix}.plotProfile.tab | sed -e 's@.0\$@@g' > ${prefix}_plotProfile_corrected.tab
   """
-}
-} else {
-process deepToolsComputeMatrixScaled{
-  tag "${prefix}"
-  publishDir "${params.outdir}/deepTools/singleBam", mode: "copy"
-
-  when:
-  !params.skipDeepTools
-
-  input:
-  set val(prefix), file(bigwig) from chBigWigSF
-  file geneBed from chGeneBedDeeptools.collect()
-
-  output:
-  set val(prefix), file("*.{gz,pdf}") into chDeeptoolsSingle
-  set val(prefix), file("*_corrected.tab") into chDeeptoolsSingleMqc
-  script:
-  """
-  computeMatrix scale-regions -R $geneBed -S ${bigwig} \\
-                -o ${prefix}_matrix.mat.gz \\
-                --outFileNameMatrix ${prefix}.computeMatrix.vals.mat.gz \\
-                --downstream 1000 --upstream 1000 --skipZeros --binSize 100\\
-                -p ${task.cpus}
-
-  plotProfile -m ${prefix}_matrix.mat.gz -o ${prefix}_bams_profile.pdf \\
-        --outFileNameData ${prefix}.plotProfile.tab
-  sed -e 's/.0\t/\t/g' ${prefix}.plotProfile.tab | sed -e 's@.0\$@@g' > ${prefix}_plotProfile_corrected.tab
-  """
-  }
 }
 
 process deepToolsCorrelationQC{
@@ -1392,7 +1244,7 @@ process peakAnnoHomer{
 }
 
 
-/*
+/**********************************
  * Per Group Analysis
  */
 
@@ -1571,9 +1423,9 @@ process multiqc {
   file ('rawReads/*') from chFastqcResults.collect().ifEmpty([])
 
   file ('alignment/reference/*') from chBwaMqc.collect().ifEmpty([])
-  file ('alignment/spike/*') from chSpikeBwaMqc.collect().ifEmpty([])
+  //file ('alignment/spike/*') from chSpikeBwaMqc.collect().ifEmpty([])
   file ('alignment/reference/*') from chBowtie2Mqc.collect().ifEmpty([])
-  file ('alignment/spike/*') from chSpikeBowtie2Mqc.collect().ifEmpty([])
+  //file ('alignment/spike/*') from chSpikeBowtie2Mqc.collect().ifEmpty([])
 
   file ('picard/*') from chMarkedPicstats.collect().ifEmpty([])
 

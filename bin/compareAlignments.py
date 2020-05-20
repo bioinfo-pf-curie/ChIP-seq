@@ -5,30 +5,28 @@ import pysam
 import re
 import sys
 
-AS_TAG = "XX"
-
 def argsParse():
     """
     Parsing input & outputs BAM files. Also takes in a boolean to indicate if
     the raw reads are single-end or paired-end
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument("-IR", metavar="INPUT_BAM_REF", help="Enter a valid "
+    parser.add_argument("-i", metavar="INPUT_BAM_REF", help="Enter a valid "
                                                         "BAM file")
-    parser.add_argument("-IS", metavar="INPUT_BAM_SPIKE", help="Enter a valid "
+    parser.add_argument("-s", metavar="INPUT_BAM_SPIKE", help="Enter a valid "
                                                         "BAM file")
-    parser.add_argument("-OR", metavar="OUTPUT_BAM_REF", help="Enter a valid "
+    parser.add_argument("-o", metavar="OUTPUT_BAM_REF", help="Enter a valid "
                                                         "BAM file name")
-    parser.add_argument("-OS", metavar="OUTPUT_BAM_SPIKE", help="Enter a valid "
+    parser.add_argument("-os", metavar="OUTPUT_BAM_SPIKE", help="Enter a valid "
                                                         "BAM file name")
-    parser.add_argument("-SE", metavar="SINGLE_END", help="Is data SE (True) or"
+    parser.add_argument("-se", metavar="SINGLE_END", help="Is data SE (True) or"
                                                         " PE (False) ?")
     args = parser.parse_args()
-    inputBamRef = args.IR
-    inputBamSpike = args.IS
-    outputBamRef = args.OR
-    outputBamSpike = args.OS
-    singleEnd = args.SE
+    inputBamRef = args.i
+    inputBamSpike = args.s
+    outputBamRef = args.o
+    outputBamSpike = args.os
+    singleEnd = args.se
     return inputBamRef, inputBamSpike, outputBamRef, outputBamSpike, singleEnd
 
 def compareTwoAlignments (read1, read2):
@@ -44,6 +42,7 @@ def compareTwoAlignments (read1, read2):
 def get_read_name(read):
     name = read.query_name
     return re.split('/| ', name)[0]
+
 
 ## Get max Mapping Quality
 def getMaxMapQ(reads):
@@ -74,7 +73,6 @@ def compareAlignments(set1, set2, filterNonPrimary=True):
     else:
         #print (get_read_name(set1[0]),"----UNKNOWN") 
         return None
-
 
 
 def compareBams(bam1, bam2, obam1, obam2, singleEnd):
