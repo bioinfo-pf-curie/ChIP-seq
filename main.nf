@@ -613,6 +613,8 @@ if (params.aligner == "bowtie2"){
   chAlignReads = chAlignReadsStar
 }
 
+
+
 /*
  * SPIKES GENOME
  */
@@ -636,8 +638,7 @@ process spikeBwaMem{
   script:
   spikeprefix = "${prefix}_spike"
   """
-  bwa mem -t ${task.cpus} $spikeBwaIndex${spikeBwaBase} $reads \\
-  | samtools view -b -h -F 256 -F 2048 -o ${spikeprefix}.bam
+  bwa mem -t ${task.cpus} $spikeBwaIndex${spikeBwaBase} $reads | samtools view -b -h -F 256 -F 2048 -o ${spikeprefix}.bam
   samtools view -F 0x4 -F 0x100 -c ${spikeprefix}.bam > log.tmp
   samtools view -q 1 -F 0x4 -F 0x100 ${spikeprefix}.bam | grep -v XA:Z | grep -v SA:Z | wc -l >> log.tmp
   bwamem_log.sh $spikeprefix
@@ -891,7 +892,7 @@ process bamFiltering {
   input:
   set val(prefix), file(markedBam) from chMarkedBamsFilt
   file bed from chGeneBed.collect()
-  file bamtoolsFilterConfig from chBamtoolsFilterConfig.collect()
+  //file bamtoolsFilterConfig from chBamtoolsFilterConfig.collect()
 
   output:
   set val(prefix), file("*.{bam,bam.bai}") into chFilteredBams
@@ -901,7 +902,7 @@ process bamFiltering {
   script:
   filterParams = params.singleEnd ? "-F 0x004" : "-F 0x004 -F 0x0008 -f 0x001"
   dupParams = params.keepDups ? "" : "-F 0x0400"
-  mapQParams = params.mapQ ? "" : "-q ${params.mapQ}"
+  mapQParams = params.mapQ ? "-q ${params.mapQ}" : ""
   blacklistParams = params.blacklist ? "-L $bed" : ""
   nameSortBam = params.singleEnd ? "" : "samtools sort -n -@ $task.cpus -o ${prefix}.bam -T $prefix ${prefix}_filtered.bam"
   """
@@ -911,10 +912,7 @@ process bamFiltering {
     -F 0x08 \\
     $mapQParams \\
     $blacklistParams \\
-    -b ${markedBam[0]} \\
-    | bamtools filter \\
-      -out ${prefix}_filtered.bam \\
-      -script $bamtoolsFilterConfig
+    -b ${markedBam[0]} > ${prefix}_filtered.bam
   samtools index ${prefix}_filtered.bam
   samtools flagstat ${prefix}_filtered.bam > ${prefix}_filtered.flagstat
   samtools idxstats ${prefix}_filtered.bam > ${prefix}_filtered.idxstats
