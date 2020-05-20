@@ -498,7 +498,7 @@ process checkDesign{
 
 process fastQC{
   tag "${prefix}"
-  publishDir "${params.outdir}/rawReads"
+  publishDir "${params.outdir}/fastqc", mode: 'copy'
 
   when:
   !params.skipFastqc
@@ -522,7 +522,8 @@ process fastQC{
 /* BWA-MEM */
 process bwaMem{
   tag "${sample} on ${genomeBase}"
-  publishDir "${params.outdir}/alignment/${genomeBase}"
+  publishDir "${params.outdir}/mapping", mode: 'copy',
+             saveAs: {filename -> if (!params.spike) filename}
 
   when:
   !params.skipAlignment && params.aligner == "bwa-mem"
@@ -546,8 +547,8 @@ process bwaMem{
 /* BOWTIE2 */
 process bowtie2{
   tag "${sample} on ${genomeBase}"
-  publishDir "${params.outdir}/alignment/${genomeBase}"
-
+  publishDir "${params.outdir}/mapping", mode: 'copy',
+              saveAs: {filename -> if (!params.spike) filename}
   when:
   !params.skipAlignment && params.aligner == "bowtie2"
 
@@ -570,8 +571,8 @@ process bowtie2{
 /* STAR */
 process star{
   tag "${sample} on ${genomeBase}"
-  publishDir "${params.outdir}/alignment/${genomeBase}"
-
+  publishDir "${params.outdir}/mapping", mode: 'copy',
+             saveAs: {filename -> if (!params.spike) filename}
   when:
   !params.skipAlignment && params.aligner == "star"
 
@@ -626,7 +627,7 @@ if (params.spike && params.spike != 'spike'){
    // Merging, if necessary reference aligned reads and spike aligned reads
    process compareRefSpike{
      tag "${sample}"
-     publishDir "${params.outdir}/alignment/compareRefSpike"
+     publishDir "${params.outdir}/mapping/", mode: 'copy'
 
      input:
      set val(sample), file(unsortedBamRef), file(unsortedBamSpike) from chCompAln
@@ -654,7 +655,7 @@ if (params.spike && params.spike != 'spike'){
 
   process sepMetagenome{
     tag "${sample}"
-    publishDir "${params.outdir}/alignment/sepMetagenome"
+    publishDir "${params.outdir}/mapping", mode: 'copy'
 
     input:
     set val(sample), file(unsortedBam) from chAlignReads
@@ -688,9 +689,9 @@ if (params.spike && params.spike != 'spike'){
 
 process bamSort{
   tag "${prefix}"
-  publishDir path: "${params.outdir}/alignedReads/sortedBams", mode: 'copy',
+  publishDir path: "${params.outdir}/mapping", mode: 'copy',
     saveAs: {filename ->
-             if (!filename.endsWith(".bam") && (!filename.endsWith(".bam.bai"))) "samtools_stats/$filename"
+             if (!filename.endsWith(".bam") && (!filename.endsWith(".bam.bai"))) "stats/$filename"
              else if (filename.endsWith(".bam") || (filename.endsWith(".bam.bai"))) filename
              else null
             }
@@ -719,9 +720,9 @@ process bamSort{
 
 process markDuplicates{
   tag "${prefix}"
-  publishDir path: "${params.outdir}/alignedReads/markedBams", mode: 'copy',
+  publishDir path: "${params.outdir}/mapping", mode: 'copy',
     saveAs: {filename ->
-             if (!filename.endsWith(".bam") && (!filename.endsWith(".bam.bai"))) "samtools_stats/$filename"
+             if (!filename.endsWith(".bam") && (!filename.endsWith(".bam.bai"))) "stats/$filename"
              else if (filename.endsWith(".bam") || (filename.endsWith(".bam.bai"))) filename
              else null
             }
@@ -759,7 +760,7 @@ process markDuplicates{
 
 process preseq {
   tag "${prefix}"
-  publishDir "${params.outdir}/preseq"
+  publishDir "${params.outdir}/preseq", mode: 'copy'
 
   when:
   !params.skipPreseq
@@ -783,9 +784,9 @@ process preseq {
 
 process bamFiltering {
   tag "${prefix}"
-  publishDir path: "${params.outdir}/alignedReads/filteredBams", mode: 'copy',
+  publishDir path: "${params.outdir}/mapping", mode: 'copy',
     saveAs: {filename ->
-             if (!filename.endsWith(".bam") && (!filename.endsWith(".bam.bai"))) "samtools_stats/$filename"
+             if (!filename.endsWith(".bam") && (!filename.endsWith(".bam.bai"))) "stats/$filename"
              else if (filename.endsWith("_filtered.bam") || (filename.endsWith("_filtered.bam.bai"))) filename
              else null
             }
@@ -904,7 +905,7 @@ process PPQT{
 
 process bigWig {
   tag "${prefix}"
-  publishDir "${params.outdir}/bigWig", mode: "copy"
+  publishDir "${params.outdir}/bigwig", mode: "copy"
 
   input:
   set val(prefix), file(filteredBams) from chBamsBigWig
@@ -924,7 +925,7 @@ if (params.spike){
     .into{chBamsSpikesBam; chBamsSpikesBai}
 
   process getSpikeScalingFactor {
-    publishDir "${params.outdir}/bigwig/10kbins"
+    publishDir "${params.outdir}/bigwig", mode: "copy"
 
     input:
     file(allBams) from chBamsSpikesBam.map{it[1][0]}.collect()
@@ -953,7 +954,7 @@ if (params.spike){
 
   process bigWigSpikeNorm{
     tag "${prefix}"
-    publishDir "${params.outdir}/bigWig", mode: "copy"
+    publishDir "${params.outdir}/bigwig", mode: "copy"
 
     input:
     set val(prefix), file(filteredBams), val(normFactor) from chBigWigScaleFactor
@@ -975,7 +976,7 @@ if (params.spike){
 
 process deepToolsComputeMatrix{
   tag "${prefix}"
-  publishDir "${params.outdir}/deepTools/singleBam", mode: "copy"
+  publishDir "${params.outdir}/deepTools", mode: "copy"
 
   when:
   !params.skipDeepTools
@@ -1002,7 +1003,7 @@ process deepToolsComputeMatrix{
 }
 
 process deepToolsCorrelationQC{
-  publishDir "${params.outdir}/deepTools/multipleBams"
+  publishDir "${params.outdir}/deepTools"
 
   when:
   allPrefix.size() > 2 && !params.skipDeepTools
@@ -1086,7 +1087,6 @@ process sharpMACS2{
   publishDir path: "${params.outdir}/peakCalling/sharp", mode: 'copy',
     saveAs: { filename ->
             if (filename.endsWith(".tsv")) "stats/$filename"
-            else if (filename.endsWith(".igv.txt")) null
             else filename
             }
  
@@ -1129,7 +1129,6 @@ process broadMACS2{
   publishDir path: "${params.outdir}/peakCalling/broad", mode: 'copy',
     saveAs: { filename ->
             if (filename.endsWith(".tsv")) "stats/$filename"
-            else if (filename.endsWith(".igv.txt")) null
             else filename
             }
    
@@ -1174,7 +1173,6 @@ process veryBroadEpic2{
   publishDir path: "${params.outdir}/peakCalling/very-broad", mode: 'copy',
     saveAs: { filename ->
             if (filename.endsWith(".tsv")) "stats/$filename"
-            else if (filename.endsWith(".igv.txt")) null
             else filename
             }
  
