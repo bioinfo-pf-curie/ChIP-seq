@@ -58,9 +58,6 @@ def helpMessage() {
   --keepDups               Do not remove duplicates afer marking
   --blacklist              Path to black list regions (.bed)
 
-  Peak calling
-  --macsGzise              Reference genome size for MACS2
-
   References           If not specified in the configuration file or you wish to overwrite any of the references given by the --genome field
   --fasta                  Path to Fasta reference
 
@@ -72,6 +69,7 @@ def helpMessage() {
   Annotation
   --bed                    BED annotation file. Used with samtools to filter the reads, and in Deeptools ComputeMatrix function
   --gtf                    GTF annotation file. Used in HOMER peak annotation
+  --effGenomeSize          Effective Genome size
 
   Skip options:        All are false by default
   --skipMultiqc            Skips final report writing
@@ -234,23 +232,25 @@ else {
   exit 1, "GTF annotation file not specified!"
 }
 
-params.geneBed = genomeRef ? params.genomes[ genomeRef ].bed12 ?: false : false
+params.geneBed = genomeRef ? params.genomes[ genomeRef ].geneBed ?: false : false
 if (params.geneBed) {
   Channel
     .fromPath(params.geneBed, checkIfExists: true)
     .into{chGeneBed; chGeneBedDeeptools}
+}else{
+  chGeneBed = Channel.empty()
+  chGeneBedDeeptools = Channel.empty()
 }
 
-if (params.spike && params.spike != 'spike'){
-  params.spikeGeneBed = params.spike ? params.genomes[ params.spike ].bed12 ?: false : false
-  if (params.spikeGeneBed) {
-    Channel
-      .fromPath(params.spikeGeneBed, checkIfExists: true)
-      .set{chSpikeGeneBed}
-  }
-  else{
-  exit 1, "BED file not specified!"
-  }
+params.blacklist = genomeRef ? params.genomes[ genomeRef ].blacklist ?: false : false
+if (params.blacklist) { 
+  Channel
+    .fromPath(params.blacklist, checkIfExists: true)
+    .into {chBlacklistBamCompare; chBlacklistBamCompareSpike; chBlacklistCorrelation} 
+}else{
+  chBlacklistBamCompare = Channel.empty()
+  chBlacklistBamCompareSpike = Channel.empty()
+  chBlacklistCorrelation = Channel.empty()
 }
 
 
@@ -264,7 +264,7 @@ chPpqtNSCHeader = file("$baseDir/assets/ppqt_nsc_header.txt", checkIfExists: tru
 chPpqtRSCHeader = file("$baseDir/assets/ppqt_rsc_header.txt", checkIfExists: true)
 
 //Peak Calling
-params.macsGsize = genomeRef ? params.genomes[ genomeRef ].macsGsize ?: false : false
+params.effGenomeSize = genomeRef ? params.genomes[ genomeRef ].effGenomeSize ?: false : false
 params.blacklist = genomeRef ? params.genomes[ genomeRef ].blacklist ?: false : false
 
 Channel
@@ -325,6 +325,8 @@ else{
 summary['Design']       = params.design ?: "None"
 summary['Fasta Ref']    = params.fasta
 summary['Spikes']       = params.spikes
+summary['GTF']          = params.gtf
+if (params.blacklist)  summary['Blacklist '] = params.blacklist
 summary['Data Type']    = params.singleEnd ? 'Single-End' : 'Paired-End'
 summary['Max Memory']   = params.max_memory
 summary['Max CPUs']     = params.max_cpus
@@ -523,7 +525,7 @@ process fastQC{
 process bwaMem{
   tag "${sample} on ${genomeBase}"
   publishDir "${params.outdir}/mapping", mode: 'copy',
-             saveAs: {filename -> if (!params.spike) filename}
+             saveAs: {filename -> if (!params.spike || params.saveAlignedIntermediates) filename}
 
   when:
   !params.skipAlignment && params.aligner == "bwa-mem"
@@ -548,7 +550,7 @@ process bwaMem{
 process bowtie2{
   tag "${sample} on ${genomeBase}"
   publishDir "${params.outdir}/mapping", mode: 'copy',
-              saveAs: {filename -> if (!params.spike) filename}
+              saveAs: {filename -> if (!params.spike || params.saveAlignedIntermediates) filename}
   when:
   !params.skipAlignment && params.aligner == "bowtie2"
 
@@ -572,7 +574,7 @@ process bowtie2{
 process star{
   tag "${sample} on ${genomeBase}"
   publishDir "${params.outdir}/mapping", mode: 'copy',
-             saveAs: {filename -> if (!params.spike) filename}
+             saveAs: {filename -> if (!params.spike || params.saveAlignedIntermediates) filename}
   when:
   !params.skipAlignment && params.aligner == "star"
 
@@ -639,10 +641,11 @@ if (params.spike && params.spike != 'spike'){
 
      script:
      sampleSpike = sample + '_spike'
+     opts = params.singleEnd ? "-se" : ""
      """
      samtools sort $unsortedBamRef -n -@ ${task.cpus} -T ${sample}_ref -o ${sample}_ref_sorted.bam
      samtools sort $unsortedBamSpike -n -@ ${task.cpus} -T ${sample}_spike -o ${sample}_spike_sorted.bam
-     compareAlignments.py -i ${sample}_ref_sorted.bam -s ${sample}_spike_sorted.bam -o ${sample}_ref.bam -os ${sample}_spike.bam -se ${params.singleEnd}
+     compareAlignments.py -i ${sample}_ref_sorted.bam -s ${sample}_spike_sorted.bam -o ${sample}_ref.bam -os ${sample}_spike.bam ${opts}
      """
    }
 
@@ -753,7 +756,6 @@ process markDuplicates{
   """
 }
 
-
 /*
  * Preseq (before alignment filtering and only on ref mapped reads)
  */
@@ -808,7 +810,6 @@ process bamFiltering {
   filterParams = params.singleEnd ? "-F 0x004" : "-F 0x004 -F 0x0008 -f 0x001"
   dupParams = params.keepDups ? "" : "-F 0x0400"
   mapQParams = params.mapQ ? "-q ${params.mapQ}" : ""
-  blacklistParams = params.blacklist ? "-L $bed" : ""
   nameSortBam = params.singleEnd ? "" : "samtools sort -n -@ $task.cpus -o ${prefix}.bam -T $prefix ${prefix}_filtered.bam"
   """
   samtools view \\
@@ -816,7 +817,6 @@ process bamFiltering {
     $dupParams \\
     -F 0x08 \\
     $mapQParams \\
-    $blacklistParams \\
     -b ${markedBam[0]} > ${prefix}_filtered.bam
   samtools index ${prefix}_filtered.bam
   samtools flagstat ${prefix}_filtered.bam > ${prefix}_filtered.flagstat
@@ -909,17 +909,27 @@ process bigWig {
 
   input:
   set val(prefix), file(filteredBams) from chBamsBigWig
+  file(BLbed) from chBlacklistBamCompare.ifEmpty([])
 
   output:
   set val(prefix), file('*.bigwig') into chBigWig
 
   script:
+  blacklistParams = params.blacklist ? "--blackListFileName ${BLbed}" : ""
+  effGsize = params.effGenomeSize ? "--effectiveGenomeSize ${params.effGenomeSize}" : ""
   """
-  bamCoverage -b ${filteredBams[0]} -o ${prefix}.bigwig -p ${task.cpus}
+  bamCoverage -b ${filteredBams[0]} \\
+              -o ${prefix}.bigwig \\
+              -p ${task.cpus} \\
+              ${blacklistParams} \\
+              ${effGsize} --normalizeUsing RPKM
+
   """
 }
 
-// With Spikes
+/*
+ * Spike-in normalization
+ */
 if (params.spike){
   chBamsSpikes
     .into{chBamsSpikesBam; chBamsSpikesBai}
@@ -930,13 +940,17 @@ if (params.spike){
     input:
     file(allBams) from chBamsSpikesBam.map{it[1][0]}.collect()
     file(allBai) from chBamsSpikesBai.map{it[1][1]}.collect()
- 
+
     output:
     file "*.sf" into chTabSF
 
     script:
     """
-    multiBamSummary bins -b $allBams --binSize 10000 -o results.npz --outRawCounts readCounts_10kbins.tab
+    multiBamSummary bins \\
+                   -b $allBams \\
+                   --binSize 10000 \\
+                   -o results.npz \\
+                   --outRawCounts readCounts_10kbins.tab
     getDESeqSF.R readCounts_10kbins.tab
     """
   }
@@ -958,13 +972,21 @@ if (params.spike){
 
     input:
     set val(prefix), file(filteredBams), val(normFactor) from chBigWigScaleFactor
+    file(BLbed) from chBlacklistBamCoverageSpike.ifEmpty([])
 
     output:
     set val(prefix), file('*.bigwig') into chBigWigSF
 
     script:
+    blacklistParams = params.blacklist ? "--blackListFileName ${BLbed}" : ""
+    effGsize = params.effGenomeSize ? "--effectiveGenomeSize ${params.effGenomeSize}" : ""
     """
-    bamCoverage -b ${filteredBams[0]} -o ${prefix}_spikes.bigwig -p ${task.cpus} --scaleFactor ${normFactor}
+    bamCoverage -b ${filteredBams[0]} \\
+                -o ${prefix}_spikes.bigwig \\
+                -p ${task.cpus} \\
+                 ${blacklistParams} \\
+                 ${effGsize} \\
+                --scaleFactor ${normFactor}
     """
   }
 }
@@ -988,16 +1010,21 @@ process deepToolsComputeMatrix{
   output:
   set val(prefix), file("*.{gz,pdf}") into chDeeptoolsSingle
   set val(prefix), file("*_corrected.tab") into chDeeptoolsSingleMqc
+
   script:
   """
-  computeMatrix scale-regions -R $geneBed -S ${bigwig} \\
+  computeMatrix scale-regions \\
+                -R $geneBed \\
+                -S ${bigwig} \\
                 -o ${prefix}_matrix.mat.gz \\
                 --outFileNameMatrix ${prefix}.computeMatrix.vals.mat.gz \\
                 --downstream 1000 --upstream 1000 --skipZeros --binSize 100\\
                 -p ${task.cpus}
 
-  plotProfile -m ${prefix}_matrix.mat.gz -o ${prefix}_bams_profile.pdf \\
-        --outFileNameData ${prefix}.plotProfile.tab
+  plotProfile -m ${prefix}_matrix.mat.gz \\
+              -o ${prefix}_bams_profile.pdf \\
+              --outFileNameData ${prefix}.plotProfile.tab
+  
   sed -e 's/.0\t/\t/g' ${prefix}.plotProfile.tab | sed -e 's@.0\$@@g' > ${prefix}_plotProfile_corrected.tab
   """
 }
@@ -1012,6 +1039,7 @@ process deepToolsCorrelationQC{
   file(allBams) from chBamsDeeptoolsCorBam.map{it[1][0]}.collect()
   file(allBai) from chBamsDeeptoolsCorBai.map{it[1][1]}.collect()
   val (allPrefix) from chBamsDeeptoolsCorSample.map{it[0]}.collect()
+  file(BLbed) from chBlacklistCorrelation.ifEmpty([])
 
   output:
   file "bams_correlation.pdf" into chDeeptoolsCorrel
@@ -1022,17 +1050,32 @@ process deepToolsCorrelationQC{
   file "bams_fingerprint*" into chDeeptoolsFingerprintMqc
 
   script:
+  blacklistParams = params.blacklist ? "--blackListFileName ${BLbed}" : "" 
   allPrefix = allPrefix.toString().replace("[","")
   allPrefix = allPrefix.replace(","," ")
   allPrefix = allPrefix.replace("]","")
   """
-  multiBamSummary bins -b $allBams -o bams_summary.npz  -p ${task.cpus}
-  plotCorrelation -in bams_summary.npz -o bams_correlation.pdf \\
-          -c spearman -p heatmap -l $allPrefix \\
-          --outFileCorMatrix bams_correlation.tab
+  multiBamSummary bins -b $allBams \\
+                        -o bams_summary.npz \\
+                        -p ${task.cpus} \\
+                        ${blacklistParams}
+  plotCorrelation -in bams_summary.npz \\
+                  -o bams_correlation.pdf \\
+                  -c spearman -p heatmap -l $allPrefix \\
+                  --outFileCorMatrix bams_correlation.tab
 
-  plotCoverage -b $allBams -o bams_coverage.pdf -p ${task.cpus} -l $allPrefix --outRawCounts bams_coverage_raw.txt
-  plotFingerprint -b $allBams -plot bams_fingerprint.pdf -p ${task.cpus} -l $allPrefix --outRawCounts bams_fingerprint_raw.txt --outQualityMetrics bams_fingerprint_qmetrics.tab
+  plotCoverage -b $allBams \\
+               -o bams_coverage.pdf \\
+               -p ${task.cpus} \\
+               -l $allPrefix \\
+               --outRawCounts bams_coverage_raw.txt
+
+  plotFingerprint -b $allBams \\
+                  -plot bams_fingerprint.pdf \\
+                  -p ${task.cpus} \\
+                  -l $allPrefix \\
+                  --outRawCounts bams_fingerprint_raw.txt \\
+                  --outQualityMetrics bams_fingerprint_qmetrics.tab
   """
 }
 
@@ -1042,7 +1085,7 @@ process deepToolsCorrelationQC{
 ###########################################################################*/
 
 /*
- * Peak calling index build
+ * Prepare channels
  */
 
 if (params.design){
@@ -1077,11 +1120,13 @@ if (params.design){
   chGroupBamMacsVeryBroad=Channel.empty()
 }
 
-/*
+/***********************
  * Peak calling 
  */
 
-//MACS2 SHARP
+/*
+ * MACS2 - sharp mode
+ */
 process sharpMACS2{
   tag "${sampleID} - ${controlID}"
   publishDir path: "${params.outdir}/peakCalling/sharp", mode: 'copy',
@@ -1113,7 +1158,7 @@ process sharpMACS2{
     -t ${sampleBam[0]} \\
     ${ctrl} \\
     -f $format \\
-    -g $params.macsGsize \\
+    -g $params.effGenomeSize \\
     -n $sampleID \\
     --keep-dup all
   cat ${sampleID}_peaks.$peaktypeMacs | wc -l | awk -v OFS='\t' '{ print "${sampleID}", \$1 }' | cat $peakCountHeader - > ${sampleID}_peaks.count_mqc.tsv
@@ -1123,7 +1168,9 @@ process sharpMACS2{
   """
  }
 
-//MACS2 BROAD
+/*
+ * MACS2  - Board
+ */
 process broadMACS2{
   tag "${sampleID} - ${controlID}"
   publishDir path: "${params.outdir}/peakCalling/broad", mode: 'copy',
@@ -1157,7 +1204,7 @@ process broadMACS2{
     ${ctrl} \\
     ${broad} \\
     -f $format \\
-    -g $params.macsGsize \\
+    -g $params.effGenomeSize \\
     -n $sampleID \\
     --keep-dup all
     cat ${sampleID}_peaks.$peaktypeMacs | wc -l | awk -v OFS='\t' '{ print "${sampleID}", \$1 }' | cat $peakCountHeader - > ${sampleID}_peaks.count_mqc.tsv
@@ -1167,7 +1214,9 @@ process broadMACS2{
   """
 }
 
-//EPIC2 VERY BROAD
+/*
+ * EPIC2 - very broad
+ */
 process veryBroadEpic2{
   tag "${sampleID} - ${controlID}"
   publishDir path: "${params.outdir}/peakCalling/very-broad", mode: 'copy',
@@ -1212,7 +1261,7 @@ chPeaksMacsSharp
   .into{ chPeaksHomer; chIDRpeaks; chIDRid; chPeakQC }
 
 
-/*
+/************************************
  * Peaks Annotation
  */
 

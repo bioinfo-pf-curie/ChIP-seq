@@ -11,16 +11,12 @@ def argsParse():
     the raw reads are single-end or paired-end
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument("-i", metavar="INPUT_BAM_REF", help="Enter a valid "
-                                                        "BAM file")
-    parser.add_argument("-s", metavar="INPUT_BAM_SPIKE", help="Enter a valid "
-                                                        "BAM file")
-    parser.add_argument("-o", metavar="OUTPUT_BAM_REF", help="Enter a valid "
-                                                        "BAM file name")
-    parser.add_argument("-os", metavar="OUTPUT_BAM_SPIKE", help="Enter a valid "
-                                                        "BAM file name")
-    parser.add_argument("-se", metavar="SINGLE_END", help="Is data SE (True) or"
-                                                        " PE (False) ?")
+    parser.add_argument("-i", metavar="INPUT_BAM_REF", help= "Ref BAM file")
+    parser.add_argument("-s", metavar="INPUT_BAM_SPIKE", help="Spike BAM file")
+    parser.add_argument("-o", metavar="OUTPUT_BAM_REF", help="Ref output file name")
+    parser.add_argument("-os", metavar="OUTPUT_BAM_SPIKE", help="Spike output file name"
+    parser.add_argument("-se", metavar="SINGLE_END", help="For single-end data", action="store_true")
+
     args = parser.parse_args()
     inputBamRef = args.i
     inputBamSpike = args.s
