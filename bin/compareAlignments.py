@@ -11,11 +11,11 @@ def argsParse():
     the raw reads are single-end or paired-end
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument("-i", metavar="INPUT_BAM_REF", help= "Ref BAM file")
-    parser.add_argument("-s", metavar="INPUT_BAM_SPIKE", help="Spike BAM file")
-    parser.add_argument("-o", metavar="OUTPUT_BAM_REF", help="Ref output file name")
-    parser.add_argument("-os", metavar="OUTPUT_BAM_SPIKE", help="Spike output file name"
-    parser.add_argument("-se", metavar="SINGLE_END", help="For single-end data", action="store_true")
+    parser.add_argument("-i", help="Ref BAM file")
+    parser.add_argument("-s", help="Spike BAM file")
+    parser.add_argument("-o", help="Ref output file name")
+    parser.add_argument("-os", help="Spike output file name")
+    parser.add_argument("-se", help="For single-end data", action="store_true")
 
     args = parser.parse_args()
     inputBamRef = args.i
@@ -173,7 +173,8 @@ def compareBams(bam1, bam2, obam1, obam2, singleEnd):
     if get_read_name(r1) != get_read_name(r1Mm) and get_read_name(r2) != get_read_name(r2Mm):
         if r1Mm.is_unmapped == False:
             r1Aln.append(r1Mm)
-        if r2.is_unmapped == False:                                                        r2Aln.append(r2Mm)
+        if r2.is_unmapped == False:
+            r2Aln.append(r2Mm)
         if len(r1Aln) == 0 and len(r2Aln) == 0:
             reads_unmapped += 1
 
@@ -207,14 +208,14 @@ def compareBams(bam1, bam2, obam1, obam2, singleEnd):
     hr2.close()
     hr2Mm.close()
 
-    logName = os.path.basename(inputBamRef).rsplit('_',1)[0] + '_log.txt'
+    logName = os.path.basename(inputBamRef).rsplit('_',1)[0] + '_bamcomp.log'
     with open(logName, 'w') as logFile:
-        logFile.write('Reads on BAM1 only : ' + str(reads_bam1only) + '\n')
-        logFile.write('Reads rescue on BAM1 : ' + str(reads_bam1rescue) + '\n')
-        logFile.write('Reads on BAM2 only : ' + str(reads_bam2only) + '\n')
-        logFile.write('Reads rescue on BAM2 : ' + str(reads_bam2rescue) + '\n')
-        logFile.write('Reads unmapped : ' + str(reads_unmapped) + '\n')
-        logFile.write('Ambiguous reads : ' + str(reads_ambiguous) + '\n')
+        logFile.write('Reads on ref only ' + str(reads_bam1only) + '\n')
+        logFile.write('Reads rescue on ref ' + str(reads_bam1rescue) + '\n')
+        logFile.write('Reads on spike only ' + str(reads_bam2only) + '\n')
+        logFile.write('Reads rescue on spike ' + str(reads_bam2rescue) + '\n')
+        logFile.write('Reads unmapped ' + str(reads_unmapped) + '\n')
+        logFile.write('Ambiguous reads ' + str(reads_ambiguous) + '\n')
 
      
 if __name__ == '__main__':

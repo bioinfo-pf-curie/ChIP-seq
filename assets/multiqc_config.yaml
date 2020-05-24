@@ -14,7 +14,7 @@ custom_data:
     my_stats:
         file_format: 'csv'
         section_name: 'General Metrics'
-        description: ' of sequenced data. Note that in the context of paired-end data, the number pairs are reported (as reads). Low NSC and RSC values can be due to failed and poor quality ChIP, low read sequence quality and hence lots of mismappings, shallow sequencing depth or a combination of these. Also, datasets with few binding sites (< 200) which could be due to biological reasons (i.e. a factor that truly binds only a few sites in a particular tissue type) would output low NSC and RSC scores.'
+        description: ' of sequenced data. Note that in the context of paired-end data, the number pairs are reported (as reads). Low **NSC** and **RSC** values can be due to failed and poor quality ChIP, low read sequence quality and hence lots of mismappings, shallow sequencing depth or a combination of these. Also, datasets with few binding sites (< 200) which could be due to biological reasons (i.e. a factor that truly binds only a few sites in a particular tissue type) would output low NSC and RSC scores.'
         plot_type: 'table'
         pconfig:
             namespace: 'stats'
@@ -29,85 +29,123 @@ custom_data:
               format: '{:.0f}'
               placement: 1000
             Number_of_reads:
-              title: 'Total reads'
+              title: 'Total Reads'
               scale: 'RdYlGn'
               format: '{:,.0f}'
               placement: 2000
             Fragment_length:
-              title: 'Frag. length'
+              title: 'Fragment Length'
               scale: 'YlGnGn'
               format: '{:,.0f}'
               placement: 3000
-            Number_of_uniquely_mapped_reads:
-              title: 'Nb. mapped unique reads'
+            Number_of_aligned_reads:
+              title: 'Aligned Reads'
               scale: 'RdYlGn'
               format: '{:,.0f}'
               hidden: true
+              placement: 3000
+            Percent_of_aligned_reads:
+              title: 'Aligned Reads (%)'
+              min: 0
+              max: 100
+              scale: 'RdYlGn'
+              suffix: '%'
+              format: '{:,.1f}'
               placement: 4000
-            Percentage_of_uniquely_mapped_reads:
-              title: 'Mapped unique reads'
-              min: 0
-              max: 100
+            Number_of_uniquely_mapped_reads:
+              title: 'Unique Reads'
               scale: 'RdYlGn'
-              format: '{:,.1f}'
-              suffix: '%'
+              format: '{:,.0f}'
+              hidden: true
               placement: 5000
-            Number_of_multiple_mapped_reads:
-              title: 'Nb. mapped multiple reads'
-              scale: 'RdYlGn'
-              format: '{:,.0f}'
-              hidden: true
-              placement: 6000
-            Percentage_of_multiple_mapped_reads:
-              title: 'Mapped multiple reads'
+            Percent_of_uniquely_mapped_reads:
+              title: 'Unique Reads (%)'
               min: 0
               max: 100
               scale: 'RdYlGn'
               format: '{:,.1f}'
               suffix: '%'
-              placement: 7000
-            Number_of_duplicates:
-              title: 'Duplicate reads'
+              placement: 6000
+            Number_of_multiple_mapped_reads:
+              title: 'Multiple reads'
               scale: 'RdYlGn'
               format: '{:,.0f}'
               hidden: true
+              placement: 7000
+            Percent_of_multiple_mapped_reads:
+              title: 'Multiple reads (%)'
+              min: 0
+              max: 100
+              scale: 'RdYlGn'
+              format: '{:,.1f}'
+              suffix: '%'
               placement: 8000
-            Percentage_of_duplicates:
-              title: 'Percentage of duplicates'
+            Number_of_duplicates:
+              title: 'Duplicates'
+              scale: 'RdYlGn'
+              format: '{:,.0f}'
+              hidden: true
+              placement: 9000
+            Percent_of_duplicates:
+              title: 'Duplicates (%)'
               min: 0
               max: 100
               scale: 'RdYlVBu'
               format: '{:,.1f}'
               suffix: '%'
-              placement: 9000
+              placement: 10000
             Normalized_strand_correlation:
               title: 'NSC'
               min: 0.8
               max: 3
               scale: 'RdYlGn'
               format: '{:,.2f}'
-              placement: 10000
+              placement: 11000
             Relative_strand_correlation:
               title: 'RSC'
               min: 0
               max: 2
               scale: 'RdYlGn'
               format: '{:,.2f}'
-              placement: 11000
+              placement: 12000
             Fraction_of_reads_in_peaks:
               min: 0
               max: 1
               title: 'FRiP'
               scale: 'RdYlGn'
               format: '{:,.2f}'
-              placement: 12000
+              placement: 13000
+
+   splike:
+        file_format: 'csv'
+        section_name: 'Spike-in'
+        description: 'statistics of spike-in alignment data."
+        plot_type: 'bargraph'
+        pconfig:
+            title: 'Spikes'
+            id: 'spikes'
+            scale: 'Set2'    
+
+   my_mapping_plot:
+        file_format: 'csv'
+        section_name: 'Mapping'
+        description: 'statistics on aligned data. Number of unique and multiple mapped reads, as well unmapped reads are reported.'
+        plot_type: 'bargraph'
+        pconfig:
+            title: 'Reads Alignment on Reference Genome'
+            id: 'mapping'
+            scale: 'Set2'    
 
 sp:
   my_stats:
       fn: '*.stats'
+  spikes:
+      fn: '*bamcomp.log'
+  bwa_logs:
+      fn: '*bwa.log'
 
 table_cond_formatting_rules:
-    Percentage_of_uniquely_mapped_reads:
+    Percent_of_aligned_reads:
         pass:
           - gt: 80
         warn:
@@ -140,9 +178,6 @@ table_cond_formatting_rules:
           - gt: 0.01
         fail:
           - lt: 0.01
-
-
-
 
 
 ###############################
