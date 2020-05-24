@@ -14,7 +14,7 @@ custom_data:
     my_stats:
         file_format: 'csv'
         section_name: 'General Metrics'
-        description: ' of sequenced data. Note that in the context of paired-end data, the number pairs are reported (as reads). Low **NSC** and **RSC** values can be due to failed and poor quality ChIP, low read sequence quality and hence lots of mismappings, shallow sequencing depth or a combination of these. Also, datasets with few binding sites (< 200) which could be due to biological reasons (i.e. a factor that truly binds only a few sites in a particular tissue type) would output low NSC and RSC scores.'
+        description: ' of sequenced data. Note that in the context of paired-end data, the number pairs are reported (as reads). Low <b>NSC</b> and <b>RSC</b> values can be due to failed and poor quality ChIP, low read sequence quality and hence lots of mismappings, shallow sequencing depth or a combination of these. Also, datasets with few binding sites (< 200) which could be due to biological reasons (i.e. a factor that truly binds only a few sites in a particular tissue type) would output low NSC and RSC scores.'
         plot_type: 'table'
         pconfig:
             namespace: 'stats'
@@ -115,20 +115,18 @@ custom_data:
               scale: 'RdYlGn'
               format: '{:,.2f}'
               placement: 13000
-
-   splike:
-        file_format: 'csv'
+    spikes:
+        file_format: 'tsv'
         section_name: 'Spike-in'
-        description: 'statistics of spike-in alignment data."
+        description: 'statistics of spike-in alignment data.'
         plot_type: 'bargraph'
         pconfig:
             title: 'Spikes'
             id: 'spikes'
-            scale: 'Set2'    
-
-   my_mapping_plot:
-        file_format: 'csv'
-        section_name: 'Mapping'
+            scale: 'Set2'
+    bwa_logs:
+        file_format: 'tsv'
+        section_name: 'BWA'
         description: 'statistics on aligned data. Number of unique and multiple mapped reads, as well unmapped reads are reported.'
         plot_type: 'bargraph'
         pconfig:
@@ -195,22 +193,28 @@ module_order:
    - homer
 
 report_section_order:
+  my_stats:
+    order: -1
+  bwa_logs:
+    order: -10
+  spikes:
+    order: -100
   strand_shift_correlation:
-      order: -1200
+    order: -1200
   peak_count:
-      order: -1300
+    order: -1300
   peak_annotation:
-      order: -1500
+    order: -1500
   deeptools_correlation:
-      order: -1600
+    order: -1600
   deeptools_fingerprint:
-      order: -1700
+    order: -1700
   read_distribution_profile_plot:
-      order: -1900
+    order: -1900
   Chip-seq_pipeline_software_versions:
-      order: -2000
+    order: -2000
   summary:
-      order: -2100
+    order: -2100
 
 #############################
 ## Removed plots

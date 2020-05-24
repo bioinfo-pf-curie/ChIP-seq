@@ -540,7 +540,7 @@ process bwaMem{
   prefix = genomeBase == genomeRef ? sample : sample + '_spike'
   alnMult = params.spike == 'spike' ? '-a' : ''
   """
-  bwa mem -t ${task.cpus} $alnMult ${index}/${genomeBase} $reads | samtools view -b -h -F 256 -o ${prefix}.bam
+  bwa mem -t ${task.cpus} $alnMult ${index}/${genomeBase} $reads | samtools view -bS - > ${prefix}.bam
   getBWAstats.sh ${prefix}.bam ${prefix}_bwa.log
   """
 }
@@ -638,7 +638,7 @@ if (params.spike && params.spike != 'spike'){
      publishDir "${params.outdir}/mapping/", mode: 'copy'
 
      input:
-     set val(sample), file(unsortedBamRef), file(unsortedBamSpike) from chCompAln
+     set val(sample), file(unsortedBamSpike), file(unsortedBamRef) from chCompAln
 
      output:
      set val(sample), file('*_clean.bam') into chRefBams
@@ -902,7 +902,7 @@ process bigWig {
 
   input:
   set val(prefix), file(filteredBams) from chBamsBigWig
-  file(BLbed) from chBlacklistBigWig.ifEmpty([])
+  file(BLbed) from chBlacklistBigWig.collect()
 
   output:
   set val(prefix), file('*.bigwig') into chBigWig
@@ -1512,7 +1512,7 @@ process multiqc {
   
   output:
   file splan
-  file "*multiqc_report.html" into multiqc_report
+  file "*_report.html" into multiqc_report
   file "*_data"
 
   script:

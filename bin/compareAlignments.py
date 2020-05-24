@@ -23,7 +23,7 @@ def argsParse():
     outputBamRef = args.o
     outputBamSpike = args.os
     singleEnd = args.se
-    return inputBamRef, inputBamSpike, outputBamRef, outputBamSpike, singleEnd
+    return (inputBamRef, inputBamSpike, outputBamRef, outputBamSpike, singleEnd)
 
 def compareTwoAlignments (read1, read2):
     if read1.mapping_quality > read2.mapping_quality:
@@ -99,6 +99,8 @@ def compareBams(bam1, bam2, obam1, obam2, singleEnd):
                 r1Mm = next(hr1Mm)
                 r2Mm = next(hr2Mm)
                 startInit=1
+
+            print(r2)
 
             if get_read_name(r1) == get_read_name(r2):
                 if r1.is_unmapped == False:
@@ -210,12 +212,12 @@ def compareBams(bam1, bam2, obam1, obam2, singleEnd):
 
     logName = os.path.basename(inputBamRef).rsplit('_',1)[0] + '_bamcomp.log'
     with open(logName, 'w') as logFile:
-        logFile.write('Reads on ref only ' + str(reads_bam1only) + '\n')
-        logFile.write('Reads rescue on ref ' + str(reads_bam1rescue) + '\n')
-        logFile.write('Reads on spike only ' + str(reads_bam2only) + '\n')
-        logFile.write('Reads rescue on spike ' + str(reads_bam2rescue) + '\n')
-        logFile.write('Reads unmapped ' + str(reads_unmapped) + '\n')
-        logFile.write('Ambiguous reads ' + str(reads_ambiguous) + '\n')
+        logFile.write('Reads on ref only\t' + str(reads_bam1only) + '\n')
+        logFile.write('Reads rescue on ref\t' + str(reads_bam1rescue) + '\n')
+        logFile.write('Reads on spike only\t' + str(reads_bam2only) + '\n')
+        logFile.write('Reads rescue on spike\t' + str(reads_bam2rescue) + '\n')
+        logFile.write('Reads unmapped\t' + str(reads_unmapped) + '\n')
+        logFile.write('Ambiguous reads\t' + str(reads_ambiguous) + '\n')
 
      
 if __name__ == '__main__':

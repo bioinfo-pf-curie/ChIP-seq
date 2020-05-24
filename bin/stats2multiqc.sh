@@ -17,34 +17,39 @@ do
 
 #ALIGNMENT
   if [ $aligner == "bowtie2" ]; then
-    nb_reads=$(grep "reads;" mapping/${sample}_mapping.log | sed 's/ .*//')
-    nb_uniq_reads=$(grep "exactly" mapping/${sample}_mapping.log | awk '{print $1}')
+    nb_reads=$(grep "reads;" mapping/${sample}_bowtie2.log | sed 's/ .*//')
+    nb_uniq_reads=$(grep "exactly" mapping/${sample}_bowtie2.log | awk '{print $1}')
     perc_uniq_reads=$(echo "${nb_uniq_reads} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
-    nb_mult_reads=$(grep ">1" mapping/${sample}_mammping.log | awk '{print $1}')
+    nb_mult_reads=$(grep ">1" mapping/${sample}_bowtie2.log | awk '{print $1}')
     perc_mult_reads=$(echo "${nb_mult_reads} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
     nb_mapped=$(($nb_uniq_reads + $nb_mult_reads))
     perc_mapped=$(echo "${nb_mapped} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
   elif [ $aligner == "bwa-mem" ]; then
-    nb_reads=$(grep 'Total' mapping/${sample}_mapping.log | awk -F "=" '{print $2}' | sed 's/ //g')
-    nb_uniq_reads=$(grep 'Uniquely' mapping/${sample}_mapping.log | awk -F "=" '{print $2}'| sed 's/ //g')
+    nb_unmapped=$(grep 'Unmapped' mapping/${sample}_bwa.log | awk -F "\t" '{print $2}')
+    nb_uniq_reads=$(grep 'Uniquely' mapping/${sample}_bwa.log | awk -F "\t" '{print $2}')
+    nb_mult_reads=$(grep 'Multi' mapping/${sample}_bwa.log | awk -F "\t" '{print $2}')
+    nb_reads=$(( $nb_unmapped + $nb_uniq_reads + $nb_mult_reads ))
     perc_uniq_reads=$(echo "${nb_uniq_reads} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
-    nb_mult_reads=$(grep 'Multi' mapping/${sample}_mapping.log | awk -F "=" '{print $2}'| sed 's/ //g')
     perc_mult_reads=$(echo "${nb_mult_reads} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
     nb_mapped=$(($nb_uniq_reads + $nb_mult_reads))
     perc_mapped=$(echo "${nb_mapped} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
   elif [ $aligner == "star" ]; then
-    nb_reads=$(grep "Number of input reads" mapping/${sample}_mapping.log | cut -d"|" -f 2 | sed -e 's/\t//g')
-    nb_uniq_reads=$(grep "Uniquely.*number" mapping/${sample}_mapping.log | awk '{print $NF}')
+    nb_reads=$(grep "Number of input reads" mapping/${sample}_star.log | cut -d"|" -f 2 | sed -e 's/\t//g')
+    nb_uniq_reads=$(grep "Uniquely.*number" mapping/${sample}_star.log | awk '{print $NF}')
     perc_uniq_reads=$(echo "${nb_uniq_reads} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
-    nb_mult_reads=$(grep "Number.*multiple" mapping/${sample}_mapping.log | awk '{print $NF}')
+    nb_mult_reads=$(grep "Number.*multiple" mapping/${sample}_star.log | awk '{print $NF}')
     perc_mult_reads=$(echo "${nb_mult_reads} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
     nb_mapped=$(($nb_uniq_reads + $nb_mult_reads))
     perc_mapped=$(echo "${nb_mapped} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
   fi
   
 #PICARD
-  nb_dups=$(tail -3 picard/${sample}.MarkDuplicates.metrics.txt | sed '/^$/d' | awk '{print $6 + $7}')
-  perc_dups=$(tail -3 picard/${sample}.MarkDuplicates.metrics.txt | sed '/^$/d' | awk '{print ($6 + $7)*100 / ($3 + $4)}')
+  if [ $is_pe == "1" ]; then
+      nb_dups=$(grep -a2 "## METRICS" picard/${sample}.MarkDuplicates_metrics.txt | tail -1 | awk '{print $7}')
+  else
+      nb_dups=$(grep -a2 "## METRICS" picard/${sample}.MarkDuplicates.metrics.txt | tail -1 | awk '{print $6}')
+  fi
+  perc_dups=$(echo "${nb_dups} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
 
 #PPQT
   if [[ -e ppqt/${sample}.spp.out && -e ppqt/${sample}_spp_nsc_mqc.tsv ]]; then
