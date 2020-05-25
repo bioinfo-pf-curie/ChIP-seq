@@ -87,6 +87,14 @@ def helpMessage() {
   --email                  Set this parameter to your e-mail address to get a summary e-mail with details of the run sent to you when the workflow exits
   -name                    Name for the pipeline run. If not specified, Nextflow will automatically generate a random mnemonic.
 
+  =======================================================
+  Available Profiles
+    -profile test                Set up the test dataset
+    -profile conda               Build a new conda environment before running the pipeline
+    -profile toolsPath           Use the paths defined in configuration for each tool
+    -profile singularity         Use the Singularity images for each process
+    -profile cluster             Run the workflow on the cluster, instead of locally
+
   """.stripIndent()
 }
 
