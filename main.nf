@@ -1637,7 +1637,7 @@ workflow.onComplete {
 
   /*]      = workflow.success     endSummary['exit status']  = workflow.exitStatus     endSummary['Error report'] = workflow.errorReport ?: '-' final logs*/
   if(spikes_poor_alignment.size() > 0){
-    log.info "[rnaseq] WARNING - ${skipped_poor_alignment.size()} samples skipped due to poor alignment scores!"
+    log.info "[chipseq] WARNING - ${spikes_poor_alignment.size()} samples skipped due to poor alignment scores!"
   }                                                                                                                                                                                                        
  
   if(workflow.success){
