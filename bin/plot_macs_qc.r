@@ -63,7 +63,7 @@ for (idx in 1:length(PeakFiles)) {
         isNarrow <- TRUE
         header <- c(header,"summit")
     }
-    peaks <- read.table(PeakFiles[idx], sep="\t", header=FALSE)
+    peaks <- read.table(PeakFiles[idx], sep="\t", header=FALSE, skip=1)
     colnames(peaks) <- header
 
     ## GET SUMMARY STATISTICS

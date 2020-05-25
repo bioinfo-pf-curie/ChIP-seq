@@ -322,7 +322,7 @@ if (params.samplePlan) {
 }
 summary['Design']       = params.design ?: "None"
 summary['Fasta Ref']    = params.fasta
-summary['Spikes']       = params.spikes
+summary['Spikes']       = params.spike
 summary['GTF']          = params.gtf
 summary['Genes']        = params.geneBed
 if (params.blacklist)  summary['Blacklist '] = params.blacklist
@@ -523,7 +523,7 @@ process bwaMem{
   tag "${sample} on ${genomeBase}"
   publishDir "${params.outdir}/mapping", mode: 'copy',
              saveAs: {filename -> 
-	     if (filename.indexOf(".log") > 0) filename 
+	     if (filename.indexOf(".log") > 0) "logs/$filename" 
 	     else if (!params.spike || params.saveAlignedIntermediates) filename}
 
   when:
@@ -540,7 +540,11 @@ process bwaMem{
   prefix = genomeBase == genomeRef ? sample : sample + '_spike'
   alnMult = params.spike == 'spike' ? '-a' : ''
   """
-  bwa mem -t ${task.cpus} $alnMult ${index}/${genomeBase} $reads | samtools view -bS - > ${prefix}.bam
+  bwa mem -t ${task.cpus} \\
+          $alnMult \\
+          ${index}/${genomeBase} \\
+          -M \\
+          $reads | samtools view -bS - > ${prefix}.bam
   getBWAstats.sh ${prefix}.bam ${prefix}_bwa.log
   """
 }
@@ -550,7 +554,7 @@ process bowtie2{
   tag "${sample} on ${genomeBase}"
   publishDir "${params.outdir}/mapping", mode: 'copy',
               saveAs: {filename ->
-	      if (filename.indexOf(".log") > 0) filename  
+	      if (filename.indexOf(".log") > 0) "logs/$filename"  
 	      else if (!params.spike || params.saveAlignedIntermediates) filename}
   when:
   params.aligner == "bowtie2"
@@ -567,7 +571,11 @@ process bowtie2{
   readCommand = params.singleEnd ? "-U ${reads[0]}" : "-1 ${reads[0]} -2 ${reads[1]}"
   alnMult = params.spike == 'spike' ? alnMult = '-k 3' : ''
   """
-  bowtie2 -p ${task.cpus} $alnMult -x ${index}/${genomeBase} $readCommand | samtools view -bS - > ${prefix}.bam 2> ${prefix}_bowtie2.log
+  bowtie2 -p ${task.cpus} \\
+          --very-sensitive --end-to-end --reorder \\
+          $alnMult \\
+          -x ${index}/${genomeBase} \\
+          $readCommand > ${prefix}.bam 2> ${prefix}_bowtie2.log
   """
 }
 
@@ -576,7 +584,7 @@ process star{
   tag "${sample} on ${genomeBase}"
   publishDir "${params.outdir}/mapping", mode: 'copy',
              saveAs: {filename ->
-	     if (filename.indexOf(".log") > 0) filename  
+	     if (filename.indexOf(".log") > 0) "logs/$filename"  
  	     else if (!params.spike || params.saveAlignedIntermediates) filename}
   when:
   params.aligner == "star"
@@ -617,10 +625,34 @@ if (params.aligner == "bowtie2"){
   chMappingMqc = chStarMqc
 }
 
-
 /****************
  * Spike-in
  */
+
+spikes_poor_alignment = []
+def check_log(logs) {
+  def nb_ref = 0;
+  def nb_spike = 0;
+  def percent_spike = 0;
+  logs.eachLine { line ->
+    if ((matcher = line =~ /Reads on ref only\t([\d\.]+)/)) {                                                                                                                                  
+      nb_ref = matcher[0][1]                                                                                                                                                                   
+    }else if ((matcher = line =~ /Reads on spike only\t([\d\.]+)/)) {                                                                                                                          
+      nb_spike = matcher[0][1]                                                                                                                                                                 
+    } 
+  }
+  logname = logs.getBaseName() - '_ref_bamcomp.log'
+  percent_spike = nb_spike.toFloat() / (nb_spike.toFloat() + nb_ref.toFloat()) * 100
+  percent_spike = percent_spike.round(3)
+  if(percent_spike.toFloat() <= '0.001'.toFloat() ){
+      log.info "#################### VERY POOR SPIKE ALIGNMENT RATE! IGNORING FOR FURTHER DOWNSTREAM ANALYSIS! ($logname)    >> ${percent_spike}% <<"
+      spikes_poor_alignment << logname
+      return false
+  } else {
+      log.info "          Passed alignment ($logname)   >> ${percent_spike}% <<"
+      return true
+  }
+}
 
 if (params.spike && params.spike != 'spike'){
 
@@ -635,14 +667,17 @@ if (params.spike && params.spike != 'spike'){
    // Merging, if necessary reference aligned reads and spike aligned reads
    process compareRefSpike{
      tag "${sample}"
-     publishDir "${params.outdir}/mapping/", mode: 'copy'
+     publishDir "${params.outdir}/mapping", mode: 'copy',
+              saveAs: {filename ->
+              if (filename.indexOf(".log") > 0) "logs/$filename"
+              else filename }
 
      input:
      set val(sample), file(unsortedBamSpike), file(unsortedBamRef) from chCompAln
 
      output:
      set val(sample), file('*_clean.bam') into chRefBams
-     set val(sampleSpike), file('*_clean_spike.bam') into chSpikeBams
+     set val(sampleSpike), file('*.log'), file('*_clean_spike.bam') into chSpikeBams
      file ('*.log') into chMappingSpikeMqc
 
      script:
@@ -655,9 +690,16 @@ if (params.spike && params.spike != 'spike'){
      """
    }
 
+  // Filter removes all 'aligned' channels that fail the check
+  chSpikeBams
+        .filter { sample, logs, bams -> check_log(logs) }
+        .map { row -> [row[0], row[2]]}
+        .set { chSpikeCheckBams }
+
+
   // concat spike and ref bams
   chRefBams
-    .concat(chSpikeBams)
+    .concat(chSpikeCheckBams)
     .set {chAllBams}
 
 } else if(params.spike && params.spike == 'spike'){
@@ -700,8 +742,8 @@ process bamSort{
   tag "${prefix}"
   publishDir path: "${params.outdir}/mapping", mode: 'copy',
     saveAs: {filename ->
-             if (!filename.endsWith(".bam") && (!filename.endsWith(".bam.bai"))) "stats/$filename"
-             else if (filename.endsWith(".bam") || (filename.endsWith(".bam.bai"))) filename
+             if ( !filename.endsWith(".bam") && !filename.endsWith(".bam.bai") && params.saveAlignedIntermediates ) "stats/$filename"
+             else if ( (filename.endsWith(".bam") || (filename.endsWith(".bam.bai"))) && params.saveAlignedIntermediates ) filename
              else null
             }
 
@@ -730,8 +772,8 @@ process markDuplicates{
   tag "${prefix}"
   publishDir path: "${params.outdir}/mapping", mode: 'copy',
     saveAs: {filename ->
-             if (!filename.endsWith(".bam") && (!filename.endsWith(".bam.bai"))) "stats/$filename"
-             else if (filename.endsWith(".bam") || (filename.endsWith(".bam.bai"))) filename
+             if (!filename.endsWith(".bam") && !filename.endsWith(".bam.bai") && params.saveAlignedIntermediates ) "stats/$filename"
+             else if ( (filename.endsWith(".bam") || (filename.endsWith(".bam.bai"))) && params.saveAlignedIntermediates ) filename
              else null
             }
 
@@ -898,7 +940,7 @@ process PPQT{
 
 process bigWig {
   tag "${prefix}"
-  publishDir "${params.outdir}/bigwig", mode: "copy"
+  publishDir "${params.outdir}/bigWig", mode: "copy"
 
   input:
   set val(prefix), file(filteredBams) from chBamsBigWig
@@ -912,7 +954,7 @@ process bigWig {
   effGsize = params.effGenomeSize ? "--effectiveGenomeSize ${params.effGenomeSize}" : ""
   """
   bamCoverage -b ${filteredBams[0]} \\
-              -o ${prefix}.bigwig \\
+              -o ${prefix}_rpkm.bigwig \\
               -p ${task.cpus} \\
               ${blacklistParams} \\
               ${effGsize} --normalizeUsing RPKM
@@ -928,7 +970,7 @@ if (params.spike){
     .into{chBamsSpikesBam; chBamsSpikesBai}
 
   process getSpikeScalingFactor {
-    publishDir "${params.outdir}/bigwig", mode: "copy"
+    publishDir "${params.outdir}/bigWig", mode: "copy"
 
     input:
     file(allBams) from chBamsSpikesBam.map{it[1][0]}.collect()
@@ -961,11 +1003,11 @@ if (params.spike){
 
   process bigWigSpikeNorm{
     tag "${prefix}"
-    publishDir "${params.outdir}/bigwig", mode: "copy"
+    publishDir "${params.outdir}/bigWig", mode: "copy"
 
     input:
     set val(prefix), file(filteredBams), val(normFactor) from chBigWigScaleFactor
-    file(BLbed) from chBlacklistBigWigSpike.ifEmpty([])
+    file(BLbed) from chBlacklistBigWigSpike.collect()
 
     output:
     set val(prefix), file('*.bigwig') into chBigWigSF
@@ -975,7 +1017,7 @@ if (params.spike){
     effGsize = params.effGenomeSize ? "--effectiveGenomeSize ${params.effGenomeSize}" : ""
     """
     bamCoverage -b ${filteredBams[0]} \\
-                -o ${prefix}_spikes.bigwig \\
+                -o ${prefix}_spikenorm.bigwig \\
                 -p ${task.cpus} \\
                  ${blacklistParams} \\
                  ${effGsize} \\
@@ -991,7 +1033,7 @@ if (params.spike){
 
 process deepToolsComputeMatrix{
   tag "${prefix}"
-  publishDir "${params.outdir}/deepTools", mode: "copy"
+  publishDir "${params.outdir}/deepTools/computeMatrix", mode: "copy"
 
   when:
   !params.skipDeepTools
@@ -1023,7 +1065,7 @@ process deepToolsComputeMatrix{
 }
 
 process deepToolsCorrelationQC{
-  publishDir "${params.outdir}/deepTools"
+  publishDir "${params.outdir}/deepTools/correlationQC", mode: "copy"
 
   when:
   allPrefix.size() > 2 && !params.skipDeepTools
@@ -1139,7 +1181,6 @@ process sharpMACS2{
   output:
   file("*.xls") into chMacsOutputSharp
   set val(group), val(replicate), val(peaktype), val(sampleID), file("*.narrowPeak") into chPeaksMacsSharp
-  //file "*igv.txt" into chMacs_igv_sharp
   file "*_mqc.tsv" into chMacsCountsSharp
 
   script:
@@ -1153,11 +1194,11 @@ process sharpMACS2{
     -f $format \\
     -g $params.effGenomeSize \\
     -n $sampleID \\
+    --SPMR --trackline --bdg \\
     --keep-dup all
-  cat ${sampleID}_peaks.$peaktypeMacs | wc -l | awk -v OFS='\t' '{ print "${sampleID}", \$1 }' | cat $peakCountHeader - > ${sampleID}_peaks.count_mqc.tsv
+  cat ${sampleID}_peaks.$peaktypeMacs | tail -n +2 | wc -l | awk -v OFS='\t' '{ print "${sampleID}", \$1 }' | cat $peakCountHeader - > ${sampleID}_peaks.count_mqc.tsv
   READS_IN_PEAKS=\$(intersectBed -a ${sampleBam[0]} -b ${sampleID}_peaks.$peaktypeMacs -bed -c -f 0.20 | awk -F '\t' '{sum += \$NF} END {print sum}')
   grep 'mapped (' $sampleFlagstat | awk -v a="\$READS_IN_PEAKS" -v OFS='\t' '{print "${sampleID}", a/\$1}' | cat $fripScoreHeader - > ${sampleID}_peaks.FRiP_mqc.tsv
-  find * -type f -name "*.$peaktypeMacs" -exec echo -e "peakCalling/sharp/"{}"\\t0,0,178" \\; > ${sampleID}_peaks.igv.txt
   """
  }
 
@@ -1183,7 +1224,6 @@ process broadMACS2{
   output:
   file("*.xls") into chMacsOutputBroad
   set val(group), val(replicate), val(peaktype), val(sampleID), file("*.broadPeak") into chPeaksMacsBroad
-  //file "*igv.txt" into chMacs_igv_broad
   file "*_mqc.tsv" into chMacsCountsBroad
 
   script:
@@ -1199,11 +1239,11 @@ process broadMACS2{
     -f $format \\
     -g $params.effGenomeSize \\
     -n $sampleID \\
+    --SPMR --trackline --bdg \\
     --keep-dup all
-    cat ${sampleID}_peaks.$peaktypeMacs | wc -l | awk -v OFS='\t' '{ print "${sampleID}", \$1 }' | cat $peakCountHeader - > ${sampleID}_peaks.count_mqc.tsv
+    cat ${sampleID}_peaks.$peaktypeMacs | tail -n +2 | wc -l | awk -v OFS='\t' '{ print "${sampleID}", \$1 }' | cat $peakCountHeader - > ${sampleID}_peaks.count_mqc.tsv
     READS_IN_PEAKS=\$(intersectBed -a ${sampleBam[0]} -b ${sampleID}_peaks.$peaktypeMacs -bed -c -f 0.20 | awk -F '\t' '{sum += \$NF} END {print sum}')
     grep 'mapped (' $sampleFlagstat | awk -v a="\$READS_IN_PEAKS" -v OFS='\t' '{print "${sampleID}", a/\$1}' | cat $fripScoreHeader - > ${sampleID}_peaks.FRiP_mqc.tsv
-    find * -type f -name "*.$peaktypeMacs" -exec echo -e "peakCalling/broad/"{}"\\t0,0,178" \\; > ${sampleID}_peaks.igv.txt
   """
 }
 
@@ -1240,6 +1280,7 @@ process veryBroadEpic2{
     ${ctrl} \\
     -gn ${params.genome} \\
     -kd -a \\
+    --window-size 200 --gaps-allowed 3 --false-discovery-rate-cutoff 0.01 \\
     -o ${sampleID}_peaks.$peaktypeEpic
   cat ${sampleID}_peaks.$peaktypeEpic | wc -l | awk -v OFS='\t' '{ print "${sampleID}", \$1 }' | cat $peakCountHeader - > ${sampleID}_peaks.count_mqc.tsv
   READS_IN_PEAKS=\$(intersectBed -a ${sampleBam[0]} -b ${sampleID}_peaks.$peaktypeEpic -bed -c -f 0.20 | awk -F '\t' '{sum += \$NF} END {print sum}')
@@ -1260,7 +1301,7 @@ chPeaksMacsSharp
 
 process peakAnnoHomer{
   tag "${sampleID}"
-  publishDir path: "${params.outdir}/peakAnnotation/", mode: 'copy'
+  publishDir path: "${params.outdir}/peakCalling/annotation/", mode: 'copy'
 
   when:
   !params.skipPeakAnno
@@ -1280,6 +1321,42 @@ process peakAnnoHomer{
         -gtf $gtfFile \\
         -cpu ${task.cpus} \\
         > ${sampleID}_annotated_peaks.txt
+  """
+}
+
+
+/*
+ * Peak calling & annotation QC
+ */
+
+process peakQC{
+  publishDir "${params.outdir}/peakCalling/QC/", mode: 'copy'
+
+  when:
+  !params.skipPeakQC && params.design
+
+  input:
+  file peaks from chPeakQC.collect{ it[-1] }
+  file annotations from chHomerMqc.collect()
+  file peakHeader from chPeakAnnotationHeader
+
+  output:
+  file "*.{txt,pdf}" into chMacsQcOutput
+  file "*.tsv" into chPeakMqc
+
+  script:
+  """
+  plot_macs_qc.r \\
+    -i ${peaks.join(',')} \\
+    -s ${peaks.join(',').replaceAll("_peaks.narrowPeak","").replaceAll("_peaks.broadPeak","")} \\
+    -o ./ \\
+    -p peak
+  plot_homer_annotatepeaks.r \\
+    -i ${annotations.join(',')} \\
+    -s ${annotations.join(',').replaceAll("_annotated_peaks.txt","")} \\
+    -o ./ \\
+    -p annotatePeaks
+  cat $peakHeader annotatePeaks.summary.txt > annotatedPeaks.summary_mqc.tsv
   """
 }
 
@@ -1325,44 +1402,12 @@ process IDR{
 }
 
 
-/*
- * Peak calling & annotation QC
- */
-if (!params.skipPeakQC && params.design){
-  process peakQC{
-    publishDir "${params.outdir}/peakQC/", mode: 'copy'
-
-    input:
-    file peaks from chPeakQC.collect{ it[-1] }
-    file annotations from chHomerMqc.collect()
-    file peakHeader from chPeakAnnotationHeader
-
-    output:
-    file "*.{txt,pdf}" into chMacsQcOutput
-    file "*.tsv" into chPeakMqc
-
-    script:
-    """
-    plot_macs_qc.r \\
-      -i ${peaks.join(',')} \\
-      -s ${peaks.join(',').replaceAll("_peaks.narrowPeak","").replaceAll("_peaks.broadPeak","")} \\
-      -o ./ \\
-      -p peak
-    plot_homer_annotatepeaks.r \\
-      -i ${annotations.join(',')} \\
-      -s ${annotations.join(',').replaceAll("_annotated_peaks.txt","")} \\
-      -o ./ \\
-      -p annotatePeaks
-    cat $peakHeader annotatePeaks.summary.txt > annotatedPeaks.summary_mqc.tsv
-    """
-  }
-}
-
 /**************************************
  * Feature counts
  */
 
 process prepareAnnotation{
+  publishDir "${params.outdir}/featCounts/", mode: "copy"
 
   when:
   !params.skipFeatCounts
@@ -1382,7 +1427,7 @@ process prepareAnnotation{
     
 process featureCounts{
   tag "${bed}"
-  publishDir "${params.outdir}/featCounts/"
+  publishDir "${params.outdir}/featCounts/", mode: "copy"
 
   when:
   !params.skipFeatCounts
@@ -1525,7 +1570,7 @@ process multiqc {
   """
   stats2multiqc.sh ${splan} ${design} ${params.aligner} ${isPE}
   mqc_header.py --name "ChIP-seq" --version ${workflow.manifest.version} ${metadataOpts} ${splanOpts} > multiqc-config-header.yaml
-  multiqc . -f $rtitle $rfilename -c multiqc-config-header.yaml -c $multiqcConfig $modules_list -s
+  multiqc . -f $rtitle $rfilename -c multiqc-config-header.yaml -c $multiqcConfig $modules_list
   """
 }
 
@@ -1554,6 +1599,8 @@ workflow.onComplete {
   if(workflow.repository) report_fields['summary']['Pipeline repository Git URL'] = workflow.repository
   if(workflow.commitId) report_fields['summary']['Pipeline repository Git Commit'] = workflow.commitId
   if(workflow.revision) report_fields['summary']['Pipeline Git branch/tag'] = workflow.revision
+
+  report_fields['spikes_poor_alignment'] = spikes_poor_alignment
 
   // Render the TXT template
   def engine = new groovy.text.GStringTemplateEngine()
@@ -1590,6 +1637,10 @@ workflow.onComplete {
   woc.write(execInfo)
 
   /*]      = workflow.success     endSummary['exit status']  = workflow.exitStatus     endSummary['Error report'] = workflow.errorReport ?: '-' final logs*/
+  if(skipped_poor_alignment.size() > 0){
+    log.info "[rnaseq] WARNING - ${skipped_poor_alignment.size()} samples skipped due to poor alignment scores!"
+  }                                                                                                                                                                                                        
+ 
   if(workflow.success){
     log.info "[Chip-seq] Pipeline Complete"
   }else{

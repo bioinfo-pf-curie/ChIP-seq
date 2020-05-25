@@ -14,7 +14,7 @@ custom_data:
     my_stats:
         file_format: 'csv'
         section_name: 'General Metrics'
-        description: ' of sequenced data. Note that in the context of paired-end data, the number pairs are reported (as reads). Low <b>NSC</b> and <b>RSC</b> values can be due to failed and poor quality ChIP, low read sequence quality and hence lots of mismappings, shallow sequencing depth or a combination of these. Also, datasets with few binding sites (< 200) which could be due to biological reasons (i.e. a factor that truly binds only a few sites in a particular tissue type) would output low NSC and RSC scores.'
+        description: ' of sequenced data. Note that in the context of paired-end data, the number pairs are reported (as reads). Low normalized strand coefficient (<b>NSC</b>) and relative strand correlation (<b>RSC</b>) values can be due to failed and poor quality ChIP, low read sequence quality and hence lots of mismappings, shallow sequencing depth or a combination of these. Also, datasets with few binding sites (< 200) which could be due to biological reasons (i.e. a factor that truly binds only a few sites in a particular tissue type) would output low NSC and RSC scores.'
         plot_type: 'table'
         pconfig:
             namespace: 'stats'
@@ -43,7 +43,7 @@ custom_data:
               scale: 'RdYlGn'
               format: '{:,.0f}'
               hidden: true
-              placement: 3000
+              placement: 3500
             Percent_of_aligned_reads:
               title: 'Aligned Reads (%)'
               min: 0
@@ -117,22 +117,25 @@ custom_data:
               placement: 13000
     spikes:
         file_format: 'tsv'
-        section_name: 'Spike-in'
+        section_name: 'Spike-In'
         description: 'statistics of spike-in alignment data.'
         plot_type: 'bargraph'
         pconfig:
-            title: 'Spikes'
+            namespace: 'spikes'
+            title: 'Spike-In / Reference genome reads cleaning'
             id: 'spikes'
             scale: 'Set2'
+
     bwa_logs:
         file_format: 'tsv'
         section_name: 'BWA'
         description: 'statistics on aligned data. Number of unique and multiple mapped reads, as well unmapped reads are reported.'
         plot_type: 'bargraph'
         pconfig:
-            title: 'Reads Alignment on Reference Genome'
-            id: 'mapping'
-            scale: 'Set2'    
+            namespace: 'bwalogs'
+            title: 'Reads Alignment'
+            id: 'bwalogs'
+            scale: 'Set1'
 
 sp:
   my_stats:
@@ -194,11 +197,19 @@ module_order:
 
 report_section_order:
   my_stats:
-    order: -1
+    order: 1000
+  fastqc:
+    order: 900
   bwa_logs:
-    order: -10
+    order: 800
+  bowtie2:
+    order: 790
+  star:
+    order: 780
   spikes:
-    order: -100
+    order: 700
+  picard:
+    order: 600
   strand_shift_correlation:
     order: -1200
   peak_count:
@@ -232,7 +243,18 @@ fn_ignore_files:
   - '*count_mqc*'
   - '*_sorted*'
 
+fn_clean_exts:
+    - '_bwa.log'
+    - '_ref_bamcomp.log'
+    - '_sorted.bam'
+
+
 #############################
 ## Display
+
+custom_plot_config:
+   bwalogs:
+      Unmapped:
+         color: '#A6ACAF'
 
 plots_force_interactive: True
