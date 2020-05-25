@@ -248,7 +248,7 @@ fn_ignore_files:
 fn_clean_exts:
     - '_bwa.log'
     - '_bowtie2.log'
-    - '_star.log'
+    - 'Log.final.out'
     - '_ref_bamcomp.log'
     - '_sorted.bam'
 
