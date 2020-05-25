@@ -131,6 +131,18 @@ else{
   exit 1, "Fasta file not found: ${params.fasta}"
 }
 
+// chromosome size file
+params.chrsize = genomeRef ? params.genomes[ genomeRef ].chrsize ?: false : false
+if ( params.chrsize ){
+  Channel
+    .fromPath(params.chrsize, checkIfExists: true)
+    .set{chChromSize}
+}
+else{
+  exit 1, "Chromosome size file not found: ${params.chrsize}"
+}                                                                                                                                                                                                            
+   
+
 
 /********************
  * Bwa-mem Index
@@ -738,6 +750,7 @@ if (params.spike && params.spike != 'spike'){
 
 }else{
   chAllBams = chAlignReads
+  chMappingSpikeMqc = Channel.empty()
 }
 
 
@@ -1272,11 +1285,11 @@ process veryBroadEpic2{
   set val(group), val(replicate), val(peaktype), val(sampleID), file(sampleBam), file(sampleFlagstat), val(controlID), file(controlBam) from chGroupBamMacsVeryBroad
   file peakCountHeader from chPeakCountHeaderVeryBroad.collect()
   file fripScoreHeader from chFripScoreHeaderVeryBroad.collect()
+  file chromsize from chChromSize.collect()
 
   output:
   // set file("*.xls") into chMacs_output_vbroad ===>> Mandatory data for MQC in Sharp&Broad MACS2
   set val(group), val(replicate), val(peaktype), val(sampleID), file("*.broadPeak") into chPeaksEpic
-  //file "*igv.txt" into chMacs_igv_vbroad
   file "*_mqc.tsv" into chMacsCountsVbroad
 
   script:
@@ -1285,14 +1298,14 @@ process veryBroadEpic2{
   """
   epic2 -t ${sampleBam[0]} \\
     ${ctrl} \\
-    -gn ${params.genome} \\
-    -kd -a \\
-    --window-size 200 --gaps-allowed 3 --false-discovery-rate-cutoff 0.01 \\
+    --chromsizes ${chromsize} \\
+    --effective-genome-fraction ${params.effGenomeSize} \\
+    -a \\
+    --bin-size 200 --gaps-allowed 3 --false-discovery-rate-cutoff 0.01 \\
     -o ${sampleID}_peaks.$peaktypeEpic
   cat ${sampleID}_peaks.$peaktypeEpic | wc -l | awk -v OFS='\t' '{ print "${sampleID}", \$1 }' | cat $peakCountHeader - > ${sampleID}_peaks.count_mqc.tsv
   READS_IN_PEAKS=\$(intersectBed -a ${sampleBam[0]} -b ${sampleID}_peaks.$peaktypeEpic -bed -c -f 0.20 | awk -F '\t' '{sum += \$NF} END {print sum}')
   grep 'mapped (' $sampleFlagstat | awk -v a="\$READS_IN_PEAKS" -v OFS='\t' '{print "${sampleID}", a/\$1}' | cat $fripScoreHeader - > ${sampleID}_peaks.FRiP_mqc.tsv
-  find * -type f -name "*.$peaktypeEpic" -exec echo -e "peakCalling/very_broad/"{}"\\t0,0,178" \\; > ${sampleID}_peaks.igv.txt
   """
 }
 
