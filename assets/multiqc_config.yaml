@@ -153,7 +153,7 @@ table_cond_formatting_rules:
           - lt: 80
         fail:
           - lt: 50
-    Percentage_of_duplicates:
+    Percent_of_duplicates:
         pass:
           - lt: 25
         warn:
@@ -189,7 +189,9 @@ module_order:
    - bowtie2
    - star
    - picard
-   - preseq
+   - preseq:
+      name: 'Sequencing Complexity'
+      info: 'estimates the complexity of a library, showing how many additional unique reads are sequenced for increasing total read count. A shallow curve indicates complexity saturation. The dashed line shows a perfectly complex library where total reads = unique reads. The presented graph shows extrapolated curves up to 200M sequencing reads.'
    - phantompeakqualtools 
    - macs2
    - deeptools
@@ -245,6 +247,8 @@ fn_ignore_files:
 
 fn_clean_exts:
     - '_bwa.log'
+    - '_bowtie2.log'
+    - '_star.log'
     - '_ref_bamcomp.log'
     - '_sorted.bam'
 
