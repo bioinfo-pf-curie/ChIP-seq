@@ -594,7 +594,7 @@ process star{
 
   output:
   set val(sample), file('*.bam') into chAlignReadsStar
-  file ("*Log.out") into chStarMqc
+  file ("*Log.final.out") into chStarMqc
 
   script:
   prefix = genomeBase == genomeRef ? sample : sample + '_spike'
