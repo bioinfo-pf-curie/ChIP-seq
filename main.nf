@@ -594,7 +594,7 @@ process star{
 
   output:
   set val(sample), file('*.bam') into chAlignReadsStar
-  file ("*.log") into chStarMqc
+  file ("*Log.out") into chStarMqc
 
   script:
   prefix = genomeBase == genomeRef ? sample : sample + '_spike'
@@ -608,9 +608,8 @@ process star{
        --runDirPerm All_RWX \
        --outSAMunmapped Within \
        --outTmpDir /local/scratch/rnaseq_\$(date +%d%s%S%N) \
+       --outFileNamePrefix $prefix  \
        --outSAMattrRGline ID:$prefix SM:$prefix LB:Illumina PL:Illumina
-  mv Aligned.out.bam ${prefix}.bam
-  mv Log.final.out ${prefix}_star.log
   """
 }
 
@@ -1637,7 +1636,7 @@ workflow.onComplete {
   woc.write(execInfo)
 
   /*]      = workflow.success     endSummary['exit status']  = workflow.exitStatus     endSummary['Error report'] = workflow.errorReport ?: '-' final logs*/
-  if(skipped_poor_alignment.size() > 0){
+  if(spikes_poor_alignment.size() > 0){
     log.info "[rnaseq] WARNING - ${skipped_poor_alignment.size()} samples skipped due to poor alignment scores!"
   }                                                                                                                                                                                                        
  

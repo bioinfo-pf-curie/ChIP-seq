@@ -34,10 +34,10 @@ do
     nb_mapped=$(($nb_uniq_reads + $nb_mult_reads))
     perc_mapped=$(echo "${nb_mapped} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
   elif [ $aligner == "star" ]; then
-    nb_reads=$(grep "Number of input reads" mapping/${sample}_star.log | cut -d"|" -f 2 | sed -e 's/\t//g')
-    nb_uniq_reads=$(grep "Uniquely.*number" mapping/${sample}_star.log | awk '{print $NF}')
+    nb_reads=$(grep "Number of input reads" mapping/${sample}Log.final.out | cut -d"|" -f 2 | sed -e 's/\t//g')
+    nb_uniq_reads=$(grep "Uniquely.*number" mapping/${sample}Log.final.out | awk '{print $NF}')
     perc_uniq_reads=$(echo "${nb_uniq_reads} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
-    nb_mult_reads=$(grep "Number.*multiple" mapping/${sample}_star.log | awk '{print $NF}')
+    nb_mult_reads=$(grep "Number.*multiple" mapping/${sample}Log.final.out | awk '{print $NF}')
     perc_mult_reads=$(echo "${nb_mult_reads} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
     nb_mapped=$(($nb_uniq_reads + $nb_mult_reads))
     perc_mapped=$(echo "${nb_mapped} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
