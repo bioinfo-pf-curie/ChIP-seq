@@ -38,62 +38,61 @@ def helpMessage() {
   nextflow run main.nf -profile test,toolsPath --genome 'hg19' --singleEnd
 
   Mandatory arguments:
-  --samplePlan             Path to sample plan file if '--reads' is not specified
-  --genome                 Name of iGenomes reference
-  -profile                 Configuration profile to use. Can use multiple (comma separated)
-                           Available: conda, docker, singularity, awsbatch, test, toolsPath and more.
+  --samplePlan               Path to sample plan file if '--reads' is not specified
+  --genome                   Name of iGenomes reference
+  -profile                   Configuration profile to use. Can use multiple (comma separated)
 
   Inputs:
-  --design                 Path to design file for downstream analysis
-  --singleEnd              Specifies that the input is single end reads
-  --spike                  Indicates if the experiment includes a spike-in normalization.
-                           Default : false. Available : 'spike' to use metagenome with reference genome
-                           '[spike genome]' to use a specific second genome
-
-  Tools:
-  --aligner                Alignment tool to use ['bwa-mem', 'star', 'bowtie2']. Default: 'bwa-mem'
-  
-  Filtering:
-  --mapQ                   Minimum mapping quality to consider
-  --keepDups               Do not remove duplicates afer marking
-  --blacklist              Path to black list regions (.bed)
+  --design                   Path to design file for downstream analysis
+  --singleEnd                Specifies that the input is single end reads
+  --spike                    Indicates if the experiment includes a spike-in normalization.
+                             Default : false. Available : 'spike' to use metagenome with reference genome
+                             '[spike genome]' to use a specific second genome
 
   References           If not specified in the configuration file or you wish to overwrite any of the references given by the --genome field
-  --fasta                  Path to Fasta reference
+  --fasta                    Path to Fasta reference
 
-  Indexes              Path to the indexes for aligners
-  --starIndex              Index for STAR aligner
-  --bwaIndex               Index for BWA MEM aligner
-  --bowtie2Index           Index for Bowtie2 aligner
+  Alignment:
+  --aligner                  Alignment tool to use ['bwa-mem', 'star', 'bowtie2']. Default: 'bwa-mem'
+  --saveAlignedIntermediates Save all intermediates mapping files. Default: false  
+  --starIndex                Index for STAR aligner
+  --bwaIndex                 Index for BWA MEM aligner
+  --bowtie2Index             Index for Bowtie2 aligner
 
-  Annotation
-  --geneBed                BED annotation file with gene coordinate.
-  --gtf                    GTF annotation file. Used in HOMER peak annotation
-  --effGenomeSize          Effective Genome size
+  Filtering:
+  --mapQ                     Minimum mapping quality to consider. Default: false
+  --keepDups                 Do not remove duplicates afer marking. Default: false
+  --blacklist                Path to black list regions (.bed).
+
+  Annotation:          If not specified in the configuration file or you wish to overwrite any of the references given by the --genome field
+  --geneBed                  BED annotation file with gene coordinate.
+  --gtf                      GTF annotation file. Used in HOMER peak annotation
+  --effGenomeSize            Effective Genome size
+  --tssSize                  Distance (upstream/downstream) to transcription start point to consider. Default: 2000
 
   Skip options:        All are false by default
-  --skipFastqc             Skips fastQC
-  --skipPreseq             Skips preseq QC
-  --skipPPQT               Skips phantompeakqualtools QC
-  --skipDeepTools          Skips deeptools QC
-  --skipPeakcalling        Skips peak calling
-  --skipPeakanno           Skips peak annotation
-  --skipIDR                Skips IDR QC
-  --skipFeatCounts         Skips feature count
-  --skipMultiQC            Skips MultiQC step
+  --skipFastqc               Skips fastQC
+  --skipPreseq               Skips preseq QC
+  --skipPPQT                 Skips phantompeakqualtools QC
+  --skipDeepTools            Skips deeptools QC
+  --skipPeakcalling          Skips peak calling
+  --skipPeakanno             Skips peak annotation
+  --skipIDR                  Skips IDR QC
+  --skipFeatCounts           Skips feature count
+  --skipMultiQC              Skips MultiQC step
 
   Other options:
-  --outdir                 The output directory where the results will be saved
-  --email                  Set this parameter to your e-mail address to get a summary e-mail with details of the run sent to you when the workflow exits
-  -name                    Name for the pipeline run. If not specified, Nextflow will automatically generate a random mnemonic.
+  --outdir                   The output directory where the results will be saved
+  --email                    Set this parameter to your e-mail address to get a summary e-mail with details of the run sent to you when the workflow exits
+  -name                      Name for the pipeline run. If not specified, Nextflow will automatically generate a random mnemonic.
 
   =======================================================
   Available Profiles
-    -profile test                Set up the test dataset
-    -profile conda               Build a new conda environment before running the pipeline
-    -profile toolsPath           Use the paths defined in configuration for each tool
-    -profile singularity         Use the Singularity images for each process
-    -profile cluster             Run the workflow on the cluster, instead of locally
+    -profile test            Set up the test dataset
+    -profile conda           Build a new conda environment before running the pipeline
+    -profile toolsPath       Use the paths defined in configuration for each tool
+    -profile singularity     Use the Singularity images for each process
+    -profile cluster         Run the workflow on the cluster, instead of locally
 
   """.stripIndent()
 }
@@ -131,7 +130,7 @@ else{
   exit 1, "Fasta file not found: ${params.fasta}"
 }
 
-// chromosome size file
+// Chromosome size file
 params.chrsize = genomeRef ? params.genomes[ genomeRef ].chrsize ?: false : false
 if ( params.chrsize ){
   Channel
@@ -140,8 +139,7 @@ if ( params.chrsize ){
 }
 else{
   exit 1, "Chromosome size file not found: ${params.chrsize}"
-}                                                                                                                                                                                                            
-   
+}
 
 
 /********************
@@ -984,6 +982,7 @@ process bigWig {
 /*
  * Spike-in normalization
  */
+
 if (params.spike){
   chBamsSpikes
     .into{chBamsSpikesBam; chBamsSpikesBai}
@@ -1044,7 +1043,6 @@ if (params.spike){
     """
   }
 }
-
 
 /*
  * DeepTools QC
@@ -1117,13 +1115,11 @@ process deepToolsCorrelationQC{
                   -o bams_correlation.pdf \\
                   -c spearman -p heatmap -l $allPrefix \\
                   --outFileCorMatrix bams_correlation.tab
-
   plotCoverage -b $allBams \\
                -o bams_coverage.pdf \\
                -p ${task.cpus} \\
                -l $allPrefix \\
                --outRawCounts bams_coverage_raw.txt
-
   plotFingerprint -b $allBams \\
                   -plot bams_fingerprint.pdf \\
                   -p ${task.cpus} \\
@@ -1141,7 +1137,6 @@ process deepToolsCorrelationQC{
 /*
  * Prepare channels
  */
-
 if (params.design){
   chBamsMacs1
     .join(chFlagstatMacs)
@@ -1317,7 +1312,6 @@ chPeaksMacsSharp
 /************************************
  * Peaks Annotation
  */
-
 process peakAnnoHomer{
   tag "${sampleID}"
   publishDir path: "${params.outdir}/peakCalling/annotation/", mode: 'copy'
@@ -1347,7 +1341,6 @@ process peakAnnoHomer{
 /*
  * Peak calling & annotation QC
  */
-
 process peakQC{
   publishDir "${params.outdir}/peakCalling/QC/", mode: 'copy'
 
@@ -1387,7 +1380,6 @@ process peakQC{
 /*
  * Irreproducible Discovery Rate
  */
-
 chIDRpeaks
   .map { it -> [it[0],it[4]] }
   .groupTuple()
@@ -1424,7 +1416,6 @@ process IDR{
 /**************************************
  * Feature counts
  */
-
 process prepareAnnotation{
   publishDir "${params.outdir}/featCounts/", mode: "copy"
 
@@ -1476,7 +1467,6 @@ process featureCounts{
 /*
  * MultiQC
  */
-
 process getSoftwareVersions{
   publishDir path: "${params.outdir}/software_versions", mode: "copy"
 
@@ -1510,7 +1500,6 @@ process getSoftwareVersions{
 }
 
 process workflowSummaryMqc {
-
   when:
   !params.skipMultiQC
 

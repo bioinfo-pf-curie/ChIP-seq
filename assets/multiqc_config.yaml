@@ -14,7 +14,8 @@ custom_data:
     my_stats:
         file_format: 'csv'
         section_name: 'General Metrics'
-        description: ' of sequenced data. Note that in the context of paired-end data, the number pairs are reported (as reads). Low normalized strand coefficient (<b>NSC</b>) and relative strand correlation (<b>RSC</b>) values can be due to failed and poor quality ChIP, low read sequence quality and hence lots of mismappings, shallow sequencing depth or a combination of these. Also, datasets with few binding sites (< 200) which could be due to biological reasons (i.e. a factor that truly binds only a few sites in a particular tissue type) would output low NSC and RSC scores.'
+        description: ' of sequenced data. Note that in the context of paired-end data, the number pairs are reported (as reads).
+High-quality ChIP-seq experiment produces significant clustering of enriched DNA sequence tags at locations bound by the protein of interest. Thus, the sequence tag density is expected to accumulate on forward and reverse strands centered around the binding site. Low normalized strand coefficient (<b>NSC</b>) and relative strand correlation (<b>RSC</b>) values can be due to failed and poor quality ChIP, low read sequence quality and hence lots of mismappings, shallow sequencing depth or a combination of these. Also, datasets with few binding sites (< 200) which could be due to biological reasons (i.e. a factor that truly binds only a few sites in a particular tissue type) would output low NSC and RSC scores. The fraction of reads in peaks (<b>FRiP</b>) is also presented. The ENCODE Consortium scrutinizes experiments in which the FRiP falls below 1%.'
         plot_type: 'table'
         pconfig:
             namespace: 'stats'
