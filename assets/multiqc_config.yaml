@@ -128,7 +128,7 @@ custom_data:
 
     bwa_logs:
         file_format: 'tsv'
-        section_name: 'BWA'
+        section_name: 'Bwa-mem'
         description: 'statistics on aligned data. Number of unique and multiple mapped reads, as well unmapped reads are reported.'
         plot_type: 'bargraph'
         pconfig:
@@ -146,6 +146,9 @@ sp:
       fn: '*bwa.log'
 
 table_cond_formatting_rules:
+    Fragment_length:
+        fail:
+          - lt: 1
     Percent_of_aligned_reads:
         pass:
           - gt: 80
@@ -187,6 +190,8 @@ table_cond_formatting_rules:
 module_order:
    - fastqc
    - bowtie2
+      name: 'Bowtie2'
+      info: 'alignment of raw sequencing reads on the reference (or spike) genome(s).'
    - star
    - picard
    - preseq:

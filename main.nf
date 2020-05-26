@@ -977,8 +977,7 @@ process bigWig {
               -o ${prefix}_rpkm.bigwig \\
               -p ${task.cpus} \\
               ${blacklistParams} \\
-              ${effGsize} --normalizeUsing RPKM
-
+              ${effGsize} --normalizeUsing RPGC
   """
 }
 

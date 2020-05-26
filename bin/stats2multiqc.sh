@@ -45,9 +45,9 @@ do
   
 #PICARD
   if [ $is_pe == "1" ]; then
-      nb_dups=$(grep -a2 "## METRICS" picard/${sample}.MarkDuplicates_metrics.txt | tail -1 | awk '{print $7}')
+      nb_dups=$(grep -a2 "## METRICS" picard/${sample}.MarkDuplicates_metrics.txt | tail -1 | awk -F"\t" '{print $7}')
   else
-      nb_dups=$(grep -a2 "## METRICS" picard/${sample}.MarkDuplicates.metrics.txt | tail -1 | awk '{print $6}')
+      nb_dups=$(grep -a2 "## METRICS" picard/${sample}.MarkDuplicates.metrics.txt | tail -1 | awk -F"\t" '{print $6}')
   fi
   perc_dups=$(echo "${nb_dups} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
 
