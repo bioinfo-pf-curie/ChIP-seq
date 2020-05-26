@@ -36,9 +36,73 @@ The current workflow is based on the nf-core best practice. See the nf-core proj
 ### Quick help
 
 ```bash
+N E X T F L O W  ~  version 20.01.0
+======================================================================
+Chip-seq v1.0
+======================================================================
+
+Usage:
+
+nextflow run main.nf -profile test,toolsPath --genome 'hg19' --singleEnd
+
+Mandatory arguments:
+--samplePlan               Path to sample plan file if '--reads' is not specified
+--genome                   Name of iGenomes reference
+-profile                   Configuration profile to use. Can use multiple (comma separated)
+
+Inputs:
+--design                   Path to design file for downstream analysis
+--singleEnd                Specifies that the input is single end reads
+--spike                    Indicates if the experiment includes a spike-in normalization.
+                           Default : false. Available : 'spike' to use metagenome with reference genome
+                           '[spike genome]' to use a specific second genome
+
+References           If not specified in the configuration file or you wish to overwrite any of the references given by the --genome field
+--fasta                    Path to Fasta reference
+
+Alignment:
+--aligner                  Alignment tool to use ['bwa-mem', 'star', 'bowtie2']. Default: 'bwa-mem'
+--saveAlignedIntermediates Save all intermediates mapping files. Default: false  
+--starIndex                Index for STAR aligner
+--bwaIndex                 Index for BWA MEM aligner
+--bowtie2Index             Index for Bowtie2 aligner
+
+Filtering:
+--mapQ                     Minimum mapping quality to consider. Default: false
+--keepDups                 Do not remove duplicates afer marking. Default: false
+--blacklist                Path to black list regions (.bed).
+
+Annotation:          If not specified in the configuration file or you wish to overwrite any of the references given by the --genome field
+--geneBed                  BED annotation file with gene coordinate.
+--gtf                      GTF annotation file. Used in HOMER peak annotation
+--effGenomeSize            Effective Genome size
+--tssSize                  Distance (upstream/downstream) to transcription start point to consider. Default: 2000
+
+Skip options:        All are false by default
+--skipFastqc               Skips fastQC
+--skipPreseq               Skips preseq QC
+--skipPPQT                 Skips phantompeakqualtools QC
+--skipDeepTools            Skips deeptools QC
+--skipPeakcalling          Skips peak calling
+--skipPeakanno             Skips peak annotation
+--skipIDR                  Skips IDR QC
+--skipFeatCounts           Skips feature count
+--skipMultiQC              Skips MultiQC step
+
+Other options:
+--outdir                   The output directory where the results will be saved
+--email                    Set this parameter to your e-mail address to get a summary e-mail with details of the run sent to you when the workflow exits
+-name                      Name for the pipeline run. If not specified, Nextflow will automatically generate a random mnemonic.
+
+=======================================================
+Available Profiles
+  -profile test            Set up the test dataset
+  -profile conda           Build a new conda environment before running the pipeline
+  -profile toolsPath       Use the paths defined in configuration for each tool
+  -profile singularity     Use the Singularity images for each process
+  -profile cluster         Run the workflow on the cluster, instead of locally
 
 ```
-
 
 ### Quick run
 
@@ -48,15 +112,14 @@ The pipeline can be run on any infrastructure from a list of input files or from
 See the conf/test.conf to set your test dataset.
 
 ```
-nextflow run main.nf -profile test,conda --replicates
+nextflow run main.nf -profile test,conda
 
 ```
-If the analysis does not contain replicates, the --replicates option is not useful, but the test sample requires it.
 
-#### Run the pipeline from a sample plan
+#### Run the pipeline from a `sample plan` and a `design` file
 
 ```
-nextflow run main.nf --samplePlan MY_SAMPLE_PLAN --genome 'hg19' --outdir MY_OUTPUT_DIR
+nextflow run main.nf --samplePlan MY_SAMPLE_PLAN --design MY_DESIGN --genome 'hg19' --outdir MY_OUTPUT_DIR
 
 ```
 
@@ -71,7 +134,7 @@ Here are a few examples of how to set the profile option.
 
 ```
 ## Run the pipeline locally, using the global environment (build by conda)
--profile condaPath
+-profile toolsPath
 
 ## Run the pipeline on the cluster, using the Singularity containers
 -profile cluster,singularity
@@ -107,8 +170,7 @@ Both files will be checked by the pipeline and have to be rigorously defined in 
 
 #### Credits
 
-<!-- Add developer names -->
-This pipeline has been written by the bioinformatics platform of the Institut Curie 
+This pipeline has been written by the bioinformatics platform of the Institut Curie (Valentin Laroche, Nicolas Servant)
 
 #### Contacts
 
