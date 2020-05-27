@@ -7,6 +7,7 @@ skip_generalstats: true
 read_count_multiplier: 0.000001
 read_count_prefix: 'M'
 read_count_desc: 'millions'
+log_filesize_limit: 2000000000
 
 ###################################
 ## Custom content
