@@ -248,8 +248,6 @@ fn_ignore_files:
   - '*_spp_nsc_*'
   - '*_spp_rsc_*'
   - '*FRiP*'
-  - '*count_mqc*'
-  - '*_sorted*'
 
 fn_clean_exts:
     - '_bwa.log'
@@ -257,6 +255,7 @@ fn_clean_exts:
     - 'Log.final.out'
     - '_ref_bamcomp.log'
     - '_sorted.bam'
+    - 'count_mqc'
 
 
 #############################
