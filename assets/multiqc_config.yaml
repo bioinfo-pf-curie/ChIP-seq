@@ -190,7 +190,7 @@ table_cond_formatting_rules:
 
 module_order:
    - fastqc
-   - bowtie2
+   - bowtie2:
       name: 'Bowtie2'
       info: 'alignment of raw sequencing reads on the reference (or spike) genome(s).'
    - star
