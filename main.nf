@@ -1098,7 +1098,6 @@ process deepToolsCorrelationQC{
   file("bams_coverage.pdf") into chDeeptoolsCoverage
   file("bams_fingerprint.pdf") into chDeeptoolsFingerprint
   file("bams_correlation.tab") into chDeeptoolsCorrelMqc
-  file("bams_coverage_raw.txt") into chDeeptoolsCovMqc
   file("plotFingerprint*") into chDeeptoolsFingerprintMqc
 
   script:
@@ -1116,12 +1115,6 @@ process deepToolsCorrelationQC{
                   -o bams_correlation.pdf \\
                   -c spearman -p heatmap -l $allPrefix \\
                   --outFileCorMatrix bams_correlation.tab
-
-  plotCoverage -b $allBams \\
-               -o bams_coverage.pdf \\
-               -p ${task.cpus} \\
-               -l $allPrefix \\
-               --outRawCounts bams_coverage_raw.txt
 
   plotFingerprint -b $allBams \\
                   -plot bams_fingerprint.pdf \\
@@ -1555,7 +1548,6 @@ process multiqc {
   //file ('deepTools/*') from chDeeptoolsSingle.collect().ifEmpty([])
   file ('deepTools/*') from chDeeptoolsSingleMqc.collect().ifEmpty([])
   file ("deepTools/*") from chDeeptoolsCorrelMqc.collect().ifEmpty([])
-  file ("deepTools/*") from chDeeptoolsCovMqc.collect().ifEmpty([])
   file ("deepTools/*") from chDeeptoolsFingerprintMqc.collect().ifEmpty([])
 
   file ('peakCalling/sharp/*') from chMacsOutputSharp.collect().ifEmpty([])
