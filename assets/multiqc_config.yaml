@@ -255,7 +255,7 @@ fn_clean_exts:
     - 'Log.final.out'
     - '_ref_bamcomp.log'
     - '_sorted.bam'
-    - 'count_mqc'
+    - '_peaks.count_mqc'
 
 
 #############################
