@@ -7,6 +7,7 @@ skip_generalstats: true
 read_count_multiplier: 0.000001
 read_count_prefix: 'M'
 read_count_desc: 'millions'
+log_filesize_limit: 2000000000
 
 ###################################
 ## Custom content
@@ -190,7 +191,7 @@ table_cond_formatting_rules:
 
 module_order:
    - fastqc
-   - bowtie2
+   - bowtie2:
       name: 'Bowtie2'
       info: 'alignment of raw sequencing reads on the reference (or spike) genome(s).'
    - star
@@ -253,6 +254,7 @@ fn_clean_exts:
     - 'Log.final.out'
     - '_ref_bamcomp.log'
     - '_sorted.bam'
+    - '_peaks.count_mqc'
 
 
 #############################

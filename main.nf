@@ -993,7 +993,7 @@ process bigWig {
               -o ${prefix}_rpkm.bigwig \\
               -p ${task.cpus} \\
               ${blacklistParams} \\
-              ${effGsize} --normalizeUsing RPGC
+              ${effGsize} --normalizeUsing RPKM
   """
 }
 
@@ -1078,8 +1078,8 @@ process deepToolsComputeMatrix{
   file geneBed from chGeneBedDeeptools.collect()
 
   output:
-  set val(prefix), file("*.{gz,pdf}") into chDeeptoolsSingle
-  set val(prefix), file("*_corrected.tab") into chDeeptoolsSingleMqc
+  file("*.{gz,pdf}") into chDeeptoolsSingle
+  file("*_corrected.tab") into chDeeptoolsSingleMqc
 
   script:
   """
@@ -1115,8 +1115,8 @@ process deepToolsCorrelationQC{
   file "bams_correlation.pdf" into chDeeptoolsCorrel
   file "bams_coverage.pdf" into chDeeptoolsCoverage
   file "bams_correlation.tab" into chDeeptoolsCorrelMqc
-  file "bams_coverage_raw.txt" into chDeeptoolsCovMqc
-
+  file("bams_correlation.pdf") into chDeeptoolsCorrel
+  
   script:
   blacklistParams = params.blacklist ? "--blackListFileName ${BLbed}" : "" 
   allPrefix = allPrefix.toString().replace("[","")
@@ -1127,15 +1127,11 @@ process deepToolsCorrelationQC{
                         -o bams_summary.npz \\
                         -p ${task.cpus} \\
                         ${blacklistParams}
+
   plotCorrelation -in bams_summary.npz \\
                   -o bams_correlation.pdf \\
                   -c spearman -p heatmap -l $allPrefix \\
                   --outFileCorMatrix bams_correlation.tab
-  plotCoverage -b $allBams \\
-               -o bams_coverage.pdf \\
-               -p ${task.cpus} \\
-               -l $allPrefix \\
-               --outRawCounts bams_coverage_raw.txt
   """
 }
 
@@ -1163,8 +1159,8 @@ process deepToolsFingerprintQC{
                   -plot bams_fingerprint.pdf \\
                   -p ${task.cpus} \\
                   -l $allPrefix \\
-                  --outRawCounts bams_fingerprint_raw.txt \\
-                  --outQualityMetrics bams_fingerprint_qmetrics.tab
+                  --outRawCounts plotFingerprint.raw.txt \\
+                  --outQualityMetrics plotFingerprint.qmetrics.txt
   """
 }
 
@@ -1589,11 +1585,10 @@ process multiqc {
   file ('ppqt/*') from chPpqtOutMqc.collect().ifEmpty([])
   file ('ppqt/*') from chPpqtCsvMqc.collect().ifEmpty([])
 
-  file ('deepTools/*') from chDeeptoolsSingle.collect().ifEmpty([])
-  file ('deepTools/*_corrected.tab') from chDeeptoolsSingleMqc.collect().ifEmpty([])
-  file ("deepTools/bams_correlation.tab") from chDeeptoolsCorrelMqc.collect().ifEmpty([])
-  file ("deepTools/bams_coverage_raw.txt") from chDeeptoolsCovMqc.collect().ifEmpty([])
-  file ("deepTools/bams_fingerprint_*") from chDeeptoolsFingerprintMqc.collect().ifEmpty([])
+  //file ('deepTools/*') from chDeeptoolsSingle.collect().ifEmpty([])
+  file ('deepTools/*') from chDeeptoolsSingleMqc.collect().ifEmpty([])
+  file ("deepTools/*") from chDeeptoolsCorrelMqc.collect().ifEmpty([])
+  file ("deepTools/*") from chDeeptoolsFingerprintMqc.collect().ifEmpty([])
 
   file ('peakCalling/sharp/*') from chMacsOutputSharp.collect().ifEmpty([])
   file ('peakCalling/broad/*') from chMacsOutputBroad.collect().ifEmpty([])
