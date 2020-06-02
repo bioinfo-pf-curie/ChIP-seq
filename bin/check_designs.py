@@ -13,26 +13,27 @@ def argsParse():
     parser = argparse.ArgumentParser()
     parser.add_argument("D", metavar="INPUT_DESIGN", help="Enter a valid "
                                                         "design csv file")
-    parser.add_argument("R", metavar="INPUT_READS_FILE", help="Enter a valid "
-                                                        "reads csv file name")
+    parser.add_argument("R", metavar="INPUT_FILE", help="Enter a valid "
+                                                        "csv file name")
     parser.add_argument("SE", metavar="SINGLE_END", help="Is data SE (True) or"
                                                         " PE (False) ?")
     parser.add_argument("BD", metavar="BASE DIR", help="Base dir if needed")
-
+    parser.add_argument("IB", metavar="INPUT BAM", help="Is data inputs bams ?")
     args = parser.parse_args()
     inputDesign = args.D
-    inputReads = args.R
+    inputData = args.R
     singleEnd = args.SE
     baseDir = args.BD
-    return inputDesign, inputReads, singleEnd, baseDir
+    inputBam = args.IB
+    return inputDesign, inputData, singleEnd, baseDir, inputBam
 
 
-def check_designs(inputDesign, inputReads, singleEnd, baseDir):
+def check_designs(inputDesign, inputData, singleEnd, baseDir, inputBam):
     dict_design = {
         'SAMPLEID': [],
         'CONTROLID': [],
         'SAMPLENAME': [],
-        'REPLICATE': [],
+        'GROUP': [],
         'PEAKTYPE': []
     }
     if (singleEnd):
@@ -48,20 +49,33 @@ def check_designs(inputDesign, inputReads, singleEnd, baseDir):
             'FASTQR1': [],
             'FASTQR2': []
         }
-    ### Checks for design file
     if inputDesign == 'false':
         designExists = False
     else:
         designExists = True
+
+    ### Checks for design file
+    if inputBam == 'false':
+        isInputBam = False
+    else:
+        isInputBam = True
     if designExists:
         with open(inputDesign, 'r') as designFile:
             lines = csv.reader(designFile)
+            header = next(lines)
+            for i in range(0, len(header)):
+                try:
+                    header[i] == [*dict_design][i]
+                except:
+                    print('Design file columns are not valid, should be : {}'
+                          .format([*dict_design]))
+                    sys.exit(1)
             # Fill dict to check all input design data
             for sample in lines:
                 dict_design['SAMPLEID'].append(sample[0])
                 dict_design['CONTROLID'].append(sample[1])
                 dict_design['SAMPLENAME'].append(sample[2])
-                dict_design['REPLICATE'].append(sample[3])
+                dict_design['GROUP'].append(sample[3])
                 dict_design['PEAKTYPE'].append(sample[4])
             # Check if samples and controls are correctly separated
             for ID in dict_design['CONTROLID']:
@@ -76,14 +90,14 @@ def check_designs(inputDesign, inputReads, singleEnd, baseDir):
                         ' Remove \'{}\''.format(sampleName, sampleName[-2:]))
             index = 0
             # Check if replicate number is an integer
-            for replicateNumber in dict_design['REPLICATE']:
-                try:
-                    int(replicateNumber)
-                except:
-                    print('Replicate number of {} is not a valid number'
-                        .format(dict_design['SAMPLEID'][index]))
-                    sys.exit(1)
-                index += 1
+            #for replicateNumber in dict_design['REPLICATE']:
+            #    try:
+            #        int(replicateNumber)
+            #    except:
+            #        print('Replicate number of {} is not a valid number'
+            #            .format(dict_design['SAMPLEID'][index]))
+            #        sys.exit(1)
+            #    index += 1
             # Check if peaktypes are correct for every sample
             peaktype_list = ['sharp', 'broad', 'very-broad']
             index = 0
@@ -94,8 +108,8 @@ def check_designs(inputDesign, inputReads, singleEnd, baseDir):
                         ', '.join(peaktype_list)))
                 index += 1
     ### Checks for sampleplan file
-    with open(inputReads, 'r') as readsFile:
-        lines = csv.reader(readsFile)
+    with open(inputData, 'r') as dataFile:
+        lines = csv.reader(dataFile)
         # Fill dict to check all input sample data
         for sample in lines:
             dict_reads['SAMPLEID'].append(sample[0])
@@ -135,16 +149,23 @@ def check_designs(inputDesign, inputReads, singleEnd, baseDir):
                 print('The path to {} does not lead to a file'
                       .format(os.path.basename(samplePath)))
                 sys.exit(1)
-        # Check file extensions to match fastq ones
-            if not ((samplePath.endswith('fq.gz'))
-                or (samplePath.endswith('fastq.gz'))
-                or (samplePath.endswith('fastq'))
-                or (samplePath.endswith('fq'))):
-                print('The file {} is not a fastq file'
-                      .format(os.path.basename(samplePath)))
-                sys.exit(1)
+        # Check file extensions to match fastq or sam/bam ones
+            if(isInputBam == False):
+                if not ((samplePath.endswith('fq.gz'))
+                    or (samplePath.endswith('fastq.gz'))
+                    or (samplePath.endswith('fastq'))
+                    or (samplePath.endswith('fq'))):
+                    print('The file {} is not a fastq file'
+                          .format(os.path.basename(samplePath)))
+                    sys.exit(1)
+            else:
+                if not  ((samplePath.endswith('sam'))
+                    or  (samplePath.endswith('bam'))):
+                    print('The file {} is not a sam/bam file'
+                          .format(os.path.basename(samplePath)))
+                    sys.exit(1)
 
 
 if __name__ == '__main__':
-    inputDesign, inputReads, singleEnd, baseDir = argsParse()
-    check_designs(inputDesign, inputReads, singleEnd, baseDir)
+    inputDesign, inputData, singleEnd, baseDir, inputBam = argsParse()
+    check_designs(inputDesign, inputData, singleEnd, baseDir, inputBam)

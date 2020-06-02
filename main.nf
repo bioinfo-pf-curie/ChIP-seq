@@ -377,24 +377,28 @@ if ( params.metadata ){
 /*
  * Create a channel for input read files
  */
-
 if(params.samplePlan){
-   if(params.singleEnd){
+   if(params.singleEnd && !params.inputBam){
       Channel
          .from(file("${params.samplePlan}"))
          .splitCsv(header: false)
          .map{ row -> [ row[0], [file(row[2])]] }
          .into { rawReadsFastqc; rawReadsBWA; rawReadsBt2; rawReadsSTAR; rawSpikeReadsBWA; rawSpikeReadsBt2; rawSpikeReadsSTAR }
-   }else{
+   }else if (!params.singleEnd && !params.inputBam){
       Channel
          .from(file("${params.samplePlan}"))
          .splitCsv(header: false)
          .map{ row -> [ row[0], [file(row[2]), file(row[3])]] }
          .into { rawReadsFastqc; rawReadsBWA; rawReadsBt2; rawReadsSTAR; rawSpikeReadsBWA; rawSpikeReadsBt2; rawSpikeReadsSTAR }
-   }
+   }else{
+      Channel
+         .from(file("${params.samplePlan}"))
+         .splitCsv(header: false)
+         .map{ row -> [ row[0], [file(row[2])]]}
+         .into { chAlignReads }
    params.reads=false
-}
-else if(params.readPaths){
+  }
+} else if(params.readPaths){
     if(params.singleEnd){
         Channel
             .from(params.readPaths)
@@ -414,6 +418,7 @@ else if(params.readPaths){
         .ifEmpty { exit 1, "Cannot find any reads matching: ${params.reads}\nNB: Path needs to be enclosed in quotes!\nNB: Path requires at least one * wildcard!\nIf this is single-end data, please specify --singleEnd on the command line." }
         .into { rawReadsFastqc; rawReadsBWA; rawReadsBt2; rawReadsSTAR; rawSpikeReadsBWA; rawSpikeReadsBt2; rawSpikeReadsSTAR }
 }
+
 
 
 /**************************
@@ -440,7 +445,15 @@ if (params.samplePlan){
         }
        .set{ chSplan; chSplanCheck }
   }
-}else{
+} else if(params.bamPaths){
+  Channel
+     .from(params.bamPaths)
+     .collectFile() {
+       item -> ["sample_plan.csv", item[0] + ',' + item[0] + ',' + item[1][0] + '\n']
+      }
+     .set{ chSplan; chSplanCheck }
+  params.aligner = false
+} else {
   if (params.singleEnd){
     Channel
        .fromFilePairs( params.reads, size: 1 )
@@ -457,7 +470,6 @@ if (params.samplePlan){
        .set { chSplan; chSplanCheck }
    }
 }
-
 /******************************
  * Design file
  */
@@ -469,12 +481,13 @@ if (params.design){
     .into { chDesignCheck; chDesignControl; chDesignMqc }
 
   chDesignControl
-    .splitCsv(header:false, sep:',')
+    .splitCsv(header:true)
     .map { row ->
-      if(row[1]==""){row[1]='NO_INPUT'}
-      return [ row[0], row[1], row[2], row[3], row[4] ]
+      if(row.CONTROLID==""){row.CONTROLID='NO_INPUT'}
+      return [ row.SAMPLEID, row.CONTROLID, row.SAMPLENAME, row.GROUP, row.PEAKTYPE ]
      }
     .dump(tag:'design')
+    .view()
     .into { chDesignControl; chDesignReplicate }
 
   // Create special channel to deal with no input cases
@@ -483,9 +496,9 @@ if (params.design){
     .toList()
     .set{ chNoInput }
 }else{
-  chDesignControl=Channel.empty()
-  chDesignReplicate=Channel.empty()
-  chDesignCheck=Channel.empty()
+  chDesignControl = Channel.empty()
+  chDesignReplicate = Channel.empty()
+  chDesignCheck = Channel.empty()
 }
 
 /*
@@ -504,11 +517,11 @@ process checkDesign{
 
   script:
   """
-  check_designs.py $design $samplePlan ${params.singleEnd} $baseDir
+  check_designs.py $design $samplePlan ${params.singleEnd} $baseDir $params.inputBam
   """
 }
 
-
+if(params.inputBam == false){
 /*
  * FastQC
  */
@@ -524,7 +537,7 @@ process fastQC{
   set val(prefix), file(reads) from rawReadsFastqc
 
   output:
-  file "*_fastqc.{zip,html}" into chFastqcResults
+  file "*_fastqc.{zip,html}" into chFastqcMqc
 
   script:
   """
@@ -629,8 +642,12 @@ process star{
        --outFileNamePrefix $prefix  \
        --outSAMattrRGline ID:$prefix SM:$prefix LB:Illumina PL:Illumina
   """
+  }
 }
-
+else{
+  chFastqcMqc = Channel.empty()
+  chMappingMqc = Channel.empty()
+}
 if (params.aligner == "bowtie2"){
   chAlignReads = chAlignReadsBowtie2
   chMappingMqc = chBowtie2Mqc
@@ -684,7 +701,7 @@ if (params.spike && params.spike != 'spike'){
    // Merging, if necessary reference aligned reads and spike aligned reads
    process compareRefSpike{
      tag "${sample}"
-     publishDir "${params.outdir}/mapping", mode: 'copy',
+     publishDir "${params.outdir}/spike", mode: 'copy',
               saveAs: {filename ->
               if (filename.indexOf(".log") > 0) "logs/$filename"
               else filename }
@@ -723,7 +740,7 @@ if (params.spike && params.spike != 'spike'){
 
   process sepMetagenome{
     tag "${sample}"
-    publishDir "${params.outdir}/mapping", mode: 'copy'
+    publishDir "${params.outdir}/spike", mode: 'copy'
 
     input:
     set val(sample), file(unsortedBam) from chAlignReads
@@ -769,7 +786,7 @@ process bamSort{
   set val(prefix), file(unsortedBam) from chAllBams
 
   output:
-  set val(prefix), file('*.{bam,bam.bai}') into chSortBams
+  set val(prefix), file('*sorted.{bam,bam.bai}') into chSortBams
   file("*stats") into chStatsMqc
 
   script:
@@ -799,9 +816,9 @@ process markDuplicates{
   set val(prefix), file(sortedBams) from chSortBams
 
   output:
-  set val(prefix), file("*.{bam,bam.bai}") into chMarkedBams, chMarkedBamsFilt, chMarkedPreseq
-  set val(prefix), file("*.flagstat") into chMarkedFlagstat
-  file "*.{idxstats,stats}" into chMarkedStats
+  set val(prefix), file("*marked.{bam,bam.bai}") into chMarkedBams, chMarkedBamsFilt, chMarkedPreseq
+  set val(prefix), file("*marked.flagstat") into chMarkedFlagstat
+  file "*marked.{idxstats,stats}" into chMarkedStats
   file "*.txt" into chMarkedPicstats
 
   script:
@@ -864,9 +881,9 @@ process bamFiltering {
   //file bamtoolsFilterConfig from chBamtoolsFilterConfig.collect()
 
   output:
-  set val(prefix), file("*.{bam,bam.bai}") into chFilteredBams
-  set val(prefix), file("*.flagstat") into chFilteredFlagstat
-  file "*.{idxstats,stats}" into chFilteredStats
+  set val(prefix), file("*filtered.{bam,bam.bai}") into chFilteredBams
+  set val(prefix), file("*filtered.flagstat") into chFilteredFlagstat
+  file "*filtered.{idxstats,stats}" into chFilteredStats
 
   script:
   filterParams = params.singleEnd ? "-F 0x004" : "-F 0x004 -F 0x0008 -f 0x001"
@@ -913,7 +930,8 @@ chBamsChip
   .dump (tag:'cbams')
   .into { chBamsMacs1; chBamsMacs2; chBamsPPQT;
           chBamsBigWig; chBamsBigWigSF; 
-          chBamsDeeptoolsCorBam; chBamsDeeptoolsCorBai; chBamsDeeptoolsCorSample;
+          chBamDTCor ; chBaiDTCor ; chSampleDTCor ;
+          chBamDTFingerprint ; chBaiDTFingerprint ; chSampleDTFingerprint ;
           chBamsCounts }
 
 chFlagstatChip
@@ -1085,21 +1103,19 @@ process deepToolsCorrelationQC{
   publishDir "${params.outdir}/deepTools/correlationQC", mode: "copy"
 
   when:
-  allPrefix.size() > 2 && !params.skipDeepTools
+  allPrefix.size() >= 2 && !params.skipDeepTools
 
   input:
-  file(allBams) from chBamsDeeptoolsCorBam.map{it[1][0]}.collect()
-  file(allBai) from chBamsDeeptoolsCorBai.map{it[1][1]}.collect()
-  val (allPrefix) from chBamsDeeptoolsCorSample.map{it[0]}.collect()
+  file(allBams) from chBamDTCor.map{it[1][0]}.collect()
+  file(allBai) from chBaiDTCor.map{it[1][1]}.collect()
+  val (allPrefix) from chSampleDTCor.map{it[0]}.collect()
   file(BLbed) from chBlacklistCorrelation.ifEmpty([])
 
   output:
   file "bams_correlation.pdf" into chDeeptoolsCorrel
   file "bams_coverage.pdf" into chDeeptoolsCoverage
-  file "bams_fingerprint.pdf" into chDeeptoolsFingerprint
   file "bams_correlation.tab" into chDeeptoolsCorrelMqc
   file "bams_coverage_raw.txt" into chDeeptoolsCovMqc
-  file "bams_fingerprint*" into chDeeptoolsFingerprintMqc
 
   script:
   blacklistParams = params.blacklist ? "--blackListFileName ${BLbed}" : "" 
@@ -1120,6 +1136,29 @@ process deepToolsCorrelationQC{
                -p ${task.cpus} \\
                -l $allPrefix \\
                --outRawCounts bams_coverage_raw.txt
+  """
+}
+
+process deepToolsFingerprintQC{
+  publishDir "${params.outdir}/deepTools/fingerprintQC", mode: "copy"
+
+  when:
+  allPrefix.size() >= 2 && !params.skipDeepTools
+
+  input:
+  file(allBams) from chBamDTFingerprint.map{it[1][0]}.collect()
+  file(allBai) from chBaiDTFingerprint.map{it[1][1]}.collect()
+  val (allPrefix) from chSampleDTFingerprint.map{it[0]}.collect()
+ 
+  output:
+  file "bams_fingerprint.pdf" into chDeeptoolsFingerprint
+  file "bams_fingerprint*" into chDeeptoolsFingerprintMqc 
+ 
+  script: 
+  allPrefix = allPrefix.toString().replace("[","")
+  allPrefix = allPrefix.replace(","," ") 
+  allPrefix = allPrefix.replace("]","")
+  """
   plotFingerprint -b $allBams \\
                   -plot bams_fingerprint.pdf \\
                   -p ${task.cpus} \\
@@ -1128,7 +1167,6 @@ process deepToolsCorrelationQC{
                   --outQualityMetrics bams_fingerprint_qmetrics.tab
   """
 }
-
 
 /*#########################################################################
   /!\ From this point, 'design' is mandatory /!\
@@ -1145,8 +1183,10 @@ if (params.design){
 
   chDesignControl
     .combine(chBamsMacs1)
+    .view()
     .filter { it[0] == it[5] && it[1] == it[8] }
     .map { it ->  it[2..-1] }
+    .view()
     .into { chGroupBamMacsSharp; chGroupBamMacsBroad; chGroupBamMacsVeryBroad}
 
   chGroupBamMacsSharp
@@ -1537,13 +1577,13 @@ process multiqc {
   file ('software_versions/*') from softwareVersionsYaml.collect()
   file ('workflow_summary/*') from workflowSummaryYaml.collect()
 
-  file ('fastqc/*') from chFastqcResults.collect().ifEmpty([])
+  file ('fastqc/*') from chFastqcMqc.collect().ifEmpty([])
 
   //file ('mapping/stats/*') from chStatsMqc.collect().ifEmpty([])
   file ('mapping/*') from chMappingMqc.collect().ifEmpty([])
   file ('mapping/*') from chMappingSpikeMqc.collect().ifEmpty([])
 
-  file ('picard/*') from chMarkedPicstats.collect().ifEmpty([])
+  file ('mapping/*') from chMarkedPicstats.collect().ifEmpty([])
   file ('preseq/*') from chPreseqStats.collect().ifEmpty([])
 
   file ('ppqt/*') from chPpqtOutMqc.collect().ifEmpty([])
