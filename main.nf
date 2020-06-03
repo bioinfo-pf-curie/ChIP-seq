@@ -395,7 +395,7 @@ if(params.samplePlan){
          .from(file("${params.samplePlan}"))
          .splitCsv(header: false)
          .map{ row -> [ row[0], [file(row[2])]]}
-         .into { chAlignReads }
+         .set { chAlignReads }
    params.reads=false
   }
 } else if(params.readPaths){
@@ -643,20 +643,20 @@ process star{
        --outSAMattrRGline ID:$prefix SM:$prefix LB:Illumina PL:Illumina
   """
   }
+  if (params.aligner == "bowtie2"){
+    chAlignReads = chAlignReadsBowtie2
+    chMappingMqc = chBowtie2Mqc
+  } else if (params.aligner == "bwa-mem"){
+    chAlignReads = chAlignReadsBwa
+    chMappingMqc = chBwaMqc
+  } else if (params.aligner == "star"){
+    chAlignReads = chAlignReadsStar
+    chMappingMqc = chStarMqc
+  }
 }
 else{
   chFastqcMqc = Channel.empty()
   chMappingMqc = Channel.empty()
-}
-if (params.aligner == "bowtie2"){
-  chAlignReads = chAlignReadsBowtie2
-  chMappingMqc = chBowtie2Mqc
-}else if (params.aligner == "bwa-mem"){
-  chAlignReads = chAlignReadsBwa
-  chMappingMqc = chBwaMqc
-}else if (params.aligner == "star"){
-  chAlignReads = chAlignReadsStar
-  chMappingMqc = chStarMqc
 }
 
 /****************
@@ -1115,7 +1115,6 @@ process deepToolsCorrelationQC{
   file "bams_correlation.pdf" into chDeeptoolsCorrel
   file "bams_coverage.pdf" into chDeeptoolsCoverage
   file "bams_correlation.tab" into chDeeptoolsCorrelMqc
-  file("bams_correlation.pdf") into chDeeptoolsCorrel
   
   script:
   blacklistParams = params.blacklist ? "--blackListFileName ${BLbed}" : "" 
@@ -1179,10 +1178,8 @@ if (params.design){
 
   chDesignControl
     .combine(chBamsMacs1)
-    .view()
     .filter { it[0] == it[5] && it[1] == it[8] }
     .map { it ->  it[2..-1] }
-    .view()
     .into { chGroupBamMacsSharp; chGroupBamMacsBroad; chGroupBamMacsVeryBroad}
 
   chGroupBamMacsSharp
@@ -1548,7 +1545,7 @@ process workflowSummaryMqc {
   id: 'summary'
   description: " - this information is collected when the pipeline is started."
   section_name: 'Workflow Summary'
-  section_href: 'https://gitlab.curie.fr/rnaseq'
+  section_href: 'https://gitlab.curie.fr/chip-seq'
   plot_type: 'html'
   data: |
         <dl class=\"dl-horizontal\">
