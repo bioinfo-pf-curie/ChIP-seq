@@ -246,6 +246,8 @@ remove_sections :
   - plotFingerprint
 
 fn_ignore_files:
+  - '*spp_rsc_mqc.tsv'
+  - '*spp_nsc_mqc.tsv'
   - '*FRiP*'
 
 fn_clean_exts:
