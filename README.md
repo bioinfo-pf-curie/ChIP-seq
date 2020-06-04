@@ -156,7 +156,7 @@ SAMPLE_ID | SAMPLE_NAME | FASTQ_R1 [Path to R1.fastq file] | FASTQ_R2 [For paire
 A design control is a csv file that list all experimental samples, their IDs, the associated input control, the replicate number and the expected peak type.
 The design control is expected to be created as below :
 
-SAMPLE_ID | CONTROL_ID | SAMPLE_NAME [Without '-ReplicateNumber'] | REPLICATE [Only the number] | PEAK_TYPE
+SAMPLE_ID | CONTROL_ID | SAMPLE_NAME | GROUP | PEAK_TYPE
 
 Both files will be checked by the pipeline and have to be rigorously defined in order to make the pipeline work.
 
