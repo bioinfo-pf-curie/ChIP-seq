@@ -14,11 +14,11 @@ This script is based on the nf-core guidelines. See https://nf-co.re/ for more i
 
 /*
 ========================================================================================
-            Chip-seq
+            ChIP-seq
 ========================================================================================
-Chip-seq Analysis Pipeline.
+ChIP-seq Analysis Pipeline.
 #### Homepage / Documentation
-https://gitlab.curie.fr/chipseq
+https://gitlab.curie.fr/data-analysis/chip-seq
 ----------------------------------------------------------------------------------------
 */
 
@@ -30,7 +30,7 @@ def helpMessage() {
 
   log.info"""
 
-  Chip-seq v${workflow.manifest.version}
+  ChIP-seq v${workflow.manifest.version}
   ======================================================================
 
   Usage:
@@ -38,61 +38,60 @@ def helpMessage() {
   nextflow run main.nf -profile test,toolsPath --genome 'hg19' --singleEnd
 
   Mandatory arguments:
-  --samplePlan               Path to sample plan file if '--reads' is not specified
-  --genome                   Name of iGenomes reference
-  -profile                   Configuration profile to use. Can use multiple (comma separated)
+  --reads [file]                     Path to input data (must be surrounded with quotes)
+  --samplePlan [file]                Path to sample plan file if '--reads' is not specified
+  --genome [str]                     Name of genome reference
+  -profile [str]                     Configuration profile to use. Can use multiple (comma separated)
 
   Inputs:
-  --design                   Path to design file for downstream analysis
-  --singleEnd                Specifies that the input is single end reads
-  --spike                    Indicates if the experiment includes a spike-in normalization.
-                             Default : false. Available : 'spike' to use metagenome with reference genome
-                             '[spike genome]' to use a specific second genome
+  --design [file]                    Path to design file for downstream analysis
+  --singleEnd [bool]                 Specifies that the input is single end reads
+  --spike [str]                      Name of the genome used for spike-in analysis
 
   References           If not specified in the configuration file or you wish to overwrite any of the references given by the --genome field
-  --fasta                    Path to Fasta reference
+  --fasta [file]                     Path to Fasta reference
 
   Alignment:
-  --aligner                  Alignment tool to use ['bwa-mem', 'star', 'bowtie2']. Default: 'bwa-mem'
-  --saveAlignedIntermediates Save all intermediates mapping files. Default: false  
-  --starIndex                Index for STAR aligner
-  --bwaIndex                 Index for BWA MEM aligner
-  --bowtie2Index             Index for Bowtie2 aligner
+  --aligner [str]                    Alignment tool to use ['bwa-mem', 'star', 'bowtie2']. Default: 'bwa-mem'
+  --saveAlignedIntermediates [bool]  Save all intermediates mapping files. Default: false  
+  --starIndex [file]                 Index for STAR aligner
+  --bwaIndex [file]                  Index for Bwa-mem aligner
+  --bowtie2Index [file]              Index for Bowtie2 aligner
 
   Filtering:
-  --mapQ                     Minimum mapping quality to consider. Default: false
-  --keepDups                 Do not remove duplicates afer marking. Default: false
-  --blacklist                Path to black list regions (.bed).
+  --mapQ [int]                       Minimum mapping quality to consider. Default: false
+  --keepDups [bool]                  Do not remove duplicates afer marking. Default: false
+  --blacklist [file]                 Path to black list regions (.bed).
 
   Annotation:          If not specified in the configuration file or you wish to overwrite any of the references given by the --genome field
-  --geneBed                  BED annotation file with gene coordinate.
-  --gtf                      GTF annotation file. Used in HOMER peak annotation
-  --effGenomeSize            Effective Genome size
-  --tssSize                  Distance (upstream/downstream) to transcription start point to consider. Default: 2000
+  --geneBed [file]                   BED annotation file with gene coordinate.
+  --gtf [file]                       GTF annotation file. Used in HOMER peak annotation
+  --effGenomeSize [int]              Effective Genome size
+  --tssSize [int]                    Distance (upstream/downstream) to transcription start point to consider. Default: 2000
 
   Skip options:        All are false by default
-  --skipFastqc               Skips fastQC
-  --skipPreseq               Skips preseq QC
-  --skipPPQT                 Skips phantompeakqualtools QC
-  --skipDeepTools            Skips deeptools QC
-  --skipPeakcalling          Skips peak calling
-  --skipPeakanno             Skips peak annotation
-  --skipIDR                  Skips IDR QC
-  --skipFeatCounts           Skips feature count
-  --skipMultiQC              Skips MultiQC step
+  --skipFastqc [bool]                Skips fastQC
+  --skipPreseq [bool]                Skips preseq QC
+  --skipPPQT [bool]                  Skips phantompeakqualtools QC
+  --skipDeepTools [bool]             Skips deeptools QC
+  --skipPeakcalling [bool]           Skips peak calling
+  --skipPeakanno [bool]              Skips peak annotation
+  --skipIDR [bool]                   Skips IDR QC
+  --skipFeatCounts [bool]            Skips feature count
+  --skipMultiQC [bool]               Skips MultiQC step
 
   Other options:
-  --outdir                   The output directory where the results will be saved
-  --email                    Set this parameter to your e-mail address to get a summary e-mail with details of the run sent to you when the workflow exits
-  -name                      Name for the pipeline run. If not specified, Nextflow will automatically generate a random mnemonic.
+  --outdir [file]                    The output directory where the results will be saved
+  --email [str]                      Set this parameter to your e-mail address to get a summary e-mail with details of the run sent to you when the workflow exits
+  -name [str]                        Name for the pipeline run. If not specified, Nextflow will automatically generate a random mnemonic.
 
   =======================================================
   Available Profiles
-    -profile test            Set up the test dataset
-    -profile conda           Build a new conda environment before running the pipeline
-    -profile toolsPath       Use the paths defined in configuration for each tool
-    -profile singularity     Use the Singularity images for each process
-    -profile cluster         Run the workflow on the cluster, instead of locally
+    -profile test                    Set up the test dataset
+    -profile conda                   Build a new conda environment before running the pipeline
+    -profile toolsPath               Use the paths defined in configuration for each tool
+    -profile singularity             Use the Singularity images for each process
+    -profile cluster                 Run the workflow on the cluster, instead of locally
 
   """.stripIndent()
 }
@@ -283,7 +282,6 @@ chPpqtRSCHeader = file("$baseDir/assets/ppqt_rsc_header.txt", checkIfExists: tru
 
 //Peak Calling
 params.effGenomeSize = genomeRef ? params.genomes[ genomeRef ].effGenomeSize ?: false : false
-
 Channel
   .fromPath("$baseDir/assets/peak_count_header.txt")
   .into { chPeakCountHeaderSharp; chPeakCountHeaderBroad; chPeakCountHeaderVeryBroad }
@@ -377,6 +375,7 @@ if ( params.metadata ){
 /*
  * Create a channel for input read files
  */
+
 if(params.samplePlan){
    if(params.singleEnd && !params.inputBam){
       Channel
@@ -488,7 +487,7 @@ if (params.design){
      }
     .dump(tag:'design')
     .view()
-    .into { chDesignControl; chDesignReplicate }
+    .into { chDesignControl }
 
   // Create special channel to deal with no input cases
   Channel
@@ -497,8 +496,8 @@ if (params.design){
     .set{ chNoInput }
 }else{
   chDesignControl = Channel.empty()
-  chDesignReplicate = Channel.empty()
   chDesignCheck = Channel.empty()
+  chDesignMqc = Channel.empty()
 }
 
 /*
@@ -521,7 +520,7 @@ process checkDesign{
   """
 }
 
-if(params.inputBam == false){
+
 /*
  * FastQC
  */
@@ -531,7 +530,7 @@ process fastQC{
   publishDir "${params.outdir}/fastqc", mode: 'copy'
 
   when:
-  !params.skipFastqc
+  !params.skipFastqc && !params.inputBam
 
   input:
   set val(prefix), file(reads) from rawReadsFastqc
@@ -558,7 +557,7 @@ process bwaMem{
 	     else if (!params.spike || params.saveAlignedIntermediates) filename}
 
   when:
-  params.aligner == "bwa-mem"
+  params.aligner == "bwa-mem" && !params.inputBam
 
   input:
   set val(sample), file(reads), file(index), val(genomeBase) from rawReadsBWA.combine(chBwaIndex)
@@ -588,7 +587,7 @@ process bowtie2{
 	      if (filename.indexOf(".log") > 0) "logs/$filename"  
 	      else if (!params.spike || params.saveAlignedIntermediates) filename}
   when:
-  params.aligner == "bowtie2"
+  params.aligner == "bowtie2" && !params.inputBam
 
   input:
   set val(sample), file(reads), file(index), val(genomeBase) from rawReadsBt2.combine(chBt2Index)
@@ -618,7 +617,7 @@ process star{
 	     if (filename.indexOf(".log") > 0) "logs/$filename"  
  	     else if (!params.spike || params.saveAlignedIntermediates) filename}
   when:
-  params.aligner == "star"
+  params.aligner == "star" && !params.inputBam
 
   input:
   set val(sample), file(reads), file(index), val(genomeBase) from rawReadsSTAR.combine(chStarIndex)
@@ -642,19 +641,21 @@ process star{
        --outFileNamePrefix $prefix  \
        --outSAMattrRGline ID:$prefix SM:$prefix LB:Illumina PL:Illumina
   """
-  }
-  if (params.aligner == "bowtie2"){
-    chAlignReads = chAlignReadsBowtie2
-    chMappingMqc = chBowtie2Mqc
-  } else if (params.aligner == "bwa-mem"){
-    chAlignReads = chAlignReadsBwa
-    chMappingMqc = chBwaMqc
-  } else if (params.aligner == "star"){
-    chAlignReads = chAlignReadsStar
-    chMappingMqc = chStarMqc
-  }
 }
-else{
+
+if (params.aligner == "bowtie2"){
+  chAlignReads = chAlignReadsBowtie2
+  chMappingMqc = chBowtie2Mqc
+} else if (params.aligner == "bwa-mem"){
+  chAlignReads = chAlignReadsBwa
+  chMappingMqc = chBwaMqc
+} else if (params.aligner == "star"){
+  chAlignReads = chAlignReadsStar
+  chMappingMqc = chStarMqc
+}
+
+
+if (params.inputBam){
   chFastqcMqc = Channel.empty()
   chMappingMqc = Channel.empty()
 }
@@ -872,8 +873,7 @@ process bamFiltering {
     saveAs: {filename ->
              if (!filename.endsWith(".bam") && (!filename.endsWith(".bam.bai"))) "stats/$filename"
              else if (filename.endsWith("_filtered.bam") || (filename.endsWith("_filtered.bam.bai"))) filename
-             else null
-            }
+             else null}
 
   input:
   set val(prefix), file(markedBam) from chMarkedBamsFilt
@@ -1113,7 +1113,6 @@ process deepToolsCorrelationQC{
 
   output:
   file "bams_correlation.pdf" into chDeeptoolsCorrel
-  file "bams_coverage.pdf" into chDeeptoolsCoverage
   file "bams_correlation.tab" into chDeeptoolsCorrelMqc
   
   script:
@@ -1134,11 +1133,11 @@ process deepToolsCorrelationQC{
   """
 }
 
-process deepToolsFingerprintQC{
+process deepToolsFingerprint{
   publishDir "${params.outdir}/deepTools/fingerprintQC", mode: "copy"
 
   when:
-  allPrefix.size() >= 2 && !params.skipDeepTools
+  !params.skipDeepTools
 
   input:
   file(allBams) from chBamDTFingerprint.map{it[1][0]}.collect()
@@ -1147,7 +1146,7 @@ process deepToolsFingerprintQC{
  
   output:
   file "bams_fingerprint.pdf" into chDeeptoolsFingerprint
-  file "bams_fingerprint*" into chDeeptoolsFingerprintMqc 
+  file "plotFingerprint*" into chDeeptoolsFingerprintMqc 
  
   script: 
   allPrefix = allPrefix.toString().replace("[","")
@@ -1170,6 +1169,7 @@ process deepToolsFingerprintQC{
 /*
  * Prepare channels
  */
+
 if (params.design){
   chBamsMacs1
     .join(chFlagstatMacs)
@@ -1209,6 +1209,7 @@ if (params.design){
 /*
  * MACS2 - sharp mode
  */
+
 process sharpMACS2{
   tag "${sampleID} - ${controlID}"
   publishDir path: "${params.outdir}/peakCalling/sharp", mode: 'copy',
@@ -1250,8 +1251,9 @@ process sharpMACS2{
  }
 
 /*
- * MACS2  - Board
+ * MACS2  - Broad
  */
+
 process broadMACS2{
   tag "${sampleID} - ${controlID}"
   publishDir path: "${params.outdir}/peakCalling/broad", mode: 'copy',
@@ -1297,6 +1299,7 @@ process broadMACS2{
 /*
  * EPIC2 - very broad
  */
+
 process veryBroadEpic2{
   tag "${sampleID} - ${controlID}"
   publishDir path: "${params.outdir}/peakCalling/very-broad", mode: 'copy',
@@ -1345,6 +1348,7 @@ chPeaksMacsSharp
 /************************************
  * Peaks Annotation
  */
+
 process peakAnnoHomer{
   tag "${sampleID}"
   publishDir path: "${params.outdir}/peakCalling/annotation/", mode: 'copy'
@@ -1374,6 +1378,7 @@ process peakAnnoHomer{
 /*
  * Peak calling & annotation QC
  */
+
 process peakQC{
   publishDir "${params.outdir}/peakCalling/QC/", mode: 'copy'
 
@@ -1413,6 +1418,7 @@ process peakQC{
 /*
  * Irreproducible Discovery Rate
  */
+
 chIDRpeaks
   .map { it -> [it[0],it[4]] }
   .groupTuple()
@@ -1449,6 +1455,7 @@ process IDR{
 /**************************************
  * Feature counts
  */
+
 process prepareAnnotation{
   publishDir "${params.outdir}/featCounts/", mode: "copy"
 
@@ -1500,6 +1507,7 @@ process featureCounts{
 /*
  * MultiQC
  */
+
 process getSoftwareVersions{
   publishDir path: "${params.outdir}/software_versions", mode: "copy"
 
@@ -1605,10 +1613,12 @@ process multiqc {
   rfilename = customRunName ? "--filename " + customRunName + "_chipseq_report" : "--filename chipseq_report" 
   metadataOpts = params.metadata ? "--metadata ${metadata}" : ""
   splanOpts = params.samplePlan ? "--splan ${params.samplePlan}" : ""
-  isPE = params.singleEnd ? 0 : 1
+  isPE = params.singleEnd ? "" : "-p"
+  splanStats = params.samplePlan ? "-s ${params.samplePlan}" : ""
+  designStats= params.design ? "-d ${params.design}" : ""
   modules_list = "-m custom_content -m fastqc -m bowtie2 -m star -m preseq -m picard -m phantompeakqualtools -m deeptools -m macs2 -m homer"
   """
-  stats2multiqc.sh ${splan} ${design} ${params.aligner} ${isPE}
+  stats2multiqc.sh ${splanStats} ${designStats} -a ${params.aligner} ${isPE}
   mqc_header.py --name "ChIP-seq" --version ${workflow.manifest.version} ${metadataOpts} ${splanOpts} > multiqc-config-header.yaml
   multiqc . -f $rtitle $rfilename -c multiqc-config-header.yaml -c $multiqcConfig $modules_list
   """
