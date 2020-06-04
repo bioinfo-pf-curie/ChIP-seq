@@ -294,14 +294,6 @@ Channel
   .fromPath("$baseDir/assets/peak_annotation_header.txt")
   .set{ chPeakAnnotationHeader }
 
-
-//Filtering
-//if (params.singleEnd) {
-//  chBamtoolsFilterConfig = Channel.fromPath(params.bamtoolsFilterSEConfig, checkIfExists: true)
-//} else {
-//  chBamtoolsFilterConfig = Channel.fromPath(params.bamtoolsFilterPEConfig, checkIfExists: true)
-//}
-
 //Stage config files
 Channel
   .fromPath(params.multiqcConfig, checkIfExists: true)
@@ -325,10 +317,10 @@ if ("${workflow.manifest.version}" =~ /dev/ ){
 
 log.info """=======================================================
 
-Chip-seq v${workflow.manifest.version}"
+ChIP-seq v${workflow.manifest.version}"
 ======================================================="""
 def summary = [:]
-summary['Pipeline Name']  = 'Chip-seq'
+summary['Pipeline Name']  = 'ChIP-seq'
 summary['Pipeline Version'] = workflow.manifest.version
 summary['Run Name']     = customRunName ?: workflow.runName
 if (params.samplePlan) {
@@ -485,9 +477,7 @@ if (params.design){
       if(row.CONTROLID==""){row.CONTROLID='NO_INPUT'}
       return [ row.SAMPLEID, row.CONTROLID, row.SAMPLENAME, row.GROUP, row.PEAKTYPE ]
      }
-    .dump(tag:'design')
-    .view()
-    .into { chDesignControl }
+    .set { chDesignControl }
 
   // Create special channel to deal with no input cases
   Channel
@@ -519,7 +509,6 @@ process checkDesign{
   check_designs.py $design $samplePlan ${params.singleEnd} $baseDir $params.inputBam
   """
 }
-
 
 /*
  * FastQC
@@ -878,7 +867,6 @@ process bamFiltering {
   input:
   set val(prefix), file(markedBam) from chMarkedBamsFilt
   file bed from chGeneBed.collect()
-  //file bamtoolsFilterConfig from chBamtoolsFilterConfig.collect()
 
   output:
   set val(prefix), file("*filtered.{bam,bam.bai}") into chFilteredBams
@@ -1590,7 +1578,6 @@ process multiqc {
   file ('ppqt/*') from chPpqtOutMqc.collect().ifEmpty([])
   file ('ppqt/*') from chPpqtCsvMqc.collect().ifEmpty([])
 
-  //file ('deepTools/*') from chDeeptoolsSingle.collect().ifEmpty([])
   file ('deepTools/*') from chDeeptoolsSingleMqc.collect().ifEmpty([])
   file ("deepTools/*") from chDeeptoolsCorrelMqc.collect().ifEmpty([])
   file ("deepTools/*") from chDeeptoolsFingerprintMqc.collect().ifEmpty([])
@@ -1688,12 +1675,12 @@ workflow.onComplete {
 
   /*]      = workflow.success     endSummary['exit status']  = workflow.exitStatus     endSummary['Error report'] = workflow.errorReport ?: '-' final logs*/
   if(spikes_poor_alignment.size() > 0){
-    log.info "[chipseq] WARNING - ${spikes_poor_alignment.size()} samples skipped due to poor alignment scores!"
+    log.info "[chIP-seq] WARNING - ${spikes_poor_alignment.size()} samples skipped due to poor alignment scores!"
   }                                                                                                                                                                                                        
  
   if(workflow.success){
-    log.info "[Chip-seq] Pipeline Complete"
+    log.info "[ChIP-seq] Pipeline Complete"
   }else{
-    log.info "[Chip-seq] FAILED: $workflow.runName"
+    log.info "[ChIP-seq] FAILED: $workflow.runName"
   }
 }
