@@ -9,13 +9,15 @@
         * [`conda`](#conda)
         * [`toolsPath`](#toolsPath)
         * [`singularity`](#singularity)
-        * ['cluster'](#cluster)
+        * [`cluster`](#cluster)
         * [`test`](#test)
     * [`--reads`](#--reads)
 	* [`--samplePlan`](#--samplePlan)
 	* [`--design`](#--design)
 	* [`--singleEnd`](#--singleend)
+* [Mapping](#mapping)
 	* [`--aligner`](#--aligner)
+	* [`--saveAlignedIntermediates`](#--saveAlignedIntermediates)
 * [Reference genomes](#reference-genomes)
     * [`--genome`](#--genome)
 	* [`--spike`](#--spike)
@@ -143,6 +145,8 @@ By default, the pipeline expects paired-end data. If you have single-end data, y
 
 It is not possible to run a mixture of single-end and paired-end files in one run.
 
+## Mapping
+
 ### `--aligner`
 
 The current version of the pipeline supports three different aligners;
@@ -155,6 +159,11 @@ By default, the `BWA-mem` mapper is run. You can specify the tool to use as foll
 ```bash
 --aligner 'bwa-mem'
 ```
+
+### `--saveAlignedIntermediates`
+
+By default, only the final bam files are saved in the results folder.
+Activate this option, if you want to keep all intermediate bam files. Note that it will take a lot of disk space.
 
 ## Reference genomes
 
@@ -206,7 +215,6 @@ Note that these paths can be updated on command line using the following paramet
 - `--geneBed` - Path to gene bed file
 - `--effGenomeSize` - Effective genome size. Mandatory for peak calling and deeptools usage.
 - `--blacklist` - Path to black list genome file defined by ENCODE
-- `--saveAlignedIntermediates` - Save the BAM files from the Aligment step  - not done by default
 
 ### `--spike`
 
