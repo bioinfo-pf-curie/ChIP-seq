@@ -495,6 +495,7 @@ if (params.design){
  */
 
 process checkDesign{
+  label 'process_low'
   publishDir "${params.outdir}/pipeline_info", mode: 'copy'
 
   when:
@@ -516,6 +517,7 @@ process checkDesign{
 
 process fastQC{
   tag "${prefix}"
+  label 'process_medium'
   publishDir "${params.outdir}/fastqc", mode: 'copy'
 
   when:
@@ -540,6 +542,7 @@ process fastQC{
 /* BWA-MEM */
 process bwaMem{
   tag "${sample} on ${genomeBase}"
+  label 'process_high'
   publishDir "${params.outdir}/mapping", mode: 'copy',
              saveAs: {filename -> 
 	     if (filename.indexOf(".log") > 0) "logs/$filename" 
@@ -571,6 +574,7 @@ process bwaMem{
 /* BOWTIE2 */
 process bowtie2{
   tag "${sample} on ${genomeBase}"
+  label 'process_medium'
   publishDir "${params.outdir}/mapping", mode: 'copy',
               saveAs: {filename ->
 	      if (filename.indexOf(".log") > 0) "logs/$filename"  
@@ -601,6 +605,7 @@ process bowtie2{
 /* STAR */
 process star{
   tag "${sample} on ${genomeBase}"
+  label 'process_highmem'
   publishDir "${params.outdir}/mapping", mode: 'copy',
              saveAs: {filename ->
 	     if (filename.indexOf(".log") > 0) "logs/$filename"  
@@ -691,6 +696,7 @@ if (params.spike && params.spike != 'spike'){
    // Merging, if necessary reference aligned reads and spike aligned reads
    process compareRefSpike{
      tag "${sample}"
+     label 'process_low'
      publishDir "${params.outdir}/spike", mode: 'copy',
               saveAs: {filename ->
               if (filename.indexOf(".log") > 0) "logs/$filename"
@@ -730,6 +736,7 @@ if (params.spike && params.spike != 'spike'){
 
   process sepMetagenome{
     tag "${sample}"
+    label 'process_low'
     publishDir "${params.outdir}/spike", mode: 'copy'
 
     input:
@@ -765,6 +772,7 @@ if (params.spike && params.spike != 'spike'){
 
 process bamSort{
   tag "${prefix}"
+  label 'process_high'
   publishDir path: "${params.outdir}/mapping", mode: 'copy',
     saveAs: {filename ->
              if ( !filename.endsWith(".bam") && !filename.endsWith(".bam.bai") && params.saveAlignedIntermediates ) "stats/$filename"
@@ -795,6 +803,7 @@ process bamSort{
 
 process markDuplicates{
   tag "${prefix}"
+  label 'process_medium'
   publishDir path: "${params.outdir}/mapping", mode: 'copy',
     saveAs: {filename ->
              if (!filename.endsWith(".bam") && !filename.endsWith(".bam.bai") && params.saveAlignedIntermediates ) "stats/$filename"
@@ -834,6 +843,7 @@ process markDuplicates{
 
 process preseq {
   tag "${prefix}"
+  label 'process_low'
   publishDir "${params.outdir}/preseq", mode: 'copy'
 
   when:
@@ -858,6 +868,7 @@ process preseq {
 
 process bamFiltering {
   tag "${prefix}"
+  label 'process_low'
   publishDir path: "${params.outdir}/mapping", mode: 'copy',
     saveAs: {filename ->
              if (!filename.endsWith(".bam") && (!filename.endsWith(".bam.bai"))) "stats/$filename"
@@ -931,6 +942,7 @@ chFlagstatChip
 
 process PPQT{
   tag "${prefix}"
+  label 'process_low'
   publishDir "${params.outdir}/ppqt", mode: "copy"
 
   when:
@@ -964,6 +976,7 @@ process PPQT{
 
 process bigWig {
   tag "${prefix}"
+  label 'process_medium'
   publishDir "${params.outdir}/bigWig", mode: "copy"
 
   input:
@@ -994,6 +1007,7 @@ if (params.spike){
     .into{chBamsSpikesBam; chBamsSpikesBai}
 
   process getSpikeScalingFactor {
+    label 'process_medium'
     publishDir "${params.outdir}/bigWig", mode: "copy"
 
     input:
@@ -1027,6 +1041,7 @@ if (params.spike){
 
   process bigWigSpikeNorm{
     tag "${prefix}"
+    label 'process_medium'
     publishDir "${params.outdir}/bigWig", mode: "copy"
 
     input:
@@ -1056,6 +1071,7 @@ if (params.spike){
 
 process deepToolsComputeMatrix{
   tag "${prefix}"
+  label 'process_medium'
   publishDir "${params.outdir}/deepTools/computeMatrix", mode: "copy"
 
   when:
@@ -1088,6 +1104,7 @@ process deepToolsComputeMatrix{
 }
 
 process deepToolsCorrelationQC{
+  label 'process_medium'
   publishDir "${params.outdir}/deepTools/correlationQC", mode: "copy"
 
   when:
@@ -1122,6 +1139,7 @@ process deepToolsCorrelationQC{
 }
 
 process deepToolsFingerprint{
+  label 'process_medium'
   publishDir "${params.outdir}/deepTools/fingerprintQC", mode: "copy"
 
   when:
@@ -1200,6 +1218,7 @@ if (params.design){
 
 process sharpMACS2{
   tag "${sampleID} - ${controlID}"
+  label 'process_medium'
   publishDir path: "${params.outdir}/peakCalling/sharp", mode: 'copy',
     saveAs: { filename ->
             if (filename.endsWith(".tsv")) "stats/$filename"
@@ -1244,6 +1263,7 @@ process sharpMACS2{
 
 process broadMACS2{
   tag "${sampleID} - ${controlID}"
+  label 'process_medium'
   publishDir path: "${params.outdir}/peakCalling/broad", mode: 'copy',
     saveAs: { filename ->
             if (filename.endsWith(".tsv")) "stats/$filename"
@@ -1290,6 +1310,7 @@ process broadMACS2{
 
 process veryBroadEpic2{
   tag "${sampleID} - ${controlID}"
+  label 'process_medium'
   publishDir path: "${params.outdir}/peakCalling/very-broad", mode: 'copy',
     saveAs: { filename ->
             if (filename.endsWith(".tsv")) "stats/$filename"
@@ -1339,6 +1360,7 @@ chPeaksMacsSharp
 
 process peakAnnoHomer{
   tag "${sampleID}"
+  label 'process_medium'
   publishDir path: "${params.outdir}/peakCalling/annotation/", mode: 'copy'
 
   when:
@@ -1368,6 +1390,7 @@ process peakAnnoHomer{
  */
 
 process peakQC{
+  label 'process_medium'
   publishDir "${params.outdir}/peakCalling/QC/", mode: 'copy'
 
   when:
@@ -1415,6 +1438,7 @@ chIDRpeaks
 
 process IDR{
   tag "${group}"
+  label 'process_medium'
   publishDir path: "${params.outdir}/IDR", mode: 'copy'
 
   when:
@@ -1445,6 +1469,7 @@ process IDR{
  */
 
 process prepareAnnotation{
+  label 'process_low'
   publishDir "${params.outdir}/featCounts/", mode: "copy"
 
   when:
@@ -1465,6 +1490,7 @@ process prepareAnnotation{
     
 process featureCounts{
   tag "${bed}"
+  label 'process_medium'
   publishDir "${params.outdir}/featCounts/", mode: "copy"
 
   when:
@@ -1552,6 +1578,7 @@ process workflowSummaryMqc {
 
 
 process multiqc {
+  label 'process_low'
   publishDir "${params.outdir}/MultiQC", mode: 'copy'
 
   when:
