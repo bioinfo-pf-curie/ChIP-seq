@@ -1,0 +1,270 @@
+#
+# MY_PIPELINE config for MultiQC
+#
+#################################################################
+
+skip_generalstats: true
+read_count_multiplier: 0.000001
+read_count_prefix: 'M'
+read_count_desc: 'millions'
+log_filesize_limit: 2000000000
+
+###################################
+## Custom content
+custom_data:
+    my_stats:
+        file_format: 'csv'
+        section_name: 'General Metrics'
+        description: ' of sequenced data. Note that in the context of paired-end data, the number pairs are reported (as reads).
+High-quality ChIP-seq experiment produces significant clustering of enriched DNA sequence tags at locations bound by the protein of interest. Thus, the sequence tag density is expected to accumulate on forward and reverse strands centered around the binding site. Low normalized strand coefficient (<b>NSC</b>) and relative strand correlation (<b>RSC</b>) values can be due to failed and poor quality ChIP, low read sequence quality and hence lots of mismappings, shallow sequencing depth or a combination of these. Also, datasets with few binding sites (< 200) which could be due to biological reasons (i.e. a factor that truly binds only a few sites in a particular tissue type) would output low NSC and RSC scores. The fraction of reads in peaks (<b>FRiP</b>) is also presented. The ENCODE Consortium scrutinizes experiments in which the FRiP falls below 1%.'
+        plot_type: 'table'
+        pconfig:
+            namespace: 'stats'
+            id: 'stats'
+            title: 'General Statistics'
+            save_file: true
+            col1_header: 'Sample_ID'
+        headers:
+            Sample_name:
+              title: 'Sample Name'
+              scale: false
+              format: '{:.0f}'
+              placement: 1000
+            Number_of_reads:
+              title: 'Total Reads'
+              scale: 'RdYlGn'
+              format: '{:,.0f}'
+              placement: 2000
+            Fragment_length:
+              title: 'Fragment Length'
+              scale: 'YlGnGn'
+              format: '{:,.0f}'
+              placement: 3000
+            Number_of_aligned_reads:
+              title: 'Aligned Reads'
+              scale: 'RdYlGn'
+              format: '{:,.0f}'
+              hidden: true
+              placement: 3500
+            Percent_of_aligned_reads:
+              title: 'Aligned Reads (%)'
+              min: 0
+              max: 100
+              scale: 'RdYlGn'
+              suffix: '%'
+              format: '{:,.1f}'
+              placement: 4000
+            Number_of_uniquely_mapped_reads:
+              title: 'Unique Reads'
+              scale: 'RdYlGn'
+              format: '{:,.0f}'
+              hidden: true
+              placement: 5000
+            Percent_of_uniquely_mapped_reads:
+              title: 'Unique Reads (%)'
+              min: 0
+              max: 100
+              scale: 'RdYlGn'
+              format: '{:,.1f}'
+              suffix: '%'
+              placement: 6000
+            Number_of_multiple_mapped_reads:
+              title: 'Multiple reads'
+              scale: 'RdYlGn'
+              format: '{:,.0f}'
+              hidden: true
+              placement: 7000
+            Percent_of_multiple_mapped_reads:
+              title: 'Multiple reads (%)'
+              min: 0
+              max: 100
+              scale: 'RdYlGn'
+              format: '{:,.1f}'
+              suffix: '%'
+              placement: 8000
+            Number_of_duplicates:
+              title: 'Duplicates'
+              scale: 'RdYlGn'
+              format: '{:,.0f}'
+              hidden: true
+              placement: 9000
+            Percent_of_duplicates:
+              title: 'Duplicates (%)'
+              min: 0
+              max: 100
+              scale: 'RdYlVBu'
+              format: '{:,.1f}'
+              suffix: '%'
+              placement: 10000
+            Normalized_strand_correlation:
+              title: 'NSC'
+              min: 0.8
+              max: 3
+              scale: 'RdYlGn'
+              format: '{:,.2f}'
+              placement: 11000
+            Relative_strand_correlation:
+              title: 'RSC'
+              min: 0
+              max: 2
+              scale: 'RdYlGn'
+              format: '{:,.2f}'
+              placement: 12000
+            Fraction_of_reads_in_peaks:
+              min: 0
+              max: 1
+              title: 'FRiP'
+              scale: 'RdYlGn'
+              format: '{:,.2f}'
+              placement: 13000
+    spikes:
+        file_format: 'tsv'
+        section_name: 'Spike-In'
+        description: 'statistics of spike-in alignment data.'
+        plot_type: 'bargraph'
+        pconfig:
+            namespace: 'spikes'
+            title: 'Spike-In / Reference genome reads cleaning'
+            id: 'spikes'
+            scale: 'Set2'
+
+    bwa_logs:
+        file_format: 'tsv'
+        section_name: 'Bwa-mem'
+        description: 'statistics on aligned data. Number of unique and multiple mapped reads, as well unmapped reads are reported.'
+        plot_type: 'bargraph'
+        pconfig:
+            namespace: 'bwalogs'
+            title: 'Reads Alignment'
+            id: 'bwalogs'
+            scale: 'Set1'
+
+sp:
+  my_stats:
+      fn: '*.stats'
+  spikes:
+      fn: '*bamcomp.log'
+  bwa_logs:
+      fn: '*bwa.log'
+
+table_cond_formatting_rules:
+    Fragment_length:
+        fail:
+          - lt: 1
+    Percent_of_aligned_reads:
+        pass:
+          - gt: 80
+        warn:
+          - lt: 80
+        fail:
+          - lt: 50
+    Percent_of_duplicates:
+        pass:
+          - lt: 25
+        warn:
+          - gt: 25
+        fail:
+          - gt: 50
+    Normalized_strand_correlation:
+        pass:
+          - gt: 1.05
+        warn:
+          - lt: 1.05
+        fail:
+          - lt: 1
+    Relative_strand_correlation:
+        pass:
+          - gt: 0.8
+        warn:
+          - lt: 0.8
+        fail:
+          - lt: 0.3
+    Fraction_of_reads_in_peaks:
+        pass:
+          - gt: 0.01
+        fail:
+          - lt: 0.01
+
+
+###############################
+## Modules 
+
+module_order:
+   - fastqc
+   - bowtie2:
+      name: 'Bowtie2'
+      info: 'alignment of raw sequencing reads on the reference (or spike) genome(s).'
+   - star
+   - picard
+   - preseq:
+      name: 'Sequencing Complexity'
+      info: 'estimates the complexity of a library, showing how many additional unique reads are sequenced for increasing total read count. A shallow curve indicates complexity saturation. The dashed line shows a perfectly complex library where total reads = unique reads. The presented graph shows extrapolated curves up to 200M sequencing reads.'
+   - phantompeakqualtools 
+   - macs2
+   - deeptools
+   - homer
+
+report_section_order:
+  my_stats:
+    order: 1000
+  fastqc:
+    order: 900
+  bwa_logs:
+    order: 800
+  bowtie2:
+    order: 790
+  star:
+    order: 780
+  spikes:
+    order: 700
+  picard:
+    order: 600
+  strand_shift_correlation:
+    order: -1200
+  peak_count:
+    order: -1300
+  peak_annotation:
+    order: -1500
+  deeptools_correlation:
+    order: -1600
+  deeptools_fingerprint:
+    order: -1700
+  read_distribution_profile_plot:
+    order: -1900
+  Chip-seq_pipeline_software_versions:
+    order: -2000
+  summary:
+    order: -2100
+
+#############################
+## Removed plots
+remove_sections :
+  - fastqc_sequence_counts
+  - fastqc_per_sequence_quality_scores
+  - fastqc_overrepresented_sequences
+  - fastqc_status_checks
+  - plotFingerprint
+
+fn_ignore_files:
+  - '*spp_rsc_mqc.tsv'
+  - '*spp_nsc_mqc.tsv'
+  - '*FRiP*'
+
+fn_clean_exts:
+    - '_bwa.log'
+    - '_bowtie2.log'
+    - 'Log.final.out'
+    - '_ref_bamcomp.log'
+    - '_sorted.bam'
+    - '_peaks.count_mqc'
+
+
+#############################
+## Display
+
+custom_plot_config:
+   bwalogs:
+      Unmapped:
+         color: '#A6ACAF'
+
+plots_force_interactive: True

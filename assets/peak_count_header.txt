@@ -1,0 +1,8 @@
+#id: 'peak_count'
+#section_name: 'Peak count'
+#description: "is calculated from total number of peaks called on a given sample"
+#plot_type: 'bargraph'
+#anchor: 'Chipseq-peak_count'
+#pconfig:
+#    title: 'Total peak count'
+#    ylab: 'Peak count'
