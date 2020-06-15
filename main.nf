@@ -111,12 +111,7 @@ if (params.aligner != 'bwa-mem' && params.aligner != 'star' && params.aligner !=
  */
 
 // Configurable reference genomes
-if (params.spike == 'spike'){
-  genomeRef = params.genome + '_spike'
-}
-else {
-  genomeRef = params.genome
-}
+genomeRef = params.genome
 
 // Genome Fasta file
 params.fasta = genomeRef ? params.genomes[ genomeRef ].fasta ?: false : false
@@ -140,6 +135,16 @@ else{
   exit 1, "Chromosome size file not found: ${params.chrsize}"
 }
 
+// spike
+params.spikeFasta = params.spike ? params.genomes[ params.spike ].fasta ?: false : false
+if ( params.fasta ){
+  Channel
+    .fromPath(params.spikeFasta, checkIfExists: true)
+    .set{chFastaSpike}
+}
+else{
+  exit 1, "Fasta file not found: ${params.spikeFasta}"
+}
 
 /********************
  * Bwa-mem Index
@@ -160,7 +165,6 @@ if (params.bwaIndex){
 }
 
 params.spikeBwaIndex = params.spike ? params.genomes[ params.spike ].bwaIndex ?: false : false
-params.spikeFasta = params.spike ? params.genomes[ params.spike ].fasta ?: false : false
 if (params.spikeBwaIndex){
   lastPath = params.spikeBwaIndex.lastIndexOf(File.separator)
   bwaDirSpike =  params.spikeBwaIndex.substring(0,lastPath+1)
@@ -664,16 +668,16 @@ def check_log(logs) {
   def nb_spike = 0;
   def percent_spike = 0;
   logs.eachLine { line ->
-    if ((matcher = line =~ /Reads on ref only\t([\d\.]+)/)) {                                                                                                                                  
+    if ((matcher = line =~ /Reads on ref\t([\d\.]+)/)) {
       nb_ref = matcher[0][1]                                                                                                                                                                   
-    }else if ((matcher = line =~ /Reads on spike only\t([\d\.]+)/)) {                                                                                                                          
+    }else if ((matcher = line =~ /Reads on spike\t([\d\.]+)/)) {
       nb_spike = matcher[0][1]                                                                                                                                                                 
     } 
   }
   logname = logs.getBaseName() - '_ref_bamcomp.log'
   percent_spike = nb_spike.toFloat() / (nb_spike.toFloat() + nb_ref.toFloat()) * 100
   percent_spike = percent_spike.round(3)
-  if(percent_spike.toFloat() <= '0.001'.toFloat() ){
+  if(percent_spike.toFloat() <= '1'.toFloat() ){
       log.info "#################### VERY POOR SPIKE ALIGNMENT RATE! IGNORING FOR FURTHER DOWNSTREAM ANALYSIS! ($logname)    >> ${percent_spike}% <<"
       spikes_poor_alignment << logname
       return false
@@ -683,7 +687,7 @@ def check_log(logs) {
   }
 }
 
-if (params.spike && params.spike != 'spike'){
+if (params.spike ){
 
    /* Split and rebuild Channel to be sure of order between bams */
    chAlignRef = Channel.create()
@@ -712,11 +716,10 @@ if (params.spike && params.spike != 'spike'){
 
      script:
      sampleSpike = sample + '_spike'
-     opts = params.singleEnd ? "-se" : ""
      """
      samtools sort $unsortedBamRef -n -@ ${task.cpus} -T ${sample}_ref -o ${sample}_ref_sorted.bam
      samtools sort $unsortedBamSpike -n -@ ${task.cpus} -T ${sample}_spike -o ${sample}_spike_sorted.bam
-     compareAlignments.py -i ${sample}_ref_sorted.bam -s ${sample}_spike_sorted.bam -o ${sample}_clean.bam -os ${sample}_clean_spike.bam ${opts}
+     compareAlignments.py -a ${sample}_ref_sorted.bam -b ${sample}_spike_sorted.bam -oa ${sample}_clean.bam -ob ${sample}_clean_spike.bam
      """
    }
 
@@ -730,34 +733,6 @@ if (params.spike && params.spike != 'spike'){
   // concat spike and ref bams
   chRefBams
     .concat(chSpikeCheckBams)
-    .set {chAllBams}
-
-} else if(params.spike && params.spike == 'spike'){
-
-  process sepMetagenome{
-    tag "${sample}"
-    label 'process_low'
-    publishDir "${params.outdir}/spike", mode: 'copy'
-
-    input:
-    set val(sample), file(unsortedBam) from chAlignReads
-
-    output:
-    set val(sample), file('*_clean.bam') into chRefBams
-    set val(sampleSpike), file('*_clean_spike.bam') into chSpikeBams
-    file ('*.txt') into chMappingSpikeMqc
-
-    script:
-    sampleSpike = sample + '_spike'
-    """
-    samtools sort $unsortedBam -n -T ${prefix} -o ${prefix}_sorted.bam
-    sepMetagenome.py -I ${prefix}_sorted.bam -OR ${prefix}_clean.bam -OS ${prefix}_clean_spike.bam -SE ${params.singleEnd}
-    """
-  }
-
-  // concat spike and ref bams
-  chRefBams
-    .concat(chSpikeBams)
     .set {chAllBams}
 
 }else{
@@ -1506,7 +1481,7 @@ process featureCounts{
 
   script:
   prefix = annot.toString() - ~/(\.bed)?$/
-  paramsPairedEnd = params.singleEnd ? '' : '-p'
+  paramsPairedEnd = params.singleEnd ? '' : '-p -C -P'
   """
   awk '{OFS="\t";print \$4,\$1,\$2,\$3,\$6}' ${annot} > ${prefix}.saf
   featureCounts -a ${prefix}.saf -F SAF \\
