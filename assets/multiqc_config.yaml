@@ -143,7 +143,7 @@ sp:
   my_stats:
       fn: '*.stats'
   spikes:
-      fn: '*bamcomp.log'
+      fn: '*bamcomp.mqc'
   bwa_logs:
       fn: '*bwa.log'
 
@@ -246,6 +246,7 @@ remove_sections :
   - plotFingerprint
 
 fn_ignore_files:
+  - '*spike*'
   - '*spp_rsc_mqc.tsv'
   - '*spp_nsc_mqc.tsv'
   - '*FRiP*'
@@ -254,7 +255,7 @@ fn_clean_exts:
     - '_bwa.log'
     - '_bowtie2.log'
     - 'Log.final.out'
-    - '_ref_bamcomp.log'
+    - '_ref_bamcomp.mqc'
     - '_sorted.bam'
     - '_peaks.count_mqc'
 

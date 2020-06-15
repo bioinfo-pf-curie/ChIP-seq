@@ -564,11 +564,9 @@ process bwaMem{
 
   script:
   prefix = genomeBase == genomeRef ? sample : sample + '_spike'
-  alnMult = params.spike == 'spike' ? '-a' : ''
-  """
+   """
   bwa mem -t ${task.cpus} \\
-          $alnMult \\
-          ${index}/${genomeBase} \\
+           ${index}/${genomeBase} \\
           -M \\
           $reads | samtools view -bS - > ${prefix}.bam
   getBWAstats.sh ${prefix}.bam ${prefix}_bwa.log
@@ -596,12 +594,10 @@ process bowtie2{
   script:
   prefix = genomeBase == genomeRef ? sample : sample + '_spike'
   readCommand = params.singleEnd ? "-U ${reads[0]}" : "-1 ${reads[0]} -2 ${reads[1]}"
-  alnMult = params.spike == 'spike' ? alnMult = '-k 3' : ''
-  """
+   """
   bowtie2 -p ${task.cpus} \\
           --very-sensitive --end-to-end --reorder \\
-          $alnMult \\
-          -x ${index}/${genomeBase} \\
+           -x ${index}/${genomeBase} \\
           $readCommand > ${prefix}.bam 2> ${prefix}_bowtie2.log
   """
 }
@@ -711,15 +707,16 @@ if (params.spike ){
 
      output:
      set val(sample), file('*_clean.bam') into chRefBams
-     set val(sampleSpike), file('*.log'), file('*_clean_spike.bam') into chSpikeBams
-     file ('*.log') into chMappingSpikeMqc
+     set val(sampleSpike), file('*.mqc'), file('*_clean_spike.bam') into chSpikeBams
+     file ('*.mqc') into chMappingSpikeMqc
+     file ('*.log') into chMappingSpikeLog
 
      script:
      sampleSpike = sample + '_spike'
      """
      samtools sort $unsortedBamRef -n -@ ${task.cpus} -T ${sample}_ref -o ${sample}_ref_sorted.bam
      samtools sort $unsortedBamSpike -n -@ ${task.cpus} -T ${sample}_spike -o ${sample}_spike_sorted.bam
-     compareAlignments.py -a ${sample}_ref_sorted.bam -b ${sample}_spike_sorted.bam -oa ${sample}_clean.bam -ob ${sample}_clean_spike.bam
+     compareAlignments.py -a ${sample}_ref_sorted.bam -b ${sample}_spike_sorted.bam -oa ${sample}_clean.bam -ob ${sample}_clean_spike.bam 2> ${sample}_compareAlignments.log
      """
    }
 

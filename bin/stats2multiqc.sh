@@ -93,7 +93,7 @@ do
   
     #PICARD
     if [[ -e mapping/${sample}.MarkDuplicates.metrics.txt ]]; then
-	if [ $is_pe == "1" ]; then
+	if [[ $is_pe == "1" ]]; then
 	    nb_dups=$(grep -a2 "## METRICS" mapping/${sample}.MarkDuplicates.metrics.txt | tail -1 | awk -F"\t" '{print $7}')
 	else
 	    nb_dups=$(grep -a2 "## METRICS" mapping/${sample}.MarkDuplicates.metrics.txt | tail -1 | awk -F"\t" '{print $6}')

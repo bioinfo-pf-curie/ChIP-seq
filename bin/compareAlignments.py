@@ -265,19 +265,26 @@ def compareBams(bam1, bam2, out1, out2, score="mapq", debug=False):
     hg2.close()
     hg2Mm.close()
 
-    logName = os.path.basename(bam1).rsplit('_',1)[0] + '_bamcomp.log'
+    logName = os.path.basename(bam1).rsplit('_',1)[0] + '_bamcomp.mqc'
     with open(logName, 'w') as logFile:
-        logFile.write("Ref BAM\t" + bam1 + "\n")
-        logFile.write("Spike BAM\t" + bam2 + "\n")
-        if isPE:
-            logFile.write('Data type\tPaired-end\n')
-        else:
-            logFile.write('Data type\tSingle-end\n')
-        logFile.write("Score\t" + score + "\n")
         logFile.write('Reads on ref\t' + str(counter_alignments["bam1"]) + '\n')
         logFile.write('Reads on spike\t' + str(counter_alignments["bam2"]) + '\n')
         logFile.write('Reads unmapped\t' + str(counter_alignments["unmapped"]) + '\n')
         logFile.write('Ambiguous reads\t' + str(counter_alignments["ambiguous"]) + '\n')
+
+
+    ## Log file
+    sys.stderr.write("compareAlignment.py\n")
+    sys.stderr.write("-------------------\n")
+    sys.stderr.write("Ref BAM\t" + bam1 + '\n') 
+    sys.stderr.write("Spike BAM\t" + bam2 + '\n')
+    if isPE:
+        sys.stderr.write('Data type\tPaired-end\n')
+    else:
+        sys.stderr.write('Data type\tSingle-end\n')
+    sys.stderr.write("Score\t" + score + '\n')
+    sys.stderr.write("Logs\t" + logName + '\n')
+
 
 if __name__ == '__main__':
     args = argsParse()
