@@ -499,6 +499,7 @@ if (params.design){
  */
 
 process checkDesign{
+  label 'python'
   label 'process_low'
   publishDir "${params.outdir}/pipeline_info", mode: 'copy'
 
@@ -521,6 +522,7 @@ process checkDesign{
 
 process fastQC{
   tag "${prefix}"
+  label 'fastqc'
   label 'process_medium'
   publishDir "${params.outdir}/fastqc", mode: 'copy'
 
@@ -546,6 +548,7 @@ process fastQC{
 /* BWA-MEM */
 process bwaMem{
   tag "${sample} on ${genomeBase}"
+  label 'bwa'
   label 'process_high'
   publishDir "${params.outdir}/mapping", mode: 'copy',
              saveAs: {filename -> 
@@ -576,6 +579,7 @@ process bwaMem{
 /* BOWTIE2 */
 process bowtie2{
   tag "${sample} on ${genomeBase}"
+  label 'bowtie2'
   label 'process_medium'
   publishDir "${params.outdir}/mapping", mode: 'copy',
               saveAs: {filename ->
@@ -605,6 +609,7 @@ process bowtie2{
 /* STAR */
 process star{
   tag "${sample} on ${genomeBase}"
+  label 'star'
   label 'process_highmem'
   publishDir "${params.outdir}/mapping", mode: 'copy',
              saveAs: {filename ->
@@ -696,6 +701,7 @@ if (params.spike ){
    // Merging, if necessary reference aligned reads and spike aligned reads
    process compareRefSpike{
      tag "${sample}"
+     label 'pysam_samtools'
      label 'process_low'
      publishDir "${params.outdir}/spike", mode: 'copy',
               saveAs: {filename ->
@@ -744,6 +750,7 @@ if (params.spike ){
 
 process bamSort{
   tag "${prefix}"
+  label 'samtools'
   label 'process_high'
   publishDir path: "${params.outdir}/mapping", mode: 'copy',
     saveAs: {filename ->
@@ -775,6 +782,7 @@ process bamSort{
 
 process markDuplicates{
   tag "${prefix}"
+  label 'picard'
   label 'process_medium'
   publishDir path: "${params.outdir}/mapping", mode: 'copy',
     saveAs: {filename ->
@@ -815,6 +823,7 @@ process markDuplicates{
 
 process preseq {
   tag "${prefix}"
+  label 'preseq'
   label 'process_low'
   publishDir "${params.outdir}/preseq", mode: 'copy'
 
@@ -840,6 +849,7 @@ process preseq {
 
 process bamFiltering {
   tag "${prefix}"
+  label 'samtools'
   label 'process_low'
   publishDir path: "${params.outdir}/mapping", mode: 'copy',
     saveAs: {filename ->
@@ -914,6 +924,7 @@ chFlagstatChip
 
 process PPQT{
   tag "${prefix}"
+  label 'r'
   label 'process_low'
   publishDir "${params.outdir}/ppqt", mode: "copy"
 
@@ -948,6 +959,7 @@ process PPQT{
 
 process bigWig {
   tag "${prefix}"
+  label 'deeptools'
   label 'process_medium'
   publishDir "${params.outdir}/bigWig", mode: "copy"
 
@@ -1013,6 +1025,7 @@ if (params.spike){
 
   process bigWigSpikeNorm{
     tag "${prefix}"
+    label 'deeptools'
     label 'process_medium'
     publishDir "${params.outdir}/bigWig", mode: "copy"
 
@@ -1043,6 +1056,7 @@ if (params.spike){
 
 process deepToolsComputeMatrix{
   tag "${prefix}"
+  label 'deeptools'
   label 'process_medium'
   publishDir "${params.outdir}/deepTools/computeMatrix", mode: "copy"
 
@@ -1076,6 +1090,7 @@ process deepToolsComputeMatrix{
 }
 
 process deepToolsCorrelationQC{
+  label 'deeptools'
   label 'process_medium'
   publishDir "${params.outdir}/deepTools/correlationQC", mode: "copy"
 
@@ -1111,6 +1126,7 @@ process deepToolsCorrelationQC{
 }
 
 process deepToolsFingerprint{
+  label 'deeptools'
   label 'process_medium'
   publishDir "${params.outdir}/deepTools/fingerprintQC", mode: "copy"
 
@@ -1190,6 +1206,7 @@ if (params.design){
 
 process sharpMACS2{
   tag "${sampleID} - ${controlID}"
+  label 'macs2'
   label 'process_medium'
   publishDir path: "${params.outdir}/peakCalling/sharp", mode: 'copy',
     saveAs: { filename ->
@@ -1235,6 +1252,7 @@ process sharpMACS2{
 
 process broadMACS2{
   tag "${sampleID} - ${controlID}"
+  label 'macs2'
   label 'process_medium'
   publishDir path: "${params.outdir}/peakCalling/broad", mode: 'copy',
     saveAs: { filename ->
@@ -1282,6 +1300,7 @@ process broadMACS2{
 
 process veryBroadEpic2{
   tag "${sampleID} - ${controlID}"
+  label 'epic2'
   label 'process_medium'
   publishDir path: "${params.outdir}/peakCalling/very-broad", mode: 'copy',
     saveAs: { filename ->
@@ -1332,6 +1351,7 @@ chPeaksMacsSharp
 
 process peakAnnoHomer{
   tag "${sampleID}"
+  label 'homer'
   label 'process_medium'
   publishDir path: "${params.outdir}/peakCalling/annotation/", mode: 'copy'
 
@@ -1362,6 +1382,7 @@ process peakAnnoHomer{
  */
 
 process peakQC{
+  label 'r'
   label 'process_medium'
   publishDir "${params.outdir}/peakCalling/QC/", mode: 'copy'
 
@@ -1410,6 +1431,7 @@ chIDRpeaks
 
 process IDR{
   tag "${group}"
+  label 'idr'
   label 'process_medium'
   publishDir path: "${params.outdir}/IDR", mode: 'copy'
 
@@ -1462,6 +1484,7 @@ process prepareAnnotation{
     
 process featureCounts{
   tag "${bed}"
+  label 'faetureCounts'
   label 'process_medium'
   publishDir "${params.outdir}/featCounts/", mode: "copy"
 
@@ -1495,6 +1518,8 @@ process featureCounts{
  */
 
 process getSoftwareVersions{
+  label 'multiqc'
+  label 'process_low'
   publishDir path: "${params.outdir}/software_versions", mode: "copy"
 
   when:

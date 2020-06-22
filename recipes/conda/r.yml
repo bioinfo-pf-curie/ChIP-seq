@@ -1,0 +1,13 @@
+name: chipseq-r
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  # R-packages
+  - r-base=3.4.1
+  - r-optparse=1.6.0
+  - r-ggplot2=3.1.0
+  - r-reshape2=1.4.3
+  - r-scales=1.0.0
+  - bioconductor-deseq2=1.20.0

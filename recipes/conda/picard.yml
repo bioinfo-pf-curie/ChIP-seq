@@ -1,0 +1,5 @@
+name: picard
+channels:
+  - bioconda
+dependencies:
+  - bioconda::picard=2.19.0

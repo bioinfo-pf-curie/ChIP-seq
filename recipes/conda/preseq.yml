@@ -1,0 +1,5 @@
+name: preseq
+channels:
+  - bioconda
+dependencies:
+  - bioconda::preseq=2.0.3

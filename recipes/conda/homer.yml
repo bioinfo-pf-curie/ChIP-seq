@@ -1,0 +1,5 @@
+name: homer
+channels:
+  - bioconda
+dependencies:
+  - bioconda::homer=4.10

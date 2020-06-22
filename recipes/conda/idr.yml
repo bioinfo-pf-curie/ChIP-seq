@@ -1,0 +1,5 @@
+C1;5202;0cname: idr
+channels:
+  - bioconda
+dependencies:
+  - bioconda::idr=2.0.4.2

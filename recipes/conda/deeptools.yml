@@ -1,0 +1,5 @@
+name: deeptools
+channels:
+  - bioconda
+dependencies:
+  - bioconda::deeptools=3.2.1
