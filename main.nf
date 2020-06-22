@@ -89,7 +89,9 @@ def helpMessage() {
   Available Profiles
     -profile test                    Set up the test dataset
     -profile conda                   Build a new conda environment before running the pipeline
-    -profile toolsPath               Use the paths defined in configuration for each tool
+    -profile multiconda              Build a new conda environment per process before running the pipeline
+    -profile path                    Use the installation paths defined for each tool
+    -profile docker                  Use the Docker images for each process
     -profile singularity             Use the Singularity images for each process
     -profile cluster                 Run the workflow on the cluster, instead of locally
 
