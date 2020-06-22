@@ -139,13 +139,12 @@ else{
 
 // spike
 params.spikeFasta = params.spike ? params.genomes[ params.spike ].fasta ?: false : false
-if ( params.fasta ){
+if ( params.spikeFasta ){
   Channel
     .fromPath(params.spikeFasta, checkIfExists: true)
     .set{chFastaSpike}
-}
-else{
-  exit 1, "Fasta file not found: ${params.spikeFasta}"
+}else{
+  chFastaSpike = Channel.empty()
 }
 
 /********************
@@ -341,9 +340,9 @@ summary['GTF']          = params.gtf
 summary['Genes']        = params.geneBed
 if (params.blacklist)  summary['Blacklist '] = params.blacklist
 summary['Data Type']    = params.singleEnd ? 'Single-End' : 'Paired-End'
-summary['Max Memory']   = params.max_memory
-summary['Max CPUs']     = params.max_cpus
-summary['Max Time']     = params.max_time
+summary['Max Memory']   = params.maxMemory
+summary['Max CPUs']     = params.maxCpus
+summary['Max Time']     = params.maxTime
 summary['Output dir']   = params.outdir
 summary['Working dir']  = workflow.workDir
 summary['Current home']   = "$HOME"
@@ -839,7 +838,7 @@ process preseq {
   file "*.ccurve.txt" into chPreseqStats
 
   script:
-  defectMode = params.preseq_defect ? '-D' : ''
+  defectMode = params.preseqDefect ? '-D' : ''
   """
   preseq lc_extrap -v $defectMode -output ${prefix}.ccurve.txt -bam ${bam[0]}
   """
