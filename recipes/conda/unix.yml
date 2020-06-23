@@ -1,0 +1,5 @@
+name: unix
+channels:
+  - conda-forge
+dependencies:
+  - conda-forge:gawk=5.1.0

@@ -501,7 +501,7 @@ if (params.design){
 
 process checkDesign{
   label 'python'
-  label 'process_low'
+  label 'processLow'
   publishDir "${params.outdir}/pipeline_info", mode: 'copy'
 
   when:
@@ -524,7 +524,7 @@ process checkDesign{
 process fastQC{
   tag "${prefix}"
   label 'fastqc'
-  label 'process_medium'
+  label 'processMedium'
   publishDir "${params.outdir}/fastqc", mode: 'copy'
 
   when:
@@ -550,7 +550,7 @@ process fastQC{
 process bwaMem{
   tag "${sample} on ${genomeBase}"
   label 'bwa'
-  label 'process_high'
+  label 'processHigh'
   publishDir "${params.outdir}/mapping", mode: 'copy',
              saveAs: {filename -> 
 	     if (filename.indexOf(".log") > 0) "logs/$filename" 
@@ -581,7 +581,7 @@ process bwaMem{
 process bowtie2{
   tag "${sample} on ${genomeBase}"
   label 'bowtie2'
-  label 'process_medium'
+  label 'processMedium'
   publishDir "${params.outdir}/mapping", mode: 'copy',
               saveAs: {filename ->
 	      if (filename.indexOf(".log") > 0) "logs/$filename"  
@@ -611,7 +611,7 @@ process bowtie2{
 process star{
   tag "${sample} on ${genomeBase}"
   label 'star'
-  label 'process_highmem'
+  label 'processHighmem'
   publishDir "${params.outdir}/mapping", mode: 'copy',
              saveAs: {filename ->
 	     if (filename.indexOf(".log") > 0) "logs/$filename"  
@@ -674,7 +674,7 @@ def check_log(logs) {
       nb_ref = matcher[0][1]                                                                                                                                                                   
     }else if ((matcher = line =~ /Reads on spike\t([\d\.]+)/)) {
       nb_spike = matcher[0][1]                                                                                                                                                                 
-    } 
+    }
   }
   logname = logs.getBaseName() - '_ref_bamcomp.log'
   percent_spike = nb_spike.toFloat() / (nb_spike.toFloat() + nb_ref.toFloat()) * 100
@@ -683,7 +683,7 @@ def check_log(logs) {
       log.info "#################### VERY POOR SPIKE ALIGNMENT RATE! IGNORING FOR FURTHER DOWNSTREAM ANALYSIS! ($logname)    >> ${percent_spike}% <<"
       spikes_poor_alignment << logname
       return false
-  } else {
+  }else {
       log.info "          Passed alignment ($logname)   >> ${percent_spike}% <<"
       return true
   }
@@ -702,8 +702,8 @@ if (params.spike ){
    // Merging, if necessary reference aligned reads and spike aligned reads
    process compareRefSpike{
      tag "${sample}"
-     label 'pysam_samtools'
-     label 'process_low'
+     label 'compbam'
+     label 'processLow'
      publishDir "${params.outdir}/spike", mode: 'copy',
               saveAs: {filename ->
               if (filename.indexOf(".log") > 0) "logs/$filename"
@@ -752,7 +752,7 @@ if (params.spike ){
 process bamSort{
   tag "${prefix}"
   label 'samtools'
-  label 'process_high'
+  label 'processHigh'
   publishDir path: "${params.outdir}/mapping", mode: 'copy',
     saveAs: {filename ->
              if ( !filename.endsWith(".bam") && !filename.endsWith(".bam.bai") && params.saveAlignedIntermediates ) "stats/$filename"
@@ -784,7 +784,7 @@ process bamSort{
 process markDuplicates{
   tag "${prefix}"
   label 'picard'
-  label 'process_medium'
+  label 'processMedium'
   publishDir path: "${params.outdir}/mapping", mode: 'copy',
     saveAs: {filename ->
              if (!filename.endsWith(".bam") && !filename.endsWith(".bam.bai") && params.saveAlignedIntermediates ) "stats/$filename"
@@ -825,7 +825,7 @@ process markDuplicates{
 process preseq {
   tag "${prefix}"
   label 'preseq'
-  label 'process_low'
+  label 'processLow'
   publishDir "${params.outdir}/preseq", mode: 'copy'
 
   when:
@@ -851,7 +851,7 @@ process preseq {
 process bamFiltering {
   tag "${prefix}"
   label 'samtools'
-  label 'process_low'
+  label 'processLow'
   publishDir path: "${params.outdir}/mapping", mode: 'copy',
     saveAs: {filename ->
              if (!filename.endsWith(".bam") && (!filename.endsWith(".bam.bai"))) "stats/$filename"
@@ -926,7 +926,7 @@ chFlagstatChip
 process PPQT{
   tag "${prefix}"
   label 'r'
-  label 'process_low'
+  label 'processLow'
   publishDir "${params.outdir}/ppqt", mode: "copy"
 
   when:
@@ -961,7 +961,7 @@ process PPQT{
 process bigWig {
   tag "${prefix}"
   label 'deeptools'
-  label 'process_medium'
+  label 'processMedium'
   publishDir "${params.outdir}/bigWig", mode: "copy"
 
   input:
@@ -991,8 +991,9 @@ if (params.spike){
   chBamsSpikes
     .into{chBamsSpikesBam; chBamsSpikesBai}
 
-  process getSpikeScalingFactor {
-    label 'process_medium'
+  process getSpikeCountPerBin {
+    label 'deeptools'
+    label 'processMedium'
     publishDir "${params.outdir}/bigWig", mode: "copy"
 
     input:
@@ -1000,7 +1001,7 @@ if (params.spike){
     file(allBai) from chBamsSpikesBai.map{it[1][1]}.collect()
 
     output:
-    file "*.sf" into chTabSF
+    file "readCounts_10kbins.tab" into chTabCounts
 
     script:
     """
@@ -1009,7 +1010,23 @@ if (params.spike){
                    --binSize 10000 \\
                    -o results.npz \\
                    --outRawCounts readCounts_10kbins.tab
-    getDESeqSF.R readCounts_10kbins.tab
+    """
+  }
+
+ process getSpikeScalingFactor {
+    label 'chipseq-r'
+    label 'processLow'
+    publishDir "${params.outdir}/bigWig", mode: "copy"
+
+    input:
+    file(tab) from chTabCounts
+
+    output:
+    file "*.sf" into chTabSF
+
+    script:
+    """
+    getDESeqSF.R ${tab}
     """
   }
 
@@ -1027,7 +1044,7 @@ if (params.spike){
   process bigWigSpikeNorm{
     tag "${prefix}"
     label 'deeptools'
-    label 'process_medium'
+    label 'processMedium'
     publishDir "${params.outdir}/bigWig", mode: "copy"
 
     input:
@@ -1058,7 +1075,7 @@ if (params.spike){
 process deepToolsComputeMatrix{
   tag "${prefix}"
   label 'deeptools'
-  label 'process_medium'
+  label 'processMedium'
   publishDir "${params.outdir}/deepTools/computeMatrix", mode: "copy"
 
   when:
@@ -1092,7 +1109,7 @@ process deepToolsComputeMatrix{
 
 process deepToolsCorrelationQC{
   label 'deeptools'
-  label 'process_medium'
+  label 'processMedium'
   publishDir "${params.outdir}/deepTools/correlationQC", mode: "copy"
 
   when:
@@ -1128,7 +1145,7 @@ process deepToolsCorrelationQC{
 
 process deepToolsFingerprint{
   label 'deeptools'
-  label 'process_medium'
+  label 'processMedium'
   publishDir "${params.outdir}/deepTools/fingerprintQC", mode: "copy"
 
   when:
@@ -1208,7 +1225,7 @@ if (params.design){
 process sharpMACS2{
   tag "${sampleID} - ${controlID}"
   label 'macs2'
-  label 'process_medium'
+  label 'processMedium'
   publishDir path: "${params.outdir}/peakCalling/sharp", mode: 'copy',
     saveAs: { filename ->
             if (filename.endsWith(".tsv")) "stats/$filename"
@@ -1254,7 +1271,7 @@ process sharpMACS2{
 process broadMACS2{
   tag "${sampleID} - ${controlID}"
   label 'macs2'
-  label 'process_medium'
+  label 'processMedium'
   publishDir path: "${params.outdir}/peakCalling/broad", mode: 'copy',
     saveAs: { filename ->
             if (filename.endsWith(".tsv")) "stats/$filename"
@@ -1302,7 +1319,7 @@ process broadMACS2{
 process veryBroadEpic2{
   tag "${sampleID} - ${controlID}"
   label 'epic2'
-  label 'process_medium'
+  label 'processMedium'
   publishDir path: "${params.outdir}/peakCalling/very-broad", mode: 'copy',
     saveAs: { filename ->
             if (filename.endsWith(".tsv")) "stats/$filename"
@@ -1353,7 +1370,7 @@ chPeaksMacsSharp
 process peakAnnoHomer{
   tag "${sampleID}"
   label 'homer'
-  label 'process_medium'
+  label 'processMedium'
   publishDir path: "${params.outdir}/peakCalling/annotation/", mode: 'copy'
 
   when:
@@ -1384,7 +1401,7 @@ process peakAnnoHomer{
 
 process peakQC{
   label 'r'
-  label 'process_medium'
+  label 'processMedium'
   publishDir "${params.outdir}/peakCalling/QC/", mode: 'copy'
 
   when:
@@ -1433,7 +1450,7 @@ chIDRpeaks
 process IDR{
   tag "${group}"
   label 'idr'
-  label 'process_medium'
+  label 'processMedium'
   publishDir path: "${params.outdir}/IDR", mode: 'copy'
 
   when:
@@ -1464,7 +1481,7 @@ process IDR{
  */
 
 process prepareAnnotation{
-  label 'process_low'
+  label 'processLow'
   publishDir "${params.outdir}/featCounts/", mode: "copy"
 
   when:
@@ -1486,7 +1503,7 @@ process prepareAnnotation{
 process featureCounts{
   tag "${bed}"
   label 'faetureCounts'
-  label 'process_medium'
+  label 'processMedium'
   publishDir "${params.outdir}/featCounts/", mode: "copy"
 
   when:
@@ -1520,14 +1537,14 @@ process featureCounts{
 
 process getSoftwareVersions{
   label 'multiqc'
-  label 'process_low'
+  label 'processLow'
   publishDir path: "${params.outdir}/software_versions", mode: "copy"
 
   when:
   !params.skipMultiQC
 
   output:
-    file 'software_versions_mqc.yaml' into softwareVersionsYaml
+  file 'software_versions_mqc.yaml' into softwareVersionsYaml
 
   script:
   """
@@ -1576,7 +1593,7 @@ process workflowSummaryMqc {
 
 
 process multiqc {
-  label 'process_low'
+  label 'processLow'
   publishDir "${params.outdir}/MultiQC", mode: 'copy'
 
   when:
