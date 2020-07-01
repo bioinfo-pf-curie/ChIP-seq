@@ -14,7 +14,6 @@ regexes = {
 	'STAR': ['v_star.txt', r"STAR(\S+)"],
 	'samtools': ['v_samtools.txt', r"samtools (\S+)"],
 	'bedtools': ['v_bedtools.txt', r"bedtools v(\S+)"],
-	'bamtools': ['v_bamtools.txt', r"bamtools (\S+)"],
 	'picard': ['v_picard.txt', r"([\d\.]+)-SNAPSHOT"],
 	'preseq': ['v_preseq.txt', r"Version: (\S+)"],
 	'deeptools': ['v_deeptools.txt', r"plotFingerprint (\S+)"],
@@ -35,7 +34,6 @@ results['Bowtie2'] = '<span style="color:#999999;\">N/A</span>'
 results['STAR'] = '<span style="color:#999999;\">N/A</span>'
 results['samtools'] = '<span style="color:#999999;\">N/A</span>'
 results['bedtools'] = '<span style="color:#999999;\">N/A</span>'
-results['bamtools'] = '<span style="color:#999999;\">N/A</span>'
 results['picard'] = '<span style="color:#999999;\">N/A</span>'
 results['preseq'] = '<span style="color:#999999;\">N/A</span>'
 results['deeptools'] = '<span style="color:#999999;\">N/A</span>'

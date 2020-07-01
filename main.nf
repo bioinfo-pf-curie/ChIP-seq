@@ -1481,6 +1481,7 @@ process IDR{
  */
 
 process prepareAnnotation{
+  label 'unix'
   label 'processLow'
   publishDir "${params.outdir}/featCounts/", mode: "copy"
 
@@ -1502,7 +1503,7 @@ process prepareAnnotation{
     
 process featureCounts{
   tag "${bed}"
-  label 'faetureCounts'
+  label 'featureCounts'
   label 'processMedium'
   publishDir "${params.outdir}/featCounts/", mode: "copy"
 
@@ -1534,14 +1535,13 @@ process featureCounts{
 /*
  * MultiQC
  */
-
 process getSoftwareVersions{
-  label 'multiqc'
+  label 'getSoftwareVersions'
   label 'processLow'
   publishDir path: "${params.outdir}/software_versions", mode: "copy"
 
   when:
-  !params.skipMultiQC
+  !params.skipSoftVersions
 
   output:
   file 'software_versions_mqc.yaml' into softwareVersionsYaml
@@ -1557,7 +1557,6 @@ process getSoftwareVersions{
   STAR --version &> v_star.txt
   samtools --version &> v_samtools.txt
   bedtools --version &> v_bedtools.txt
-  echo \$(bamtools --version 2>&1) > v_bamtools.txt
   echo \$(picard MarkDuplicates --version 2>&1) &> v_picard.txt
   preseq &> v_preseq.txt
   echo \$(plotFingerprint --version 2>&1) > v_deeptools.txt || true
@@ -1568,6 +1567,7 @@ process getSoftwareVersions{
   scrape_software_versions.py &> software_versions_mqc.yaml
   """
 }
+
 
 process workflowSummaryMqc {
   when:
@@ -1593,6 +1593,7 @@ process workflowSummaryMqc {
 
 
 process multiqc {
+  label 'multiqc'
   label 'processLow'
   publishDir "${params.outdir}/MultiQC", mode: 'copy'
 
@@ -1605,7 +1606,7 @@ process multiqc {
   file multiqcConfig from chMultiqcConfig
   file design from chDesignMqc.collect().ifEmpty([])
 
-  file ('software_versions/*') from softwareVersionsYaml.collect()
+  file ('software_versions/*') from softwareVersionsYaml.collect().ifEmpty([])
   file ('workflow_summary/*') from workflowSummaryYaml.collect()
 
   file ('fastqc/*') from chFastqcMqc.collect().ifEmpty([])

@@ -3,3 +3,4 @@ channels:
   - bioconda
 dependencies:
   - bioconda::macs2=2.2.6
+  - bioconda::bedtools=2.27.1
