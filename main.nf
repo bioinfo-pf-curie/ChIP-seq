@@ -46,7 +46,8 @@ def helpMessage() {
   Inputs:
   --design [file]                    Path to design file for downstream analysis
   --singleEnd [bool]                 Specifies that the input is single end reads
-  --spike [str]                      Name of the genome used for spike-in analysis
+  --fragmentSize [int]               Estimated fragment length used to extend single-end reads. Default: 150
+  --spike [str]                      Name of the genome used for spike-in analysis. Default: false
 
   References           If not specified in the configuration file or you wish to overwrite any of the references given by the --genome field
   --fasta [file]                     Path to Fasta reference
@@ -59,7 +60,7 @@ def helpMessage() {
   --bowtie2Index [file]              Index for Bowtie2 aligner
 
   Filtering:
-  --mapQ [int]                       Minimum mapping quality to consider. Default: false
+  --mapq [int]                       Minimum mapping quality to consider. Default: false
   --keepDups [bool]                  Do not remove duplicates afer marking. Default: false
   --blacklist [file]                 Path to black list regions (.bed).
 
@@ -90,7 +91,8 @@ def helpMessage() {
     -profile test                    Set up the test dataset
     -profile conda                   Build a new conda environment before running the pipeline
     -profile multiconda              Build a new conda environment per process before running the pipeline
-    -profile path                    Use the installation paths defined for each tool
+    -profile path                    Use the installation path defined for all tools
+    -profile multipath               Use the installation paths defined for each tool
     -profile docker                  Use the Docker images for each process
     -profile singularity             Use the Singularity images for each process
     -profile cluster                 Run the workflow on the cluster, instead of locally
@@ -340,6 +342,9 @@ summary['GTF']          = params.gtf
 summary['Genes']        = params.geneBed
 if (params.blacklist)  summary['Blacklist '] = params.blacklist
 summary['Data Type']    = params.singleEnd ? 'Single-End' : 'Paired-End'
+if (params.singleEnd)  summary['Fragment Size '] = params.fragmentSize
+if (params.keep_dups)  summary['Keep Duplicates'] = 'Yes'
+if (params.mapq)  summary['Min MapQ'] = params.mapq
 summary['Max Memory']   = params.maxMemory
 summary['Max CPUs']     = params.maxCpus
 summary['Max Time']     = params.maxTime
@@ -870,14 +875,14 @@ process bamFiltering {
   script:
   filterParams = params.singleEnd ? "-F 0x004" : "-F 0x004 -F 0x0008 -f 0x001"
   dupParams = params.keepDups ? "" : "-F 0x0400"
-  mapQParams = params.mapQ ? "-q ${params.mapQ}" : ""
+  mapqParams = params.mapq ? "-q ${params.mapq}" : ""
   nameSortBam = params.singleEnd ? "" : "samtools sort -n -@ $task.cpus -o ${prefix}.bam -T $prefix ${prefix}_filtered.bam"
   """
   samtools view \\
     $filterParams \\
     $dupParams \\
     -F 0x08 \\
-    $mapQParams \\
+    $mapqParams \\
     -b ${markedBam[0]} > ${prefix}_filtered.bam
   samtools index ${prefix}_filtered.bam
   samtools flagstat ${prefix}_filtered.bam > ${prefix}_filtered.flagstat
@@ -972,6 +977,7 @@ process bigWig {
   set val(prefix), file('*.bigwig') into chBigWig
 
   script:
+  extend = (params.singleEnd && params.fragmentSize > 0) ? "--extendReads params.fragmentSize" : '--extendReads'
   blacklistParams = params.blacklist ? "--blackListFileName ${BLbed}" : ""
   effGsize = params.effGenomeSize ? "--effectiveGenomeSize ${params.effGenomeSize}" : ""
   """
@@ -979,7 +985,9 @@ process bigWig {
               -o ${prefix}_rpkm.bigwig \\
               -p ${task.cpus} \\
               ${blacklistParams} \\
-              ${effGsize} --normalizeUsing RPKM
+              ${effGsize} \\
+              ${extend} \\
+              --normalizeUsing RPGC
   """
 }
 
@@ -1055,6 +1063,7 @@ if (params.spike){
     set val(prefix), file('*.bigwig') into chBigWigSF
 
     script:
+    extend = (params.singleEnd && params.fragmentSize > 0) ? "--extendReads ${params.fragmentSize}" : '--extendReads'
     blacklistParams = params.blacklist ? "--blackListFileName ${BLbed}" : ""
     effGsize = params.effGenomeSize ? "--effectiveGenomeSize ${params.effGenomeSize}" : ""
     """
@@ -1063,6 +1072,7 @@ if (params.spike){
                 -p ${task.cpus} \\
                  ${blacklistParams} \\
                  ${effGsize} \\
+                 ${extend} \\
                 --scaleFactor ${normFactor}
     """
   }
@@ -1160,7 +1170,8 @@ process deepToolsFingerprint{
   file "bams_fingerprint.pdf" into chDeeptoolsFingerprint
   file "plotFingerprint*" into chDeeptoolsFingerprintMqc 
  
-  script: 
+  script:
+  extend = (params.singleEnd && params.fragmentSize > 0) ? "--extendReads ${params.fragmentSize}" : '--extendReads' 
   allPrefix = allPrefix.toString().replace("[","")
   allPrefix = allPrefix.replace(","," ") 
   allPrefix = allPrefix.replace("]","")
@@ -1169,6 +1180,8 @@ process deepToolsFingerprint{
                   -plot bams_fingerprint.pdf \\
                   -p ${task.cpus} \\
                   -l $allPrefix \\
+                  ${extend} \\
+                  --skipZeros \\
                   --outRawCounts plotFingerprint.raw.txt \\
                   --outQualityMetrics plotFingerprint.qmetrics.txt
   """
@@ -1520,7 +1533,7 @@ process featureCounts{
 
   script:
   prefix = annot.toString() - ~/(\.bed)?$/
-  paramsPairedEnd = params.singleEnd ? '' : '-p -C -P'
+  paramsPairedEnd = params.singleEnd ? '' : '-p -C -B'
   """
   awk '{OFS="\t";print \$4,\$1,\$2,\$3,\$6}' ${annot} > ${prefix}.saf
   featureCounts -a ${prefix}.saf -F SAF \\

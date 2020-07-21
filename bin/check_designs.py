@@ -72,6 +72,7 @@ def check_designs(inputDesign, inputData, singleEnd, baseDir, inputBam):
                     sys.exit(1)
             # Fill dict to check all input design data
             for sample in lines:
+                print(sample)
                 dict_design['SAMPLEID'].append(sample[0])
                 dict_design['CONTROLID'].append(sample[1])
                 dict_design['SAMPLENAME'].append(sample[2])
@@ -84,11 +85,11 @@ def check_designs(inputDesign, inputData, singleEnd, baseDir, inputBam):
                         .format(ID))
                     sys.exit(1)
             # Check if sample name does not contain replicate number
-            for sampleName in dict_design['SAMPLENAME']:
-                if re.search('-[0-9]$', sampleName):
-                    print('Sample name should not contain the replicate number ({}).'
-                        ' Remove \'{}\''.format(sampleName, sampleName[-2:]))
-            index = 0
+            #for sampleName in dict_design['SAMPLENAME']:
+            #    if re.search('-[0-9]$', sampleName):
+            #        print('Sample name should not contain the replicate number ({}).'
+            #            ' Remove \'{}\''.format(sampleName, sampleName[-2:]))
+            #index = 0
             # Check if replicate number is an integer
             #for replicateNumber in dict_design['REPLICATE']:
             #    try:
