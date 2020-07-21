@@ -977,7 +977,11 @@ process bigWig {
   set val(prefix), file('*.bigwig') into chBigWig
 
   script:
-  extend = (params.singleEnd && params.fragmentSize > 0) ? "--extendReads params.fragmentSize" : '--extendReads'
+  if (params.singleEnd){
+    extend = params.fragmentSize > 0 ? "--extendReads params.fragmentSize" : ""
+  }else{
+    extend = "--extendReads"
+  }
   blacklistParams = params.blacklist ? "--blackListFileName ${BLbed}" : ""
   effGsize = params.effGenomeSize ? "--effectiveGenomeSize ${params.effGenomeSize}" : ""
   """
@@ -1063,7 +1067,11 @@ if (params.spike){
     set val(prefix), file('*.bigwig') into chBigWigSF
 
     script:
-    extend = (params.singleEnd && params.fragmentSize > 0) ? "--extendReads ${params.fragmentSize}" : '--extendReads'
+    if (params.singleEnd){
+      extend = params.fragmentSize > 0 ? "--extendReads ${params.fragmentSize}" : ""
+    }else{
+      extend = "--extendReads"
+    }
     blacklistParams = params.blacklist ? "--blackListFileName ${BLbed}" : ""
     effGsize = params.effGenomeSize ? "--effectiveGenomeSize ${params.effGenomeSize}" : ""
     """
@@ -1171,7 +1179,11 @@ process deepToolsFingerprint{
   file "plotFingerprint*" into chDeeptoolsFingerprintMqc 
  
   script:
-  extend = (params.singleEnd && params.fragmentSize > 0) ? "--extendReads ${params.fragmentSize}" : '--extendReads' 
+  if (params.singleEnd){
+    extend = params.fragmentSize > 0 ? "--extendReads ${params.fragmentSize}" : ""
+  }else{
+    extend = "--extendReads"
+  }
   allPrefix = allPrefix.toString().replace("[","")
   allPrefix = allPrefix.replace(","," ") 
   allPrefix = allPrefix.replace("]","")
