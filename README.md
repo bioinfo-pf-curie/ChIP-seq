@@ -97,7 +97,7 @@ Other options:
 
 =======================================================
 Available Profiles
-  -profile test                    Set up the test dataset
+  -profile test                    Run the test dataset
   -profile conda                   Build a new conda environment before running the pipeline. Use `--condaCacheDir` to define the conda cache path
   -profile multiconda              Build a new conda environment per process before running the pipeline. Use `--condaCacheDir` to define the conda cache path
   -profile path                    Use the installation path defined for all tools. Use `--globalPath` to define the insallation path
