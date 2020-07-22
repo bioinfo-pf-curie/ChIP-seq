@@ -35,12 +35,13 @@ def helpMessage() {
 
   Usage:
 
-  nextflow run main.nf -profile test,toolsPath --genome 'hg19' --singleEnd
+  nextflow run main.nf --reads '*_R{1,2}.fastq.gz' -profile conda --genomeAnnotationPath '/data/annotations/pipelines' --genome 'hg19' 
+  nextflow run main.nf --samplePlan 'sample_plan.csv' --design 'design.csv' -profile conda --genomeAnnotationPath '/data/annotations/pipelines' --genome 'hg19'
 
   Mandatory arguments:
   --reads [file]                     Path to input data (must be surrounded with quotes)
   --samplePlan [file]                Path to sample plan file if '--reads' is not specified
-  --genome [str]                     Name of genome reference
+  --genome [str]                     Name of genome reference. See the `--genomeAnnotationPath` to defined the annotations path.
   -profile [str]                     Configuration profile to use. Can use multiple (comma separated)
 
   Inputs:
@@ -65,6 +66,7 @@ def helpMessage() {
   --blacklist [file]                 Path to black list regions (.bed).
 
   Annotation:          If not specified in the configuration file or you wish to overwrite any of the references given by the --genome field
+  --genomeAnnotationPath             Path to genome annotations.
   --geneBed [file]                   BED annotation file with gene coordinate.
   --gtf [file]                       GTF annotation file. Used in HOMER peak annotation
   --effGenomeSize [int]              Effective Genome size
@@ -289,6 +291,14 @@ chPpqtRSCHeader = file("$baseDir/assets/ppqt_rsc_header.txt", checkIfExists: tru
 
 //Peak Calling
 params.effGenomeSize = genomeRef ? params.genomes[ genomeRef ].effGenomeSize ?: false : false
+if (!params.macs_gsize) {
+  log.warn "=================================================================\n" +
+            "  WARNING! Effective Genome Size is not defined.\n" +
+            "  Peak calling and annotation will be skipped.\n" +
+            "  Please specify value for '--effGenomeSize' to run these steps.\n" +
+            "======================================================================="
+}
+
 Channel
   .fromPath("$baseDir/assets/peak_count_header.txt")
   .into { chPeakCountHeaderSharp; chPeakCountHeaderBroad; chPeakCountHeaderVeryBroad }
@@ -1258,7 +1268,7 @@ process sharpMACS2{
             }
  
   when:
-  !params.skipPeakCalling
+  !params.skipPeakCalling && params.effGenomeSize
 
   input:
   set val(group), val(replicate), val(peaktype), val(sampleID), file(sampleBam), file(sampleFlagstat), val(controlID), file(controlBam) from chGroupBamMacsSharp
@@ -1304,7 +1314,7 @@ process broadMACS2{
             }
    
   when:
-  !params.skipPeakCalling
+  !params.skipPeakCalling && params.effGenomeSize
 
   input:
   set val(group), val(replicate), val(peaktype), val(sampleID), file(sampleBam), file(sampleFlagstat), val(controlID), file(controlBam) from chGroupBamMacsBroad
@@ -1317,7 +1327,7 @@ process broadMACS2{
   file "*_mqc.tsv" into chMacsCountsBroad
 
   script:
-  broad = "--broad --broad-cutoff ${params.broad_cutoff}"
+  broad = "--broad --broad-cutoff ${params.broadCutoff}"
   format = params.singleEnd ? "BAM" : "BAMPE"
   ctrl = controlID != 'NO_INPUT' ? "-c ${controlBam[0]}" : ''
   peaktypeMacs = "broadPeak"
@@ -1352,7 +1362,7 @@ process veryBroadEpic2{
             }
  
   when:
-  !params.skipPeakCalling
+  !params.skipPeakCalling && params.effGenomeSize
 
   input:
   set val(group), val(replicate), val(peaktype), val(sampleID), file(sampleBam), file(sampleFlagstat), val(controlID), file(controlBam) from chGroupBamMacsVeryBroad

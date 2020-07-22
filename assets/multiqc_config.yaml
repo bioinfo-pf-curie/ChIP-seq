@@ -16,7 +16,7 @@ custom_data:
         file_format: 'csv'
         section_name: 'General Metrics'
         description: ' of sequenced data. Note that in the context of paired-end data, the number pairs are reported (as reads).
-High-quality ChIP-seq experiment produces significant clustering of enriched DNA sequence tags at locations bound by the protein of interest. Thus, the sequence tag density is expected to accumulate on forward and reverse strands centered around the binding site. Low normalized strand coefficient (<b>NSC</b>) and relative strand correlation (<b>RSC</b>) values can be due to failed and poor quality ChIP, low read sequence quality and hence lots of mismappings, shallow sequencing depth or a combination of these. Also, datasets with few binding sites (< 200) which could be due to biological reasons (i.e. a factor that truly binds only a few sites in a particular tissue type) would output low NSC and RSC scores. The fraction of reads in peaks (<b>FRiP</b>) is also presented. The ENCODE Consortium scrutinizes experiments in which the FRiP falls below 1%.'
+High-quality ChIP-seq experiment produces significant clustering of enriched DNA sequence tags at locations bound by the protein of interest. Thus, the sequence tag density is expected to accumulate on forward and reverse strands centered around the binding site. Low normalized strand coefficient (<b>NSC < 1.1</b>) and relative strand correlation (<b>RSC < 0.8</b>) values can be due to failed and poor quality ChIP, low read sequence quality and hence lots of mismappings, shallow sequencing depth or a combination of these. Also, datasets with few binding sites (< 200) which could be due to biological reasons (i.e. a factor that truly binds only a few sites in a particular tissue type) or broad histone marks would output lower NSC and RSC scores. The fraction of reads in peaks (<b>FRiP</b>) is also presented. The different thresholds applied here follow the ENCODE Consortium recommandation.'
         plot_type: 'table'
         pconfig:
             namespace: 'stats'
@@ -36,7 +36,7 @@ High-quality ChIP-seq experiment produces significant clustering of enriched DNA
               format: '{:,.0f}'
               placement: 2000
             Fragment_length:
-              title: 'Fragment Length'
+              title: 'Estimated Fragment Length'
               scale: 'YlGnGn'
               format: '{:,.0f}'
               placement: 3000
@@ -98,6 +98,7 @@ High-quality ChIP-seq experiment produces significant clustering of enriched DNA
               placement: 10000
             Normalized_strand_correlation:
               title: 'NSC'
+              description: 'Normalized Strand Correlation' 
               min: 0.8
               max: 3
               scale: 'RdYlGn'
@@ -105,6 +106,7 @@ High-quality ChIP-seq experiment produces significant clustering of enriched DNA
               placement: 11000
             Relative_strand_correlation:
               title: 'RSC'
+              description: 'Relative Strand Correlation'
               min: 0
               max: 2
               scale: 'RdYlGn'
@@ -114,6 +116,7 @@ High-quality ChIP-seq experiment produces significant clustering of enriched DNA
               min: 0
               max: 1
               title: 'FRiP'
+              description: 'Faction of reads in peaks'
               scale: 'RdYlGn'
               format: '{:,.2f}'
               placement: 13000
@@ -167,18 +170,14 @@ table_cond_formatting_rules:
           - gt: 50
     Normalized_strand_correlation:
         pass:
-          - gt: 1.05
+          - ge: 1.1
         warn:
-          - lt: 1.05
-        fail:
-          - lt: 1
+          - lt: 1.1
     Relative_strand_correlation:
         pass:
-          - gt: 0.8
+          - ge: 0.8
         warn:
           - lt: 0.8
-        fail:
-          - lt: 0.3
     Fraction_of_reads_in_peaks:
         pass:
           - gt: 0.01
@@ -258,7 +257,6 @@ fn_clean_exts:
     - '_ref_bamcomp.mqc'
     - '_sorted.bam'
     - '_peaks.count_mqc'
-
 
 #############################
 ## Display

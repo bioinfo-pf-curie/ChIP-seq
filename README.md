@@ -12,8 +12,7 @@
 
 The pipeline is built using [Nextflow](https://www.nextflow.io), a workflow tool to run tasks across multiple compute infrastructures in a very portable manner. 
 It comes with containers making installation trivial and results highly reproducible.
-The current workflow is based on the nf-core best practice. See the nf-core project from details on [guidelines](https://nf-co.re/).
-
+The current workflow was initiated from the nf-core ChIP-seq pipeline. See the nf-core project from details on [guidelines](https://nf-co.re/).
 
 ### Pipeline Summary
 
@@ -26,7 +25,7 @@ The current workflow is based on the nf-core best practice. See the nf-core proj
 6. Filtering aligned BAM files ([`SAMTools`](http://www.htslib.org/) & [`BAMTools`](https://github.com/pezmaster31/bamtools))
 7. Computing Normalized and Relative Strand Cross-correlation (NSC/RSC) ([`phantompeakqualtools`](https://github.com/kundajelab/phantompeakqualtools))
 8. Diverse alignment QCs and bigWig file creation ([`deepTools`](https://deeptools.readthedocs.io/en/develop/index.html))
-    * If spike-in are used, a scaling factor will be computed and additionalr bigWig will be generated ([`DESeq2`](https://bioconductor.org/packages/release/bioc/html/DESeq2.html))
+    * If spike-in are used, a scaling factor will be computed and additional bigWig will be generated ([`DESeq2`](https://bioconductor.org/packages/release/bioc/html/DESeq2.html))
 9. Peak calling for sharp & broad peaks ([`MACS2`](https://github.com/taoliu/MACS)) and very broad peaks ([`epic2`](https://github.com/biocore-ntnu/epic2))
 10. Feature counting for every sample at gene and promoter level ([`featureCounts`](http://bioinf.wehi.edu.au/featureCounts/))
 11. Calculation of Irreproducible Discovery Rate in case of multiple replicates ([`IDR`](https://github.com/nboley/idr))
@@ -39,22 +38,24 @@ The current workflow is based on the nf-core best practice. See the nf-core proj
 
 N E X T F L O W  ~  version 20.01.0
 ======================================================================
-Chip-seq v1.0.0
+Chip-seq v1.0.1
 ======================================================================
 
 Usage:
 
-nextflow run main.nf -profile test,toolsPath --genome 'hg19' 
+nextflow run main.nf --reads '*_R{1,2}.fastq.gz' -profile conda --genomeAnnotationPath '/data/annotations/pipelines' --genome 'hg19'
+nextflow run main.nf --samplePlan 'sample_plan.csv' --design 'design.csv' -profile conda --genomeAnnotationPath '/data/annotations/pipelines' --genome 'hg19'
 
 Mandatory arguments:
 --reads [file]                     Path to input data (must be surrounded with quotes)
 --samplePlan [file]                Path to sample plan file if '--reads' is not specified
---genome [str]                     Name of genome reference
+--genome [str]                     Name of genome reference. See the `--genomeAnnotationPath` to defined the annotations path
 -profile [str]                     Configuration profile to use. Can use multiple (comma separated)
 
 Inputs:
 --design [file]                    Path to design file for downstream analysis
 --singleEnd [bool]                 Specifies that the input is single end reads
+--fragmentSize [int]               Estimated fragment length used to extend single-end reads. Default: 200
 --spike [str]                      Name of the genome used for spike-in analysis
 
 References           If not specified in the configuration file or you wish to overwrite any of the references given by the --genome field
@@ -97,9 +98,12 @@ Other options:
 =======================================================
 Available Profiles
   -profile test                    Set up the test dataset
-  -profile conda                   Build a new conda environment before running the pipeline
-  -profile toolsPath               Use the paths defined in configuration for each tool
-  -profile singularity             Use the Singularity images for each process
+  -profile conda                   Build a new conda environment before running the pipeline. Use `--condaCacheDir` to define the conda cache path
+  -profile multiconda              Build a new conda environment per process before running the pipeline. Use `--condaCacheDir` to define the conda cache path
+  -profile path                    Use the installation path defined for all tools. Use `--globalPath` to define the insallation path
+  -profile multipath               Use the installation paths defined for each tool. Use `--globalPath` to define the insallation path
+  -profile docker                  Use the Docker images for each process
+  -profile singularity             Use the Singularity images for each process. Use `--singularityPath` to define the insallation path
   -profile cluster                 Run the workflow on the cluster, instead of locally
 
 ```
@@ -117,9 +121,8 @@ nextflow run main.nf -profile test,conda
 ```
 
 #### Run the pipeline from a `sample plan` and a `design` file
-
 ```
-nextflow run main.nf --samplePlan MY_SAMPLE_PLAN --design MY_DESIGN --genome 'hg19' --outdir MY_OUTPUT_DIR
+nextflow run main.nf --samplePlan MY_SAMPLE_PLAN --design MY_DESIGN --genome 'hg19' --genomeAnnotationPath ANNOTATION_PATH --outdir MY_OUTPUT_DIR
 
 ```
 
@@ -133,14 +136,14 @@ The description of each profile is available on the help message (see above).
 Here are a few examples of how to set the profile option.
 
 ```
-## Run the pipeline locally, using the global environment (build by conda)
--profile toolsPath
+## Run the pipeline locally, using a global environment where all tools are installed (build by conda for instance)
+-profile path --globalPath INSTALLATION_PATH
 
 ## Run the pipeline on the cluster, using the Singularity containers
--profile cluster,singularity
+-profile cluster,singularity --singularityPath SINGULARITY_PATH
 
 ## Run the pipeline on the cluster, building a new conda environment
--profile cluster,conda
+-profile cluster,conda --condaCacheDir CONDA_CACHE
 
 ```
 
@@ -153,12 +156,14 @@ SAMPLE_ID | SAMPLE_NAME | FASTQ_R1 [Path to R1.fastq file] | FASTQ_R2 [For paire
 
 ### Design control
 
-A design control is a csv file that list all experimental samples, their IDs, the associated input control, the replicate number and the expected peak type.
+A design control is a csv file that list all experimental samples, their IDs, the associated input control (or IgG), the replicate number and the expected peak type.
 The design control is expected to be created as below :
 
 SAMPLE_ID | CONTROL_ID | SAMPLE_NAME | GROUP | PEAK_TYPE
 
-Both files will be checked by the pipeline and have to be rigorously defined in order to make the pipeline work.
+Both files will be checked by the pipeline and have to be rigorously defined in order to make the pipeline work.  
+Note thte the control is optional if not available but is highly recommanded.
+
 
 ### Full Documentation
 
