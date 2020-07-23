@@ -1375,6 +1375,7 @@ process veryBroadEpic2{
 
   script:
   ctrl = controlID != 'NO_INPUT' ? "-c ${controlBam[0]}" : ''
+  opts = (params.singleEnd && params.fragmentSize > 0) ? "--fragment-size params.fragmentSize" : "" 
   """
   epic2 -t ${sampleBam[0]} \\
     ${ctrl} \\
