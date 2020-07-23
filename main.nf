@@ -1384,7 +1384,7 @@ process veryBroadEpic2{
     -a \\
     --bin-size 200 \\
     --gaps-allowed 3 \\
-    --false-discovery-rate-cutoff 0.01 \\
+    --false-discovery-rate-cutoff 0.05 \\
     -o ${sampleID}_epic.out
 
   echo "track type=broadPeak name=\"${sampleID}\" description=\"${sampleID}\" nextItemButton=on" > ${sampleID}_peaks.broadPeak
