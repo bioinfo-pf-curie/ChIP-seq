@@ -1,4 +1,4 @@
-name: chipseq-r
+name: chipseqr
 channels:
   - conda-forge
   - bioconda

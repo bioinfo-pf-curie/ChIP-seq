@@ -1040,7 +1040,7 @@ if (params.spike){
   }
 
  process getSpikeScalingFactor {
-    label 'chipseq-r'
+    label 'r'
     label 'processLow'
     publishDir "${params.outdir}/bigWig", mode: "copy"
 
