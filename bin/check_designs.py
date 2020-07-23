@@ -12,7 +12,7 @@ def argsParse():
     the raw reads are single-end or paired-end
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument("-d", "--design", dest="design", help="Design file (csv)")
+    parser.add_argument("-d", "--design", dest="design", help="Design file (csv)", default=None)
     parser.add_argument("-s", "--sampleplan", dest="sampleplan", help="SamplePlan file (csv)")
     parser.add_argument("--singleEnd", help="Specify that input reads are single-end", action="store_true")
     parser.add_argument("--baseDir", help="Base dir if needed", default=".")
@@ -23,10 +23,13 @@ def argsParse():
     singleEnd = args.singleEnd
     baseDir = args.baseDir
     inputBam = args.bam
+
+    print(inputBam)
+
     return inputDesign, inputData, singleEnd, baseDir, inputBam
 
 
-def check_designs(inputDesign, inputData, singleEnd, baseDir, inputBam):
+def check_designs(inputDesign, inputData, isSingleEnd, baseDir, isInputBam):
     dict_design = {
         'SAMPLEID': [],
         'CONTROLID': [],
@@ -34,7 +37,7 @@ def check_designs(inputDesign, inputData, singleEnd, baseDir, inputBam):
         'GROUP': [],
         'PEAKTYPE': []
     }
-    if (singleEnd):
+    if (isSingleEnd):
         dict_reads = {
             'SAMPLEID': [],
             'SAMPLENAME': [],
@@ -47,17 +50,9 @@ def check_designs(inputDesign, inputData, singleEnd, baseDir, inputBam):
             'FASTQR1': [],
             'FASTQR2': []
         }
-    if inputDesign == 'false':
-        designExists = False
-    else:
-        designExists = True
 
     ### Checks for design file
-    if inputBam == 'false':
-        isInputBam = False
-    else:
-        isInputBam = True
-    if designExists:
+    if inputDesign is not None:
         with open(inputDesign, 'r') as designFile:
             lines = csv.reader(designFile)
             header = next(lines)
@@ -103,13 +98,13 @@ def check_designs(inputDesign, inputData, singleEnd, baseDir, inputBam):
                 dict_reads['FASTQR1'].append(readfile)
             else:
                 dict_reads['FASTQR1'].append(sample[2])
-            if not singleEnd:
+            if not isSingleEnd:
                 if sample[3][0] != '/':
                     readfile = baseDir + '/' + sample[3]
                     dict_reads['FASTQR2'].append(readfile)
                 else:
                     dict_reads['FASTQR2'].append(sample[3])
-        if designExists:
+        if inputDesign is not None:
             # Check if there is a missing ID in the design or sample file
             for ID in dict_reads['SAMPLEID']:
                 if not (ID in dict_design['SAMPLEID'] or 
