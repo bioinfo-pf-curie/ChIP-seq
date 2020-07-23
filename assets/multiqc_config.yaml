@@ -99,7 +99,7 @@ High-quality ChIP-seq experiment produces significant clustering of enriched DNA
             Normalized_strand_correlation:
               title: 'NSC'
               description: 'Normalized Strand Correlation' 
-              min: 0.8
+              min: 1
               max: 3
               scale: 'RdYlGn'
               format: '{:,.2f}'
@@ -170,12 +170,12 @@ table_cond_formatting_rules:
           - gt: 50
     Normalized_strand_correlation:
         pass:
-          - ge: 1.1
+          - gt: 1.1
         warn:
           - lt: 1.1
     Relative_strand_correlation:
         pass:
-          - ge: 0.8
+          - gt: 0.8
         warn:
           - lt: 0.8
     Fraction_of_reads_in_peaks:
