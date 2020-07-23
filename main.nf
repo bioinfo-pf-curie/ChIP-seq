@@ -1414,7 +1414,7 @@ process veryBroadEpic2{
   echo "track type=broadPeak name=\"\${sampleID}\" description=\"\${sampleID}\" nextItemButton=on" > ${sampleID}_peaks.broadPeak
   awk -v id="\${sampleID}" 'NR>1{OFS="\t"; print \$1,\$2,\$3,id"_peak_"NR,\$5,".",\$10,\$4,\$9}' ${sampleID}_epic.out >> ${sampleID}_peaks.broadPeak
   cat ${sampleID}_peaks.broadPeak | tail -n +2 | wc -l | awk -v OFS='\t' '{ print "${sampleID}", \$1 }' | cat $peakCountHeader - > ${sampleID}_peaks.count_mqc.tsv
-  READS_IN_PEAKS=\$(intersectBed -a ${sampleBam[0]} -b ${sampleID}_peaks.$peaktypeEpic -bed -c -f 0.20 | awk -F '\t' '{sum += \$NF} END {print sum}')
+  READS_IN_PEAKS=\$(intersectBed -a ${sampleBam[0]} -b ${sampleID}_peaks.broadPeak -bed -c -f 0.20 | awk -F '\t' '{sum += \$NF} END {print sum}')
   grep 'mapped (' $sampleFlagstat | awk -v a="\$READS_IN_PEAKS" -v OFS='\t' '{print "${sampleID}", a/\$1}' | cat $fripScoreHeader - > ${sampleID}_peaks.FRiP_mqc.tsv
 
   """
