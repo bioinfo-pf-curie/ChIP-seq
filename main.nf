@@ -142,6 +142,12 @@ else{
 }
 
 // spike
+if (params.spike || (params.spikeFasta && (params.spikeBt2Index || params.spikeBt2Index || params.spikeStarIndex))){
+  useSpike = true
+}else{
+  useSpike = false
+}
+
 params.spikeFasta = params.spike ? params.genomes[ params.spike ].fasta ?: false : false
 if ( params.spikeFasta ){
   Channel
@@ -232,10 +238,16 @@ if (params.starIndex){
 
 params.spikeStarIndex = params.spike ? params.genomes[ params.spike ].starIndex ?: false : false
 if (params.spikeStarIndex){
+  if (params.spike){
+    genomeSpike = params.spike
+  }else{
+    genomeSpike = 'spikeGenome'
+  }
+
   Channel
     .fromPath(params.spikeStarIndex, checkIfExists: true)
     .ifEmpty {exit 1, "Spike STAR index file not found: ${params.spikeStarIndex}"}
-    .combine( [ params.spike ] )
+    .combine( [ genomeSpike ] )
     .set { chSpikeStarIndex }
 
   chStarIndex = chStarIndex.concat(chSpikeStarIndex)
@@ -296,7 +308,7 @@ if (!params.effGenomeSize) {
             "  WARNING! Effective Genome Size is not defined.\n" +
             "  Peak calling and annotation will be skipped.\n" +
             "  Please specify value for '--effGenomeSize' to run these steps.\n" +
-            "======================================================================="
+            "================================================================"
 }
 
 Channel
@@ -348,7 +360,7 @@ if (params.samplePlan) {
 summary['Design']       = params.design ?: "None"
 summary['Annotation']   = params.genomeAnnotationPath
 summary['Fasta Ref']    = params.fasta
-summary['Spikes']       = params.spike
+summary['Spikes'] = params.spike ? "${params.spike}" : useSpike ? "Yes" : "False"
 if (params.spikeFasta)  summary["Fasta spike"] = params.spikeFasta
 summary['GTF']          = params.gtf
 summary['Genes']        = params.geneBed
@@ -487,6 +499,14 @@ if (params.samplePlan){
  * Design file
  */
 
+if (!params.design) {
+  log.info "=================================================================\n" +
+            "  INFO: No design file detected.\n" +
+            "  Peak calling and annotation will be skipped.\n" +
+            "  Please set up a design file '--design' to run these steps.\n" +
+            "================================================================"
+}
+
 if (params.design){
   Channel
     .fromPath(params.design)
@@ -573,7 +593,7 @@ process bwaMem{
   publishDir "${params.outdir}/mapping", mode: 'copy',
              saveAs: {filename -> 
 	     if (filename.indexOf(".log") > 0) "logs/$filename" 
-	     else if (!params.spike || params.saveAlignedIntermediates) filename}
+	     else if (!useSpike || params.saveAlignedIntermediates) filename}
 
   when:
   params.aligner == "bwa-mem" && !params.inputBam
@@ -604,7 +624,7 @@ process bowtie2{
   publishDir "${params.outdir}/mapping", mode: 'copy',
               saveAs: {filename ->
 	      if (filename.indexOf(".log") > 0) "logs/$filename"  
-	      else if (!params.spike || params.saveAlignedIntermediates) filename}
+	      else if (!useSpike || params.saveAlignedIntermediates) filename}
   when:
   params.aligner == "bowtie2" && !params.inputBam
 
@@ -634,7 +654,7 @@ process star{
   publishDir "${params.outdir}/mapping", mode: 'copy',
              saveAs: {filename ->
 	     if (filename.indexOf(".log") > 0) "logs/$filename"  
- 	     else if (!params.spike || params.saveAlignedIntermediates) filename}
+ 	     else if (!useSpike || params.saveAlignedIntermediates) filename}
   when:
   params.aligner == "star" && !params.inputBam
 
@@ -695,7 +715,7 @@ def check_log(logs) {
       nb_spike = matcher[0][1]                                                                                                                                                                 
     }
   }
-  logname = logs.getBaseName() - '_ref_bamcomp.log'
+  logname = logs.getBaseName() - '_ref_bamcomp.mqc'
   percent_spike = nb_spike.toFloat() / (nb_spike.toFloat() + nb_ref.toFloat()) * 100
   percent_spike = percent_spike.round(3)
   if(percent_spike.toFloat() <= '1'.toFloat() ){
@@ -708,7 +728,7 @@ def check_log(logs) {
   }
 }
 
-if (params.spike){
+if (useSpike){
 
    /* Split and rebuild Channel to be sure of order between bams */
    chAlignRef = Channel.create()
@@ -992,7 +1012,7 @@ process bigWig {
 
   script:
   if (params.singleEnd){
-    extend = params.fragmentSize > 0 ? "--extendReads params.fragmentSize" : ""
+    extend = params.fragmentSize > 0 ? "--extendReads ${params.fragmentSize}" : ""
   }else{
     extend = "--extendReads"
   }
@@ -1013,7 +1033,7 @@ process bigWig {
  * Spike-in normalization
  */
 
-if (params.spike){
+if (useSpike){
   chBamsSpikes
     .into{chBamsSpikesBam; chBamsSpikesBai}
 
@@ -1379,7 +1399,7 @@ process veryBroadEpic2{
 
   script:
   ctrl = controlID != 'NO_INPUT' ? "-c ${controlBam[0]}" : ''
-  opts = (params.singleEnd && params.fragmentSize > 0) ? "--fragment-size params.fragmentSize" : "" 
+  opts = (params.singleEnd && params.fragmentSize > 0) ? "--fragment-size ${params.fragmentSize}" : "" 
   """
   epic2 -t ${sampleBam[0]} \\
     ${ctrl} \\
