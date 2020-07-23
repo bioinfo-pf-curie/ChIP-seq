@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+
 import argparse
 import csv
 import sys
@@ -11,20 +12,17 @@ def argsParse():
     the raw reads are single-end or paired-end
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument("D", metavar="INPUT_DESIGN", help="Enter a valid "
-                                                        "design csv file")
-    parser.add_argument("R", metavar="INPUT_FILE", help="Enter a valid "
-                                                        "csv file name")
-    parser.add_argument("SE", metavar="SINGLE_END", help="Is data SE (True) or"
-                                                        " PE (False) ?")
-    parser.add_argument("BD", metavar="BASE DIR", help="Base dir if needed")
-    parser.add_argument("IB", metavar="INPUT BAM", help="Is data inputs bams ?")
+    parser.add_argument("-d", "--design", dest="design", help="Design file (csv)")
+    parser.add_argument("-s", "--sampleplan", dest="sampleplan", help="SamplePlan file (csv)")
+    parser.add_argument("--singleEnd", help="Specify that input reads are single-end", action="store_true")
+    parser.add_argument("--baseDir", help="Base dir if needed", default=".")
+    parser.add_argument("--bam", help="Specify that input files are BAM files", action="store_true")
     args = parser.parse_args()
-    inputDesign = args.D
-    inputData = args.R
-    singleEnd = args.SE
-    baseDir = args.BD
-    inputBam = args.IB
+    inputDesign = args.design
+    inputData = args.sampleplan
+    singleEnd = args.singleEnd
+    baseDir = args.baseDir
+    inputBam = args.bam
     return inputDesign, inputData, singleEnd, baseDir, inputBam
 
 
@@ -84,21 +82,6 @@ def check_designs(inputDesign, inputData, singleEnd, baseDir, inputBam):
                     print('The sample {} is both qualified as a control and a sample'
                         .format(ID))
                     sys.exit(1)
-            # Check if sample name does not contain replicate number
-            #for sampleName in dict_design['SAMPLENAME']:
-            #    if re.search('-[0-9]$', sampleName):
-            #        print('Sample name should not contain the replicate number ({}).'
-            #            ' Remove \'{}\''.format(sampleName, sampleName[-2:]))
-            #index = 0
-            # Check if replicate number is an integer
-            #for replicateNumber in dict_design['REPLICATE']:
-            #    try:
-            #        int(replicateNumber)
-            #    except:
-            #        print('Replicate number of {} is not a valid number'
-            #            .format(dict_design['SAMPLEID'][index]))
-            #        sys.exit(1)
-            #    index += 1
             # Check if peaktypes are correct for every sample
             peaktype_list = ['sharp', 'broad', 'very-broad']
             index = 0

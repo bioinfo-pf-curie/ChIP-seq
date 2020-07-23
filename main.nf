@@ -291,7 +291,7 @@ chPpqtRSCHeader = file("$baseDir/assets/ppqt_rsc_header.txt", checkIfExists: tru
 
 //Peak Calling
 params.effGenomeSize = genomeRef ? params.genomes[ genomeRef ].effGenomeSize ?: false : false
-if (!params.macs_gsize) {
+if (!params.effGenomeSize) {
   log.warn "=================================================================\n" +
             "  WARNING! Effective Genome Size is not defined.\n" +
             "  Peak calling and annotation will be skipped.\n" +
@@ -346,6 +346,7 @@ if (params.samplePlan) {
   summary['Reads']      = params.reads
 }
 summary['Design']       = params.design ?: "None"
+summary['Annotation']   = params.genomeAnnotationPath
 summary['Fasta Ref']    = params.fasta
 summary['Spikes']       = params.spike
 summary['GTF']          = params.gtf
@@ -353,7 +354,7 @@ summary['Genes']        = params.geneBed
 if (params.blacklist)  summary['Blacklist '] = params.blacklist
 summary['Data Type']    = params.singleEnd ? 'Single-End' : 'Paired-End'
 if (params.singleEnd)  summary['Fragment Size '] = params.fragmentSize
-if (params.keep_dups)  summary['Keep Duplicates'] = 'Yes'
+if (params.keepDups)  summary['Keep Duplicates'] = 'Yes'
 if (params.mapq)  summary['Min MapQ'] = params.mapq
 summary['Max Memory']   = params.maxMemory
 summary['Max CPUs']     = params.maxCpus
@@ -527,8 +528,10 @@ process checkDesign{
   file samplePlan from chSplanCheck
 
   script:
+  optSE = params.singleEnd ? "--singleEnd" : ""
+  optBAM = params.inputBam ? "--bam" : ""
   """
-  check_designs.py $design $samplePlan ${params.singleEnd} $baseDir $params.inputBam
+  check_designs.py -d $design -s $samplePlan --baseSir ${baseDir} ${optSE} ${optBAM}
   """
 }
 
@@ -1387,8 +1390,8 @@ process veryBroadEpic2{
     --false-discovery-rate-cutoff 0.05 \\
     -o ${sampleID}_epic.out
 
-  echo "track type=broadPeak name=\"${sampleID}\" description=\"${sampleID}\" nextItemButton=on" > ${sampleID}_peaks.broadPeak
-  awk -v id="${sampleID}" 'NR>1{OFS="\t"; print $1,$2,$3,id"_peak_"NR,$5,".",$10,$4,$9}' ${sampleID}_epic.out >> ${sampleID}_peaks.broadPeak
+  echo "track type=broadPeak name=\"\${sampleID}\" description=\"\${sampleID}\" nextItemButton=on" > ${sampleID}_peaks.broadPeak
+  awk -v id="\${sampleID}" 'NR>1{OFS="\t"; print \$1,\$2,\$3,id"_peak_"NR,\$5,".",\$10,\$4,\$9}' ${sampleID}_epic.out >> ${sampleID}_peaks.broadPeak
   cat ${sampleID}_peaks.broadPeak | tail -n +2 | wc -l | awk -v OFS='\t' '{ print "${sampleID}", \$1 }' | cat $peakCountHeader - > ${sampleID}_peaks.count_mqc.tsv
   READS_IN_PEAKS=\$(intersectBed -a ${sampleBam[0]} -b ${sampleID}_peaks.$peaktypeEpic -bed -c -f 0.20 | awk -F '\t' '{sum += \$NF} END {print sum}')
   grep 'mapped (' $sampleFlagstat | awk -v a="\$READS_IN_PEAKS" -v OFS='\t' '{print "${sampleID}", a/\$1}' | cat $fripScoreHeader - > ${sampleID}_peaks.FRiP_mqc.tsv
