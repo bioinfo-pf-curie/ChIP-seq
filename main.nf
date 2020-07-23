@@ -349,6 +349,7 @@ summary['Design']       = params.design ?: "None"
 summary['Annotation']   = params.genomeAnnotationPath
 summary['Fasta Ref']    = params.fasta
 summary['Spikes']       = params.spike
+if (params.spikeFasta)  summary["Fasta spike"] = params.spikeFasta
 summary['GTF']          = params.gtf
 summary['Genes']        = params.geneBed
 if (params.blacklist)  summary['Blacklist '] = params.blacklist
@@ -707,7 +708,7 @@ def check_log(logs) {
   }
 }
 
-if (params.spike ){
+if (params.spike){
 
    /* Split and rebuild Channel to be sure of order between bams */
    chAlignRef = Channel.create()
