@@ -1704,14 +1704,12 @@ process multiqc {
   rtitle = customRunName ? "--title \"$customRunName\"" : ''
   rfilename = customRunName ? "--filename " + customRunName + "_chipseq_report" : "--filename chipseq_report" 
   metadataOpts = params.metadata ? "--metadata ${metadata}" : ""
-  splanOpts = params.samplePlan ? "--splan ${params.samplePlan}" : ""
   isPE = params.singleEnd ? "" : "-p"
-  splanStats = params.samplePlan ? "-s ${params.samplePlan}" : ""
-  designStats= params.design ? "-d ${params.design}" : ""
+  designOpts= params.design ? "-d ${params.design}" : ""
   modules_list = "-m custom_content -m fastqc -m bowtie2 -m star -m preseq -m picard -m phantompeakqualtools -m deeptools -m macs2 -m homer"
   """
-  stats2multiqc.sh ${splanStats} ${designStats} -a ${params.aligner} ${isPE}
-  mqc_header.py --name "ChIP-seq" --version ${workflow.manifest.version} ${metadataOpts} ${splanOpts} > multiqc-config-header.yaml
+  stats2multiqc.sh -s ${splan} ${designOpts} -a ${params.aligner} ${isPE}
+  mqc_header.py --splan ${splan} --name "ChIP-seq" --version ${workflow.manifest.version} ${metadataOpts} > multiqc-config-header.yaml
   multiqc . -f $rtitle $rfilename -c multiqc-config-header.yaml -c $multiqcConfig $modules_list
   """
 }
