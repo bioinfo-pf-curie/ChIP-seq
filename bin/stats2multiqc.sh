@@ -1,7 +1,7 @@
 #!/bin/bash
 
 function usage {
-    echo -e "usage : getEffectiveGenomeSize -i FASTA -o OUTDIR [-h][-d]"
+    echo -e "usage : stats2multiqc.sh -s SAMPLE_PLAN -d DESIGN -a ALIGNER [-p][-h]"
     echo -e "Use option -h|--help for more information"
 }
 
