@@ -1,4 +1,5 @@
 #!/usr/bin/env Rscript
+.libPaths(setdiff(.libPaths(), normalizePath(Sys.getenv("R_LIBS_USER"))))
 
 ################################################
 ################################################
