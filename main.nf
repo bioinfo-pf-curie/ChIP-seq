@@ -575,9 +575,11 @@ process fastQC{
 
   output:
   file "*_fastqc.{zip,html}" into chFastqcMqc
+  file("v_fastqc.txt") into chFastqcVersion
 
   script:
   """
+  fastqc --version &> v_fastqc.txt
   fastqc -q $reads -t ${task.cpus}
   """
 }
@@ -606,10 +608,12 @@ process bwaMem{
   output:
   set val(sample), file("*.bam") into chAlignReadsBwa
   file("*.log") into chBwaMqc
+  file("v_bwa.txt") into chBwaVersion
 
   script:
   prefix = genomeBase == genomeRef ? sample : sample + '_spike'
-   """
+  """
+  echo \$(bwa 2>&1) &> v_bwa.txt
   bwa mem -t ${task.cpus} \\
            ${index}/${genomeBase} \\
           -M \\
@@ -637,11 +641,13 @@ process bowtie2{
   output:
   set val(sample), file("*.bam") into chAlignReadsBowtie2
   file("*.log") into chBowtie2Mqc
+  file("v_bowtie2.txt") into chBowtie2Version
 
   script:
   prefix = genomeBase == genomeRef ? sample : sample + '_spike'
   readCommand = params.singleEnd ? "-U ${reads[0]}" : "-1 ${reads[0]} -2 ${reads[1]}"
-   """
+  """
+  bowtie2 --version &> v_bowtie2.txt
   bowtie2 -p ${task.cpus} \\
           --very-sensitive --end-to-end --reorder \\
            -x ${index}/${genomeBase} \\
@@ -668,10 +674,12 @@ process star{
   output:
   set val(sample), file('*.bam') into chAlignReadsStar
   file ("*Log.final.out") into chStarMqc
+  file("v_star.txt") into chStarVersion
 
   script:
   prefix = genomeBase == genomeRef ? sample : sample + '_spike'
   """
+  STAR --version &> v_star.txt
   STAR --genomeDir $index \
        --readFilesIn $reads \
        --runThreadN ${task.cpus} \
@@ -811,9 +819,11 @@ process bamSort{
   output:
   set val(prefix), file('*sorted.{bam,bam.bai}') into chSortBams
   file("*stats") into chStatsMqc
+  file("v_samtools.txt") into chSamtoolsVersionBamSort
 
   script:
   """
+  samtools --version &> v_samtools.txt
   samtools sort $unsortedBam -@ ${task.cpus} -T ${prefix} -o ${prefix}_sorted.bam
   samtools index ${prefix}_sorted.bam
   samtools flagstat ${prefix}_sorted.bam > ${prefix}_sorted.flagstats
@@ -845,10 +855,12 @@ process markDuplicates{
   set val(prefix), file("*marked.{bam,bam.bai}") into chMarkedBams, chMarkedBamsFilt, chMarkedPreseq
   set val(prefix), file("*marked.flagstat") into chMarkedFlagstat
   file "*marked.{idxstats,stats}" into chMarkedStats
-  file "*.txt" into chMarkedPicstats
+  file "*metrics.txt" into chMarkedPicstats
+  file("v_picard.txt") into chPicardVersion
 
   script:
   """
+  echo \$(picard MarkDuplicates --version 2>&1) &> v_picard.txt
   picard -Xmx4g MarkDuplicates \\
     INPUT=${sortedBams[0]} \\
     OUTPUT=${prefix}_marked.bam \\
@@ -883,10 +895,12 @@ process preseq {
 
   output:
   file "*.ccurve.txt" into chPreseqStats
+  file("v_preseq.txt") into chPreseqVersion
 
   script:
   defectMode = params.preseqDefect ? '-D' : ''
   """
+  preseq &> v_preseq.txt
   preseq lc_extrap -v $defectMode -output ${prefix}.ccurve.txt -bam ${bam[0]}
   """
 }
@@ -914,6 +928,7 @@ process bamFiltering {
   set val(prefix), file("*filtered.{bam,bam.bai}") into chFilteredBams
   set val(prefix), file("*filtered.flagstat") into chFilteredFlagstat
   file "*filtered.{idxstats,stats}" into chFilteredStats
+  file("v_samtools.txt") into chSamtoolsVersionBamFiltering
 
   script:
   filterParams = params.singleEnd ? "-F 0x004" : "-F 0x004 -F 0x0008 -f 0x001"
@@ -921,6 +936,7 @@ process bamFiltering {
   mapqParams = params.mapq ? "-q ${params.mapq}" : ""
   nameSortBam = params.singleEnd ? "" : "samtools sort -n -@ $task.cpus -o ${prefix}.bam -T $prefix ${prefix}_filtered.bam"
   """
+  samtools --version &> v_samtools.txt
   samtools view \\
     $filterParams \\
     $dupParams \\
@@ -991,9 +1007,11 @@ process PPQT{
   file '*.pdf' into chPpqtPlot
   file '*.spp.out' into chPpqtOutMqc
   file '*_mqc.tsv' into chPpqtCsvMqc
+  file("v_R.txt") into chPPQTVersion
 
   script:
   """
+  R --version &> v_R.txt
   RUN_SPP=`which run_spp.R`
   Rscript -e "library(caTools); source(\\"\$RUN_SPP\\")" -c="${bams[0]}" -savp="${prefix}.spp.pdf" -savd="${prefix}.spp.Rdata" -out="${prefix}.spp.out" -p=$task.cpus
   cp $sppCorrelationHeader ${prefix}_spp_correlation_mqc.tsv
@@ -1020,6 +1038,7 @@ process bigWig {
 
   output:
   set val(prefix), file('*.bigwig') into chBigWig
+  file("v_deeptools.txt") into chDeeptoolsVersion
 
   script:
   if (params.singleEnd){
@@ -1030,6 +1049,7 @@ process bigWig {
   blacklistParams = params.blacklist ? "--blackListFileName ${BLbed}" : ""
   effGsize = params.effGenomeSize ? "--effectiveGenomeSize ${params.effGenomeSize}" : ""
   """
+  bamCoverage --version &> v_deeptools.txt
   bamCoverage -b ${filteredBams[0]} \\
               -o ${prefix}_rpgc.bigwig \\
               -p ${task.cpus} \\
@@ -1060,6 +1080,7 @@ if (useSpike){
 
     output:
     file "readCounts_10kbins.tab" into chTabCounts
+    file("v_multiBamSummary") into chMultiBamSummaryVersion
 
     script:
     """
@@ -1321,11 +1342,13 @@ process sharpMACS2{
   file("*.xls") into chMacsOutputSharp
   set val(group), val(replicate), val(peaktype), val(sampleID), file("*.narrowPeak") into chPeaksMacsSharp
   file "*_mqc.tsv" into chMacsCountsSharp
+  file("v_macs2.txt") into chMacs2VersionMacs2Sharp
 
   script:
   format = params.singleEnd ? "BAM" : "BAMPE"
   ctrl = controlID != 'NO_INPUT' ? "-c ${controlBam[0]}" : ''
   """
+  echo \$(macs2 --version 2>&1) &> v_macs2.txt
   macs2 callpeak \\
     -t ${sampleBam[0]} \\
     ${ctrl} \\
@@ -1367,12 +1390,14 @@ process broadMACS2{
   file("*.xls") into chMacsOutputBroad
   set val(group), val(replicate), val(peaktype), val(sampleID), file("*.broadPeak") into chPeaksMacsBroad
   file "*_mqc.tsv" into chMacsCountsBroad
+  file("v_macs2.txt") into chMacs2VersionMacs2Broad
 
   script:
   broad = "--broad --broad-cutoff ${params.broadCutoff}"
   format = params.singleEnd ? "BAM" : "BAMPE"
   ctrl = controlID != 'NO_INPUT' ? "-c ${controlBam[0]}" : ''
   """
+  echo \$(macs2 --version 2>&1) &> v_macs2.txt
   macs2 callpeak \\
     -t ${sampleBam[0]} \\
     ${ctrl} \\
@@ -1382,9 +1407,9 @@ process broadMACS2{
     -n $sampleID \\
     --SPMR --trackline --bdg \\
     --keep-dup all
-    cat ${sampleID}_peaks.broadPeak | tail -n +2 | wc -l | awk -v OFS='\t' '{ print "${sampleID}", \$1 }' | cat $peakCountHeader - > ${sampleID}_peaks.count_mqc.tsv
-    READS_IN_PEAKS=\$(intersectBed -a ${sampleBam[0]} -b ${sampleID}_peaks.broadPeak -bed -c -f 0.20 | awk -F '\t' '{sum += \$NF} END {print sum}')
-    grep 'mapped (' $sampleFlagstat | awk -v a="\$READS_IN_PEAKS" -v OFS='\t' '{print "${sampleID}", a/\$1}' | cat $fripScoreHeader - > ${sampleID}_peaks.FRiP_mqc.tsv
+  cat ${sampleID}_peaks.broadPeak | tail -n +2 | wc -l | awk -v OFS='\t' '{ print "${sampleID}", \$1 }' | cat $peakCountHeader - > ${sampleID}_peaks.count_mqc.tsv
+  READS_IN_PEAKS=\$(intersectBed -a ${sampleBam[0]} -b ${sampleID}_peaks.broadPeak -bed -c -f 0.20 | awk -F '\t' '{sum += \$NF} END {print sum}')
+  grep 'mapped (' $sampleFlagstat | awk -v a="\$READS_IN_PEAKS" -v OFS='\t' '{print "${sampleID}", a/\$1}' | cat $fripScoreHeader - > ${sampleID}_peaks.FRiP_mqc.tsv
   """
 }
 
@@ -1416,11 +1441,13 @@ process veryBroadEpic2{
   set val(group), val(replicate), val(peaktype), val(sampleID), file("*.broadPeak") into chPeaksEpic
   file ("*.out") into chEpicOutput
   file "*_mqc.tsv" into chMacsCountsVbroad
+  file("v_epic2.txt") into chEpic2Version
 
   script:
   ctrl = controlID != 'NO_INPUT' ? "-c ${controlBam[0]}" : ''
   opts = (params.singleEnd && params.fragmentSize > 0) ? "--fragment-size ${params.fragmentSize}" : "" 
   """
+  epic2 --version &> v_epic2.txt
   epic2 -t ${sampleBam[0]} \\
     ${ctrl} \\
     --chromsizes ${chromsize} \\
@@ -1436,7 +1463,6 @@ process veryBroadEpic2{
   cat ${sampleID}_peaks.broadPeak | tail -n +2 | wc -l | awk -v OFS='\t' '{ print "${sampleID}", \$1 }' | cat $peakCountHeader - > ${sampleID}_peaks.count_mqc.tsv
   READS_IN_PEAKS=\$(intersectBed -a ${sampleBam[0]} -b ${sampleID}_peaks.broadPeak -bed -c -f 0.20 | awk -F '\t' '{sum += \$NF} END {print sum}')
   grep 'mapped (' $sampleFlagstat | awk -v a="\$READS_IN_PEAKS" -v OFS='\t' '{print "${sampleID}", a/\$1}' | cat $fripScoreHeader - > ${sampleID}_peaks.FRiP_mqc.tsv
-
   """
 }
 
@@ -1444,7 +1470,6 @@ process veryBroadEpic2{
 chPeaksMacsSharp
   .mix(chPeaksMacsBroad, chPeaksEpic)
   .into{ chPeaksHomer; chIDRpeaks; chIDRid; chPeakQC }
-
 
 /************************************
  * Peaks Annotation
@@ -1548,11 +1573,13 @@ process IDR{
   output:
   file "*idrValues.txt" into chIdr
   file "*log.txt" into chMqcIdr
+  file("v_idr.txt") into chIdrVersion
 
   script:
   peaktype = allPeaks[0].toString()
   peaktype = peaktype.substring(peaktype.lastIndexOf(".") + 1)
   """
+  idr --version &> v_idr.txt
   idr --samples ${allPeaks} \\
       --input-file-type  ${peaktype} \\
       -o ${group}_idrValues.txt \\
@@ -1603,13 +1630,15 @@ process featureCounts{
   each file(annot) from chGeneFeatCounts.concat(chTSSFeatCounts)
 
   output:
-  file "*csv" into chFeatCounts
-  file "*summary" into chFeatCountsMqc
+  file("*csv") into chFeatCounts
+  file("*summary") into chFeatCountsMqc
+  file("v_featurecounts.txt") into chFeaturecountsVersion
 
   script:
   prefix = annot.toString() - ~/(\.bed)?$/
   paramsPairedEnd = params.singleEnd ? '' : '-p -C -B'
   """
+  featureCounts -v &> v_featurecounts.txt
   awk '{OFS="\t";print \$4,\$1,\$2,\$3,\$6}' ${annot} > ${prefix}.saf
   featureCounts -a ${prefix}.saf -F SAF \\
                 -o allchip_counts_${prefix}.csv \\
@@ -1624,13 +1653,28 @@ process featureCounts{
  * MultiQC
  */
 process getSoftwareVersions{
-  label 'getSoftwareVersions'
+  label 'python'
   label 'lowCpu'
   label 'lowMem'
   publishDir path: "${params.outdir}/software_versions", mode: "copy"
 
   when:
   !params.skipSoftVersions
+
+  input:
+  file 'v_fastqc.txt' from chFastqcVersion.first().ifEmpty([])
+  file 'v_bwa.txt' from chBwaVersion.first().ifEmpty([])
+  file 'v_bowtie2.txt' from chBowtie2Version.first().ifEmpty([])
+  file 'v_star.txt' from chStarVersion.first().ifEmpty([])
+  file 'v_samtools.txt' from chSamtoolsVersionBamSort.concat(chSamtoolsVersionBamFiltering).first().ifEmpty([])
+  file 'v_picard.txt' from chPicardVersion.first().ifEmpty([])
+  file 'v_macs2.txt' from chMacs2VersionMacs2Sharp.concat(chMacs2VersionMacs2Broad).first().ifEmpty([])
+  file 'v_epic2.txt' from chEpic2Version.first().ifEmpty([])
+  file 'v_preseq.txt' from chPreseqVersion.first().ifEmpty([])
+  file 'v_idr.txt' from chIdrVersion.first().ifEmpty([])
+  file 'v_R.txt' from chPPQTVersion.first().ifEmpty([])
+  file 'v_deeptools.txt' from chDeeptoolsVersion.first().ifEmpty([])
+  file 'v_featurecounts.txt' from chFeaturecountsVersion.first().ifEmpty([])
 
   output:
   file 'software_versions_mqc.yaml' into softwareVersionsYaml
@@ -1639,20 +1683,6 @@ process getSoftwareVersions{
   """
   echo $workflow.manifest.version &> v_pipeline.txt
   echo $workflow.nextflow.version &> v_nextflow.txt
-  fastqc --version &> v_fastqc.txt
-  multiqc --version &> v_multiqc.txt
-  echo \$(bwa 2>&1) &> v_bwa.txt
-  bowtie2 --version &> v_bowtie2.txt
-  STAR --version &> v_star.txt
-  samtools --version &> v_samtools.txt
-  bedtools --version &> v_bedtools.txt
-  echo \$(picard MarkDuplicates --version 2>&1) &> v_picard.txt
-  preseq &> v_preseq.txt
-  echo \$(plotFingerprint --version 2>&1) > v_deeptools.txt || true
-  R --version &> v_R.txt
-  echo \$(macs2 --version 2>&1) &> v_macs2.txt
-  epic2 --version &> v_epic2.txt
-  idr --version &> v_idr.txt
   scrape_software_versions.py &> software_versions_mqc.yaml
   """
 }
@@ -1701,7 +1731,6 @@ process multiqc {
 
   file ('fastqc/*') from chFastqcMqc.collect().ifEmpty([])
 
-  //file ('mapping/stats/*') from chStatsMqc.collect().ifEmpty([])
   file ('mapping/*') from chMappingMqc.collect().ifEmpty([])
   file ('mapping/*') from chMappingSpikeMqc.collect().ifEmpty([])
 
@@ -1752,7 +1781,7 @@ process outputDocumentation {
     publishDir "${params.outdir}/pipeline_info", mode: 'copy'
 
     input:
-    file output_docs from outputDocsCh
+    file output_docs from chOutputDocs
 
     output:
     file "results_description.html"

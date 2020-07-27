@@ -19,4 +19,4 @@ colnames(d) = sub("\\_.*", "", colnames(d))
 dds <- DESeqDataSetFromMatrix(d, colData=DataFrame(type=rep("chip", ncol(d))), design=~ 1)
 dds <- estimateSizeFactors(dds)
 
-write.table(sizeFactors(dds), file=gsub(".tab", ".sf", count.table), quote=FALSE, col.names=FALSE, sep=',')
+write.table(1/sizeFactors(dds), file=gsub(".tab", ".sf", count.table), quote=FALSE, col.names=FALSE, sep=',')
