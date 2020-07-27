@@ -6,4 +6,4 @@ channels:
 dependencies:
   # Add required software dependencies here
   - python=3.7
-
+  - pymdown-extensions=7.1

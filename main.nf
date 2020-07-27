@@ -47,7 +47,7 @@ def helpMessage() {
   Inputs:
   --design [file]                    Path to design file for downstream analysis
   --singleEnd [bool]                 Specifies that the input is single end reads
-  --fragmentSize [int]               Estimated fragment length used to extend single-end reads. Default: 150
+  --fragmentSize [int]               Estimated fragment length used to extend single-end reads. Default: 200
   --spike [str]                      Name of the genome used for spike-in analysis. Default: false
 
   References           If not specified in the configuration file or you wish to overwrite any of the references given by the --genome field
@@ -537,7 +537,8 @@ if (params.design){
 
 process checkDesign{
   label 'python'
-  label 'processLow'
+  label 'lowCpu'
+  label 'lowMem'
   publishDir "${params.outdir}/pipeline_info", mode: 'copy'
 
   when:
@@ -562,7 +563,8 @@ process checkDesign{
 process fastQC{
   tag "${prefix}"
   label 'fastqc'
-  label 'processMedium'
+  label 'medCpu'
+  label 'medMem'
   publishDir "${params.outdir}/fastqc", mode: 'copy'
 
   when:
@@ -588,7 +590,8 @@ process fastQC{
 process bwaMem{
   tag "${sample} on ${genomeBase}"
   label 'bwa'
-  label 'processHigh'
+  label 'highCpu'
+  label 'highMem'
   publishDir "${params.outdir}/mapping", mode: 'copy',
              saveAs: {filename -> 
 	     if (filename.indexOf(".log") > 0) "logs/$filename" 
@@ -619,7 +622,8 @@ process bwaMem{
 process bowtie2{
   tag "${sample} on ${genomeBase}"
   label 'bowtie2'
-  label 'processMedium'
+  label 'highCpu'
+  label 'medMem'
   publishDir "${params.outdir}/mapping", mode: 'copy',
               saveAs: {filename ->
 	      if (filename.indexOf(".log") > 0) "logs/$filename"  
@@ -649,7 +653,8 @@ process bowtie2{
 process star{
   tag "${sample} on ${genomeBase}"
   label 'star'
-  label 'processHighmem'
+  label 'highCpu'
+  label 'highMem'
   publishDir "${params.outdir}/mapping", mode: 'copy',
              saveAs: {filename ->
 	     if (filename.indexOf(".log") > 0) "logs/$filename"  
@@ -741,7 +746,8 @@ if (useSpike){
    process compareRefSpike{
      tag "${sample}"
      label 'compbam'
-     label 'processLow'
+     label 'lowCpu'
+     label 'medMem'
      publishDir "${params.outdir}/spike", mode: 'copy',
               saveAs: {filename ->
               if (filename.indexOf(".log") > 0) "logs/$filename"
@@ -790,7 +796,8 @@ if (useSpike){
 process bamSort{
   tag "${prefix}"
   label 'samtools'
-  label 'processHigh'
+  label 'medCpu'
+  label 'medMem'
   publishDir path: "${params.outdir}/mapping", mode: 'copy',
     saveAs: {filename ->
              if ( !filename.endsWith(".bam") && !filename.endsWith(".bam.bai") && params.saveAlignedIntermediates ) "stats/$filename"
@@ -822,7 +829,8 @@ process bamSort{
 process markDuplicates{
   tag "${prefix}"
   label 'picard'
-  label 'processMedium'
+  label 'medCpu'
+  label 'medMem'
   publishDir path: "${params.outdir}/mapping", mode: 'copy',
     saveAs: {filename ->
              if (!filename.endsWith(".bam") && !filename.endsWith(".bam.bai") && params.saveAlignedIntermediates ) "stats/$filename"
@@ -863,7 +871,8 @@ process markDuplicates{
 process preseq {
   tag "${prefix}"
   label 'preseq'
-  label 'processLow'
+  label 'lowCpu'
+  label 'medMem'
   publishDir "${params.outdir}/preseq", mode: 'copy'
 
   when:
@@ -889,7 +898,8 @@ process preseq {
 process bamFiltering {
   tag "${prefix}"
   label 'samtools'
-  label 'processLow'
+  label 'lowCpu'
+  label 'medMem'
   publishDir path: "${params.outdir}/mapping", mode: 'copy',
     saveAs: {filename ->
              if (!filename.endsWith(".bam") && (!filename.endsWith(".bam.bai"))) "stats/$filename"
@@ -964,7 +974,8 @@ chFlagstatChip
 process PPQT{
   tag "${prefix}"
   label 'r'
-  label 'processMedium'
+  label 'medCpu'
+  label 'medMem'
   publishDir "${params.outdir}/ppqt", mode: "copy"
 
   when:
@@ -999,7 +1010,8 @@ process PPQT{
 process bigWig {
   tag "${prefix}"
   label 'deeptools'
-  label 'processMedium'
+  label 'medCpu'
+  label 'medMem'
   publishDir "${params.outdir}/bigWig", mode: "copy"
 
   input:
@@ -1038,7 +1050,8 @@ if (useSpike){
 
   process getSpikeCountPerBin {
     label 'deeptools'
-    label 'processMedium'
+    label 'medCpu'
+    label 'medMem'
     publishDir "${params.outdir}/bigWig", mode: "copy"
 
     input:
@@ -1060,7 +1073,8 @@ if (useSpike){
 
  process getSpikeScalingFactor {
     label 'r'
-    label 'processLow'
+    label 'lowCpu'
+    label 'medMem'
     publishDir "${params.outdir}/bigWig", mode: "copy"
 
     input:
@@ -1071,7 +1085,7 @@ if (useSpike){
 
     script:
     """
-    getDESeqSF.R ${tab}
+    getDESeqSF.r ${tab}
     """
   }
 
@@ -1089,7 +1103,8 @@ if (useSpike){
   process bigWigSpikeNorm{
     tag "${prefix}"
     label 'deeptools'
-    label 'processMedium'
+    label 'medCpu'
+    label 'medMem'
     publishDir "${params.outdir}/bigWig", mode: "copy"
 
     input:
@@ -1126,7 +1141,8 @@ if (useSpike){
 process deepToolsComputeMatrix{
   tag "${prefix}"
   label 'deeptools'
-  label 'processMedium'
+  label 'medCpu'
+  label 'medMem'
   publishDir "${params.outdir}/deepTools/computeMatrix", mode: "copy"
 
   when:
@@ -1160,7 +1176,8 @@ process deepToolsComputeMatrix{
 
 process deepToolsCorrelationQC{
   label 'deeptools'
-  label 'processMedium'
+  label 'medCpu'
+  label 'medMem'
   publishDir "${params.outdir}/deepTools/correlationQC", mode: "copy"
 
   when:
@@ -1196,7 +1213,8 @@ process deepToolsCorrelationQC{
 
 process deepToolsFingerprint{
   label 'deeptools'
-  label 'processMedium'
+  label 'medCpu'
+  label 'medMem'
   publishDir "${params.outdir}/deepTools/fingerprintQC", mode: "copy"
 
   when:
@@ -1283,7 +1301,8 @@ if (params.design){
 process sharpMACS2{
   tag "${sampleID} - ${controlID}"
   label 'macs2'
-  label 'processMedium'
+  label 'medCpu'
+  label 'medMem'
   publishDir path: "${params.outdir}/peakCalling/sharp", mode: 'copy',
     saveAs: { filename ->
             if (filename.endsWith(".tsv")) "stats/$filename"
@@ -1328,7 +1347,8 @@ process sharpMACS2{
 process broadMACS2{
   tag "${sampleID} - ${controlID}"
   label 'macs2'
-  label 'processMedium'
+  label 'medCpu'
+  label 'medMem'
   publishDir path: "${params.outdir}/peakCalling/broad", mode: 'copy',
     saveAs: { filename ->
             if (filename.endsWith(".tsv")) "stats/$filename"
@@ -1375,7 +1395,8 @@ process broadMACS2{
 process veryBroadEpic2{
   tag "${sampleID} - ${controlID}"
   label 'epic2'
-  label 'processMedium'
+  label 'medCpu'
+  label 'medMem'
   publishDir path: "${params.outdir}/peakCalling/very-broad", mode: 'copy',
     saveAs: { filename ->
             if (filename.endsWith(".tsv")) "stats/$filename"
@@ -1432,7 +1453,8 @@ chPeaksMacsSharp
 process peakAnnoHomer{
   tag "${sampleID}"
   label 'homer'
-  label 'processMedium'
+  label 'medCpu'
+  label 'medMem'
   publishDir path: "${params.outdir}/peakCalling/annotation/", mode: 'copy'
 
   when:
@@ -1463,7 +1485,8 @@ process peakAnnoHomer{
 
 process peakQC{
   label 'r'
-  label 'processMedium'
+  label 'medCpu'
+  label 'medMem'
   publishDir "${params.outdir}/peakCalling/QC/", mode: 'copy'
 
   when:
@@ -1512,7 +1535,8 @@ chIDRpeaks
 process IDR{
   tag "${group}"
   label 'idr'
-  label 'processMedium'
+  label 'medCpu'
+  label 'medMem'
   publishDir path: "${params.outdir}/IDR", mode: 'copy'
 
   when:
@@ -1544,7 +1568,8 @@ process IDR{
 
 process prepareAnnotation{
   label 'unix'
-  label 'processLow'
+  label 'lowCpu'
+  label 'lowMem'
   publishDir "${params.outdir}/featCounts/", mode: "copy"
 
   when:
@@ -1566,7 +1591,8 @@ process prepareAnnotation{
 process featureCounts{
   tag "${bed}"
   label 'featureCounts'
-  label 'processMedium'
+  label 'medCpu'
+  label 'medMem'
   publishDir "${params.outdir}/featCounts/", mode: "copy"
 
   when:
@@ -1599,7 +1625,8 @@ process featureCounts{
  */
 process getSoftwareVersions{
   label 'getSoftwareVersions'
-  label 'processLow'
+  label 'lowCpu'
+  label 'lowMem'
   publishDir path: "${params.outdir}/software_versions", mode: "copy"
 
   when:
@@ -1656,7 +1683,8 @@ process workflowSummaryMqc {
 
 process multiqc {
   label 'multiqc'
-  label 'processLow'
+  label 'lowCpu'
+  label 'lowMem'
   publishDir "${params.outdir}/MultiQC", mode: 'copy'
 
   when:
@@ -1712,6 +1740,27 @@ process multiqc {
   mqc_header.py --splan ${splan} --name "ChIP-seq" --version ${workflow.manifest.version} ${metadataOpts} > multiqc-config-header.yaml
   multiqc . -f $rtitle $rfilename -c multiqc-config-header.yaml -c $multiqcConfig $modules_list
   """
+}
+
+/*
+ * Sub-routine
+ */
+process outputDocumentation {
+    label 'python'
+    label 'lowCpu'
+    label 'lowMem'
+    publishDir "${params.outdir}/pipeline_info", mode: 'copy'
+
+    input:
+    file output_docs from outputDocsCh
+
+    output:
+    file "results_description.html"
+
+    script:
+    """
+    markdown_to_html.py $output_docs -o results_description.html
+    """
 }
 
 
