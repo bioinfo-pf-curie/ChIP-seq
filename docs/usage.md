@@ -69,7 +69,7 @@ You can change the output director using the `--outdir/-w` options.
 
 ## Main arguments
 
-###`--reads`
+### `--reads`
 Use this to specify the location of your input FastQ files. For example:
 
 ```bash
@@ -85,7 +85,7 @@ Please note the following requirements:
 If left unspecified, a default pattern is used: `data/*{1,2}.fastq.gz`
 
 
-###`--samplePlan`
+### `--samplePlan`
 Use this to specify a sample plan file instead of a regular expression to find fastq files. For example :
 
 ```bash
@@ -96,7 +96,8 @@ The sample plan is a csv file with the following information :
 
 Sample ID | Sample Name | Path to R1 fastq file | Path to R2 fastq file
 
-###`--design`
+### `--design`
+
 Specify a `design` file for extended analysis.
 
 ```bash
@@ -112,7 +113,8 @@ The `--samplePlan` and the `--design` will be checked by the pipeline and have t
 Note that the control is optional if not available but is highly recommanded.  
 If the `design` file is not specified, the pipeline will run until the alignment, QCs and track generation. The peak calling and the annotation will be skipped.
 
-###`--singleEnd`
+### `--singleEnd`
+
 By default, the pipeline expects paired-end data. If you have single-end data, you need to specify `--singleEnd` on the command line when you launch the pipeline. A normal glob pattern, enclosed 
 in quotation marks, can then be used for `--reads`. For example:
 
@@ -121,6 +123,7 @@ in quotation marks, can then be used for `--reads`. For example:
 ```
 
 ### `--fragmentSize`
+
 For `--singleEnd` data only. Specify the expected fragment size in the experiments (default: 200).  
 This information is used to extend the reads to fragment length in some analysis.  
 
@@ -205,6 +208,7 @@ See `conf/installation.md` for details.
 ## Alignment
 
 ### `--aligner`
+
 Specify which tool must be used for reads alignment. The expected values are `star`, `bwa-mem` or `bowtie2` (default: `bwa-mem`).
 
 ```bash
@@ -221,7 +225,6 @@ By default, no mapq filtering is performed.
 ```bash
 --mapq 20
 ```
-
 
 ### `--keepDups`
 
@@ -241,8 +244,6 @@ Defines the regions upstream/downstream as the transcription start site use in t
 ```bash
 --tssSize '2000' 
 ```
-
-
 
 ## Profiles
 
@@ -294,15 +295,19 @@ The following options can be used:
 - `--skip_multiqc` - Skip MultiQC
 				
 ### `--metadata`
+
 Specify a two-columns (tab-delimited) metadata file to diplay in the final Multiqc report.
 
 ### `--outdir`
+
 The output directory where the results will be saved.
 
 ### `--email`
+
 Set this parameter to your e-mail address to get a summary e-mail with details of the run sent to you when the workflow exits. If set in your user config file (`~/.nextflow/config`) then you don't need to speicfy this on the command line for every run.
 
 ### `-name`
+
 Name for the pipeline run. If not specified, Nextflow will automatically generate a random mnemonic.
 
 This is used in the MultiQC report (if not default) and in the summary HTML / e-mail (always).
@@ -310,6 +315,7 @@ This is used in the MultiQC report (if not default) and in the summary HTML / e-
 **NB:** Single hyphen (core Nextflow option)
 
 ### `-resume`
+
 Specify this when restarting a pipeline. Nextflow will used cached results from any pipeline steps where the inputs are the same, continuing from where it got to previously.
 
 You can also supply a run name to resume a specific run: `-resume [run-name]`. Use the `nextflow log` command to show previous run names.
@@ -317,6 +323,7 @@ You can also supply a run name to resume a specific run: `-resume [run-name]`. U
 **NB:** Single hyphen (core Nextflow option)
 
 ### `-c`
+
 Specify the path to a specific config file (this is a core NextFlow command).
 
 **NB:** Single hyphen (core Nextflow option)
@@ -324,18 +331,22 @@ Specify the path to a specific config file (this is a core NextFlow command).
 Note - you can use this to override pipeline defaults.
 
 ### `--maxMemory`
+
 Use to set a top-limit for the default memory requirement for each process.
 Should be a string in the format integer-unit. eg. `--maxMemory '8.GB'`
 
 ### `--maxTime`
+
 Use to set a top-limit for the default time requirement for each process.
 Should be a string in the format integer-unit. eg. `--maxTime '2.h'`
 
 ### `--maxCpus`
+
 Use to set a top-limit for the default CPU requirement for each process.
 Should be a string in the format integer-unit. eg. `--maxCpus 1`
 
 ### `--multiqc_config`
+
 Specify a path to a custom MultiQC configuration file.
 
 ## Job resources
