@@ -6,43 +6,41 @@
 * [Running the pipeline](#running-the-pipeline)
 * [Main arguments](#main-arguments)
     * [`-profile`](#-profile-single-dash)
-        * [`conda`](#conda)
-        * [`toolsPath`](#toolsPath)
-        * [`singularity`](#singularity)
-        * [`cluster`](#cluster)
-        * [`test`](#test)
     * [`--reads`](#--reads)
-	* [`--samplePlan`](#--samplePlan)
-	* [`--design`](#--design)
-	* [`--singleEnd`](#--singleend)
-* [Mapping](#mapping)
-	* [`--aligner`](#--aligner)
-	* [`--saveAlignedIntermediates`](#--saveAlignedIntermediates)
+    * [`--samplePlan`](#--samplePlan)
+    * [`--design`](#--design)
+    * [`--singleEnd`](#--singleend)
+    * [`--fragmentSize`](#--fragmentSize)
 * [Reference genomes](#reference-genomes)
     * [`--genome`](#--genome)
-	* [`--spike`](#--spike)
-* [Filtering](#fitlering)
-    * [`--mapQ`](#--mapq)
-	* [`--keepDups`](#--keepDups)
-	* [`--blacklist`](#--blacklist)
+    * [`--spike`](#--spike)
+    * [`--genomeAnnotationPath`](#--genomeAnnotationPath)
+* [Alignment](#alignment)
+    * [`--aligner`](#--aligner)
+* [Filtering](#filtering)
+    * [`--mapq`](#--mapq)
+    * [`--keepDups`](#--keepDups)
+* [Annotation](#annotation)
+    * [`--tssSize`](#--tssSize)
+* [Profiles](#profiles)
 * [Job resources](#job-resources)
 * [Automatic resubmission](#automatic-resubmission)
 * [Custom resource requests](#custom-resource-requests)
 * [Other command line parameters](#other-command-line-parameters)
     * [`--skip*`](#--skip*)
-	* [`--metadata`](#--metadta)
-	* [`--outdir`](#--outdir)
+    * [`--metadata`](#--metadta)
+    * [`--outdir`](#--outdir)
     * [`--email`](#--email)
     * [`-name`](#-name-single-dash)
     * [`-resume`](#-resume-single-dash)
     * [`-c`](#-c-single-dash)
-    * [`--max_memory`](#--max_memory)
-    * [`--max_time`](#--max_time)
-    * [`--max_cpus`](#--max_cpus)
+    * [`--maxMemory`](#--maxMemory)
+    * [`--maxTime`](#--maxTime)
+    * [`--maxCpus`](#--maxCpus)
     * [`--multiqc_config`](#--multiqc_config)
 
-## General Nextflow info
 
+## General Nextflow info
 Nextflow handles job submissions on SLURM or other environments, and supervises running the jobs. Thus the Nextflow process must run until the pipeline is finished. We recommend that you put the process running in the background through `screen` / `tmux` or similar tool. Alternatively you can run nextflow within a cluster job submitted your job scheduler.
 
 It is recommended to limit the Nextflow Java virtual machines memory. We recommend adding the following line to your environment (typically in `~/.bashrc` or `~./bash_profile`):
@@ -72,29 +70,7 @@ You can change the output director using the `--outdir/-w` options.
 
 ## Main arguments
 
-### `-profile`
-
-Use this parameter to choose a configuration profile. Profiles can give configuration presets for different compute environments. Note that multiple profiles can be loaded, for example: `-profile singularity` - the order of arguments is important!
-
-If `-profile` is not specified at all the pipeline will be run locally and expects all software to be installed and available on the `PATH`.
-
-* `conda`
-    * A generic configuration profile to be used with [conda](https://conda.io/docs/)
-    * Pulls most software from [Bioconda](https://bioconda.github.io/)
-* `toolsPath`
-    * A generic configuration profile to be used with [conda](https://conda.io/docs/)
-    * Use the conda images available on the cluster
-* `singularity`
-    * A generic configuration profile to be used with [Singularity](http://singularity.lbl.gov/)
-    * Use the singularity images available on the cluster
-* `cluster`
-    * Run the workflow on the computational cluster
-* `test`
-    * A profile with a complete configuration for automated testing
-    * Includes links to test data so needs no other parameters
-
 ### `--reads`
-
 Use this to specify the location of your input FastQ files. For example:
 
 ```bash
@@ -109,8 +85,8 @@ Please note the following requirements:
 
 If left unspecified, a default pattern is used: `data/*{1,2}.fastq.gz`
 
-### `--samplePlan`
 
+### `--samplePlan`
 Use this to specify a sample plan file instead of a regular expression to find fastq files. For example :
 
 ```bash
@@ -122,54 +98,42 @@ The sample plan is a csv file with the following information :
 Sample ID | Sample Name | Path to R1 fastq file | Path to R2 fastq file
 
 ### `--design`
+Specify a `design` file for extended analysis.
 
-Specify a design for extended analysis which require metadata (peak calling, IDR, etc.).
+```bash
+--design 'path/to/data/design.csv'
+```
 
-The expected format is the following :
+A design control is a csv file that list all experimental samples, their IDs, the associated input control (or IgG), the replicate number and the expected peak type.
+The design control is expected to be created as below :
 
-Sample ID | Control ID | Sample Name | Group | Peak Type
+SAMPLE_ID | CONTROL_ID | SAMPLE_NAME | GROUP | PEAK_TYPE
 
-Note that the `Sample ID` and ` Control ID` must match the IDs of the samplePlan.
-
-The `Group` information allows to consider as replicates all samples from the same group.
-
-The peak type is used to infer the algorithm to use for the peak calling. Expected values are `sharp`, `broad` or `very-broad`.
+The `--samplePlan` and the `--design` will be checked by the pipeline and have to be rigorously defined in order to make the pipeline work.  
+Note that the control is optional if not available but is highly recommanded.  
+If the `design` file is not specified, the pipeline will run until the alignment, QCs and track generation. The peak calling and the annotation will be skipped.
 
 ### `--singleEnd`
-
-By default, the pipeline expects paired-end data. If you have single-end data, you need to specify `--singleEnd` on the command line when you launch the pipeline. A normal glob pattern, enclosed in quotation marks, can then be used for `--reads`. For example:
+By default, the pipeline expects paired-end data. If you have single-end data, you need to specify `--singleEnd` on the command line when you launch the pipeline. A normal glob pattern, enclosed 
+in quotation marks, can then be used for `--reads`. For example:
 
 ```bash
 --singleEnd --reads '*.fastq.gz'
 ```
 
-It is not possible to run a mixture of single-end and paired-end files in one run.
-
-## Mapping
-
-### `--aligner`
-
-The current version of the pipeline supports three different aligners;
-- [`star`](https://github.com/alexdobin/STAR). Default value.
-- [`bowtie2`](http://bowtie-bio.sourceforge.net/bowtie2/index.shtml)
-- [`bwa-mem`](http://bio-bwa.sourceforge.net/bwa.shtml)
-
-By default, the `BWA-mem` mapper is run. You can specify the tool to use as follows:
+### `--fragmentSize`
+For `--singleEnd` data only. Specify the expected fragment size in the experiments (default: 200).  
+This information is used to extend the reads to fragment length in some analysis.  
 
 ```bash
---aligner 'bwa-mem'
+--singleEnd --fragmentSize 200 --reads '*.fastq.gz'
 ```
 
-### `--saveAlignedIntermediates`
+## Reference Genomes
 
-By default, only the final bam files are saved in the results folder.
-Activate this option, if you want to keep all intermediate bam files. Note that it will take a lot of disk space.
+All information about genomes and annotation are available in `conf/genomes.config`.
 
-## Reference genomes
-
-The pipeline config files come bundled with paths to the genomes reference files. 
-
-### `--genome`
+### `-genome`
 
 There are different species supported in the genomes references file. To run the pipeline, you must specify which to use with the `--genome` flag.
 
@@ -183,23 +147,21 @@ You can find the keys to specify the genomes in the [genomes config file](../con
 > There are numerous others - check the config file for more.
 
 Note that you can use the same configuration setup to save sets of reference files for your own use, even if they are not part of the genomes resource. 
-See the [Nextflow documentation](https://www.nextflow.io/docs/latest/config.html) for instructions on where to save such a file.
-
 The syntax for this reference configuration is as follows:
 
 ```nextflow
 params {
   genomes {
     'hg19' {
-       fasta = path to genome fasta file
-	   chrsize = path to chromosome size file
-       bwaIndex = path to bwa-mem index
-       bowtie2Index = path to bowtie index
-       starIndex = path to star index
-       geneBed = path to BED gene file
-       gtf = path to GTF annotation file
-       effGenomeSize = effective genome size value
-       blacklist = path to blacklist regions (.bed) file
+      fasta         = '<path to the genome fasta file>'
+      chrsize       = '<path to the chromosome lenght file>'
+      bwaIndex      = '<path to the BWA-mem index files>'
+      starIndex     = '<path to the STAR index files>'
+      bowtie2Index  = '<path to the Bowtie2 index files>'
+      geneBed       = '<path to a gene annotation file in bed format>'
+	  gtf           = '<path to annotation file in gtf format>'
+	  effGenomeSize = '<effective genome size>'
+	  blacklist     = '<path to black list region file>'
     }
     // Any number of additional genomes, key is used with --genome
   }
@@ -209,46 +171,119 @@ params {
 Note that these paths can be updated on command line using the following parameters:
 - `--fasta` - Path to genome fasta file
 - `--starIndex` - Path to STAR index
-- `--bwaIndex` - Path to Bwa-mem index
-- `--bowtie2Index` - Path to Bowtie2 index
+- `--bowtie2Index` - Path to HiSAT2 index
+- `--bwaIndex` - Path to TopHat2 index
 - `--gtf` - Path to GTF file
-- `--geneBed` - Path to gene bed file
-- `--effGenomeSize` - Effective genome size. Mandatory for peak calling and deeptools usage.
-- `--blacklist` - Path to black list genome file defined by ENCODE
+- `--geneBed` - Path to gene file
+- `--effGenomeSize` - Effective Genome Size
+- `--blacklist` - Path to black list region file (bed format)
+- `--saveAlignedIntermediates` - Save the BAM files from the Aligment step  - not done by default
+
 
 ### `--spike`
 
-Same as `--genome`. Define the organism of spike-in which has to be used.
+In addition, the `--spike` option can be used to specify a spike-in genome (default: false).
 
-In this case, the reads are mapped on both the reference and the spike genomes.
+```bash
+--spike 'dmelr6'
+```
 
-### `--tssSize`
+If a `--spike` is specified, the reads will be mapped both on the reference and on the spike genomes. Then, ambiguous mapped reads aligned on both genomes will be discarded, and reads aligned only on the spike genome will be used to calculate a normalization factor. This normalization factor will be applied to the `bigWig` process to generate spike-in normalized tracks.
 
-Define the size of the upstream/downstream region of the transcription start sites should be consider as promoter region.
-Default: 2000 bp.
+All genomes available in the `conf/genome.config` can be used, exactly as the `-genome` option.
+
+Note that in this case, the paths can be updated on command line using the following parameters:
+- `--spikeFasta` - Path the spike fasta file
+- `--spikeStarIndex` - Path to STAR index
+- `--spikeBowtie2Index` - Path to HiSAT2 index
+- `--spikeBwaIndex` - Path to TopHat2 index
+
+### `--genomeAnnotationPath`
+
+The `--genomeAnnotationPath` define where all annotations are stored. This path can be defined on the command line or set up in the different configuration file during the pipeline installation.
+See `conf/installation.md` for details.
+
+## Alignment
+
+### `--aligner`
+Specify which tool must be used for reads alignment. The expected values are `star`, `bwa-mem` or `bowtie2` (default: `bwa-mem`).
+
+```bash
+--aligner 'bowtie2' 
+```
 
 ## Filtering
 
-### `--mapQ`
+### `--mapq`
 
-Keep reads with a mapping quality value (mapQ) higher that `--mapQ`.
-By default, no filtering is performed.
+Filter all reads in the alignment files with a mapping quality lower than this threshold.
+By default, no mapq filtering is performed.
+
+```bash
+--mapq 20
+```
+
 
 ### `--keepDups`
 
-Keep reads flagged as duplicates for downstream analysis. By default, these reads are discarded.
+By default, duplicates are removed from the aligned data for downstream analysis.
+Use this option to keep the duplicates.
 
-### `--blacklist`
+```bash
+--keepDuplicates
+```
 
-Remove reads from blacklist regions at the peak calling level and in the deeptools analysis.
-See the `conf/genomes.config` for details.
+## Annotation
 
-## Job resources
+### `--tssSize`
 
-### Automatic resubmission
+Defines the regions upstream/downstream as the transcription start site use in the `featureCounts` process. Default: 2000
 
-Each step in the pipeline has a default set of requirements for number of CPUs, memory and time (see the `conf/base.conf` file). 
-For most of the steps in the pipeline, if the job exits with an error code of `143` (exceeded requested resources) it will automatically resubmit with higher requests (2 x original, then 3 x original). If it still fails after three times then the pipeline is stopped.
+```bash
+--tssSize '2000' 
+```
+
+
+
+## Profiles
+
+Use this parameter to choose a configuration profile. Profiles can give configuration presets for different compute environments. Note that multiple profiles can be loaded, for example: `-profil\
+\e docker` - the order of arguments is important!
+
+The following `-profile` are available. If `-profile` is not specified at all the pipeline will be run locally and expects all software to be installed and available on the `PATH`.
+
+  - `test`
+  
+  A profile with a complete configuration for automated testing. It includes links to test data so needs no other parameters.
+
+  - `conda`
+  
+  Build a new conda environment before running the pipeline. Use the option `--condaCacheDir` to change the default conda cache directory.
+  
+  - `multiconda`
+  
+  Build a new conda environment for each process before running the pipeline. Use the option ``--condaCacheDir` to change the default conda cache directory.
+
+  - `path`
+  
+  Use a global path for all tools. Use the option `--globalPath` to define the path the use.
+  
+  - `multipath`
+  
+  Use the paths defined in configuration for each tool.
+  
+  - `docker`
+  
+  Use the Docker images for each process.
+  
+  - `singularity`
+  
+  Use the Singularity images for each process. Use the option `--singularityImagePath` to specify where the images are available.
+  
+  - `cluster`
+  
+  Submit the jobs on the cluster instead of running them locally.
+												
 
 ## Other command line parameters
 
@@ -256,30 +291,19 @@ For most of the steps in the pipeline, if the job exits with an error code of `1
 
 The pipeline is made with a few *skip* options that allow to skip optional steps in the workflow.
 The following options can be used:
-- `--skip_qc` - Skip all QC steps apart from MultiQC
-- `--skip_rrna` - Skip rRNA mapping
 - `--skip_fastqc` - Skip FastQC
-- '--skip_genebody_coverage' - Skip genebody coverage step
-- `--skip_saturation` - Skip Saturation qc
-- `--skip_dupradar` - Skip dupRadar (and Picard MarkDups)
-- `--skip_readdist` - Skip read distribution steps
-- `--skip_expan` - Skip exploratory analysis
 - `--skip_multiqc` - Skip MultiQC
 				
 ### `--metadata`
-
 Specify a two-columns (tab-delimited) metadata file to diplay in the final Multiqc report.
 
 ### `--outdir`
-
 The output directory where the results will be saved.
 
 ### `--email`
-
-Set this parameter to your e-mail address to get a summary e-mail with details of the run sent to you when the workflow exits. If set in your user config file (`~/.nextflow/config`) then you don't need to specify this on the command line for every run.
+Set this parameter to your e-mail address to get a summary e-mail with details of the run sent to you when the workflow exits. If set in your user config file (`~/.nextflow/config`) then you don't need to speicfy this on the command line for every run.
 
 ### `-name`
-
 Name for the pipeline run. If not specified, Nextflow will automatically generate a random mnemonic.
 
 This is used in the MultiQC report (if not default) and in the summary HTML / e-mail (always).
@@ -287,35 +311,35 @@ This is used in the MultiQC report (if not default) and in the summary HTML / e-
 **NB:** Single hyphen (core Nextflow option)
 
 ### `-resume`
-
 Specify this when restarting a pipeline. Nextflow will used cached results from any pipeline steps where the inputs are the same, continuing from where it got to previously.
+
 You can also supply a run name to resume a specific run: `-resume [run-name]`. Use the `nextflow log` command to show previous run names.
 
 **NB:** Single hyphen (core Nextflow option)
 
 ### `-c`
-
 Specify the path to a specific config file (this is a core NextFlow command).
 
 **NB:** Single hyphen (core Nextflow option)
 
 Note - you can use this to override pipeline defaults.
 
-### `--max_memory`
-
+### `--maxMemory`
 Use to set a top-limit for the default memory requirement for each process.
-Should be a string in the format integer-unit. eg. `--max_memory '8.GB'`
+Should be a string in the format integer-unit. eg. `--maxMemory '8.GB'`
 
-### `--max_time`
-
+### `--maxTime`
 Use to set a top-limit for the default time requirement for each process.
-Should be a string in the format integer-unit. eg. `--max_time '2.h'`
+Should be a string in the format integer-unit. eg. `--maxTime '2.h'`
 
-### `--max_cpus`
-
+### `--maxCpus`
 Use to set a top-limit for the default CPU requirement for each process.
-Should be a string in the format integer-unit. eg. `--max_cpus 1`
+Should be a string in the format integer-unit. eg. `--maxCpus 1`
 
 ### `--multiqc_config`
-
 Specify a path to a custom MultiQC configuration file.
+
+## Job resources
+
+Each step in the pipeline has a default set of requirements for number of CPUs, memory and time (see the `conf/base.conf` file). 
+For most of the steps in the pipeline, if the job exits with an error code of `143` (exceeded requested resources) it will automatically resubmit with higher requests (2 x original, then 3 x original). If it still fails after three times then the pipeline is stopped.

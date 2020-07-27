@@ -12,22 +12,22 @@
 
 The pipeline is built using [Nextflow](https://www.nextflow.io), a workflow tool to run tasks across multiple compute infrastructures in a very portable manner. 
 It comes with containers making installation trivial and results highly reproducible.
-The current workflow was initiated from the nf-core ChIP-seq pipeline. See the nf-core project from details on [guidelines](https://nf-co.re/).
+The current workflow was initiated from the [nf-core ChIP-seq pipeline](https://github.com/nf-core/chipseq). See the nf-core project from details on [guidelines](https://nf-co.re/).
 
 ### Pipeline Summary
 
 1. Run quality control of raw sequencing reads ([`fastqc`](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/))
 2. Align reads on reference genome ([`BWA`](http://bio-bwa.sourceforge.net/) / [`Bowtie2`](http://bowtie-bio.sourceforge.net/bowtie2/index.shtml) / [`STAR`](https://github.com/alexdobin/STAR))
-    * If spike-in are used, mapping on spike genome is run and ambiguous reads will be removed from both BAM files generated ([`pysam`](https://pysam.readthedocs.io/en/latest/api.html))
+    * If spike-in are used, mapping on spike genome is run and ambiguous reads are removed from both BAM files ([`pysam`](https://pysam.readthedocs.io/en/latest/api.html))
 3. Sort aligned reads ([`SAMTools`](http://www.htslib.org/))
-4. Mark duplicates ([`Picard`](https://broadinstitute.github.io/picard/))
+4. Remove duplicates ([`Picard`](https://broadinstitute.github.io/picard/))
 5. Library complexity analysis ([`Preseq`](http://smithlabresearch.org/software/preseq/))
 6. Filtering aligned BAM files ([`SAMTools`](http://www.htslib.org/) & [`BAMTools`](https://github.com/pezmaster31/bamtools))
 7. Computing Normalized and Relative Strand Cross-correlation (NSC/RSC) ([`phantompeakqualtools`](https://github.com/kundajelab/phantompeakqualtools))
 8. Diverse alignment QCs and bigWig file creation ([`deepTools`](https://deeptools.readthedocs.io/en/develop/index.html))
-    * If spike-in are used, a scaling factor will be computed and additional bigWig will be generated ([`DESeq2`](https://bioconductor.org/packages/release/bioc/html/DESeq2.html))
-9. Peak calling for sharp & broad peaks ([`MACS2`](https://github.com/taoliu/MACS)) and very broad peaks ([`epic2`](https://github.com/biocore-ntnu/epic2))
-10. Feature counting for every sample at gene and promoter level ([`featureCounts`](http://bioinf.wehi.edu.au/featureCounts/))
+    * If spike-in are used, a scaling factor is computed and additional bigWig are generated ([`DESeq2`](https://bioconductor.org/packages/release/bioc/html/DESeq2.html))
+9. Peak calling for sharp, broad peaks and very-broad peaks ([`MACS2`](https://github.com/taoliu/MACS)) and very broad peaks ([`epic2`](https://github.com/biocore-ntnu/epic2))
+10. Feature counting for every sample at gene and transcription start sites loci ([`featureCounts`](http://bioinf.wehi.edu.au/featureCounts/))
 11. Calculation of Irreproducible Discovery Rate in case of multiple replicates ([`IDR`](https://github.com/nboley/idr))
 12. Peak annotation and QC ([`HOMER`](http://homer.ucsd.edu/homer/ngs/annotation.html))
 13. Results summary ([`MultiQC`](https://multiqc.info/))
@@ -60,16 +60,20 @@ Inputs:
 
 References           If not specified in the configuration file or you wish to overwrite any of the references given by the --genome field
 --fasta [file]                     Path to Fasta reference
+--spikeFasta [file]                Path to Fasta reference for spike-in
 
 Alignment:
 --aligner [str]                    Alignment tool to use ['bwa-mem', 'star', 'bowtie2']. Default: 'bwa-mem'
 --saveAlignedIntermediates [bool]  Save all intermediates mapping files. Default: false  
 --starIndex [file]                 Index for STAR aligner
+--spikeStarIndex [file]            Spike-in Index for STAR aligner
 --bwaIndex [file]                  Index for Bwa-mem aligner
+--spikeBwaIndex [file]             Spike-in Index for Bwa-mem aligner
 --bowtie2Index [file]              Index for Bowtie2 aligner
+--spikeBowtie2Index [file]         Spike-in Index for Bowtie2 aligner
 
 Filtering:
---mapQ [int]                       Minimum mapping quality to consider. Default: false
+--mapq [int]                       Minimum mapping quality to consider. Default: false
 --keepDups [bool]                  Do not remove duplicates afer marking. Default: false
 --blacklist [file]                 Path to black list regions (.bed).
 
@@ -162,7 +166,8 @@ The design control is expected to be created as below :
 SAMPLE_ID | CONTROL_ID | SAMPLE_NAME | GROUP | PEAK_TYPE
 
 Both files will be checked by the pipeline and have to be rigorously defined in order to make the pipeline work.  
-Note thte the control is optional if not available but is highly recommanded.
+Note that the control is optional if not available but is highly recommanded.  
+If the `design` file is not specified, the pipeline will run until the alignment, QCs and track generation. The peak calling and the annotation will be skipped.
 
 
 ### Full Documentation

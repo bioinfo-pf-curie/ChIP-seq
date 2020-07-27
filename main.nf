@@ -52,13 +52,17 @@ def helpMessage() {
 
   References           If not specified in the configuration file or you wish to overwrite any of the references given by the --genome field
   --fasta [file]                     Path to Fasta reference
+  --spikeFasta [file]                Path to Fasta reference for spike-in
 
   Alignment:
   --aligner [str]                    Alignment tool to use ['bwa-mem', 'star', 'bowtie2']. Default: 'bwa-mem'
   --saveAlignedIntermediates [bool]  Save all intermediates mapping files. Default: false  
   --starIndex [file]                 Index for STAR aligner
+  --spikeStarIndex [file]            Spike-in Index for STAR aligner
   --bwaIndex [file]                  Index for Bwa-mem aligner
+  --spikeBwaIndex [file]             Spike-in Index for Bwa-mem aligner
   --bowtie2Index [file]              Index for Bowtie2 aligner
+  --spikeBowtie2Index [file]         Spike-in Index for Bowtie2 aligner
 
   Filtering:
   --mapq [int]                       Minimum mapping quality to consider. Default: false
@@ -142,7 +146,7 @@ else{
 }
 
 // spike
-if (params.spike || (params.spikeFasta && (params.spikeBt2Index || params.spikeBt2Index || params.spikeStarIndex))){
+if (params.spike || (params.spikeFasta && (params.spikeBwaIndex || params.spikeBt2Index || params.spikeStarIndex))){
   useSpike = true
 }else{
   useSpike = false
