@@ -5,7 +5,6 @@
 * [Introduction](#general-nextflow-info)
 * [Running the pipeline](#running-the-pipeline)
 * [Main arguments](#main-arguments)
-    * [`-profile`](#-profile-single-dash)
     * [`--reads`](#--reads)
     * [`--samplePlan`](#--samplePlan)
     * [`--design`](#--design)
@@ -70,7 +69,7 @@ You can change the output director using the `--outdir/-w` options.
 
 ## Main arguments
 
-### `--reads`
+###`--reads`
 Use this to specify the location of your input FastQ files. For example:
 
 ```bash
@@ -86,7 +85,7 @@ Please note the following requirements:
 If left unspecified, a default pattern is used: `data/*{1,2}.fastq.gz`
 
 
-### `--samplePlan`
+###`--samplePlan`
 Use this to specify a sample plan file instead of a regular expression to find fastq files. For example :
 
 ```bash
@@ -97,7 +96,7 @@ The sample plan is a csv file with the following information :
 
 Sample ID | Sample Name | Path to R1 fastq file | Path to R2 fastq file
 
-### `--design`
+###`--design`
 Specify a `design` file for extended analysis.
 
 ```bash
@@ -113,7 +112,7 @@ The `--samplePlan` and the `--design` will be checked by the pipeline and have t
 Note that the control is optional if not available but is highly recommanded.  
 If the `design` file is not specified, the pipeline will run until the alignment, QCs and track generation. The peak calling and the annotation will be skipped.
 
-### `--singleEnd`
+###`--singleEnd`
 By default, the pipeline expects paired-end data. If you have single-end data, you need to specify `--singleEnd` on the command line when you launch the pipeline. A normal glob pattern, enclosed 
 in quotation marks, can then be used for `--reads`. For example:
 
