@@ -247,8 +247,7 @@ Defines the regions upstream/downstream as the transcription start site use in t
 
 ## Profiles
 
-Use this parameter to choose a configuration profile. Profiles can give configuration presets for different compute environments. Note that multiple profiles can be loaded, for example: `-profil\
-\e docker` - the order of arguments is important!
+Use this parameter to choose a configuration profile. Profiles can give configuration presets for different compute environments. Note that multiple profiles can be loaded, for example: `-profile docker` - the order of arguments is important!
 
 The following `-profile` are available. If `-profile` is not specified at all the pipeline will be run locally and expects all software to be installed and available on the `PATH`.
 
