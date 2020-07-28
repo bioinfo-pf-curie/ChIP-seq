@@ -601,7 +601,7 @@ process bwaMem{
   publishDir "${params.outdir}/mapping", mode: 'copy',
              saveAs: {filename -> 
 	     if (filename.indexOf(".log") > 0) "logs/$filename" 
-	     else if (!useSpike || params.saveAlignedIntermediates) filename}
+	     else if (params.saveAlignedIntermediates) filename}
 
   when:
   params.aligner == "bwa-mem" && !params.inputBam
@@ -635,7 +635,7 @@ process bowtie2{
   publishDir "${params.outdir}/mapping", mode: 'copy',
               saveAs: {filename ->
 	      if (filename.indexOf(".log") > 0) "logs/$filename"  
-	      else if (!useSpike || params.saveAlignedIntermediates) filename}
+	      else if (params.saveAlignedIntermediates) filename}
   when:
   params.aligner == "bowtie2" && !params.inputBam
 
@@ -668,7 +668,7 @@ process star{
   publishDir "${params.outdir}/mapping", mode: 'copy',
              saveAs: {filename ->
 	     if (filename.indexOf(".log") > 0) "logs/$filename"  
- 	     else if (!useSpike || params.saveAlignedIntermediates) filename}
+ 	     else if (params.saveAlignedIntermediates) filename}
   when:
   params.aligner == "star" && !params.inputBam
 
@@ -1076,14 +1076,14 @@ if (useSpike){
     label 'deeptools'
     label 'medCpu'
     label 'medMem'
-    publishDir "${params.outdir}/bigWig", mode: "copy"
+    publishDir "${params.outdir}/bigWigSpike", mode: "copy"
 
     input:
     file(allBams) from chBamsSpikesBam.map{it[1][0]}.collect()
     file(allBai) from chBamsSpikesBai.map{it[1][1]}.collect()
 
     output:
-    file "readCounts_10kbins.tab" into chTabCounts
+    file "readCounts_spike_10kbins.tab" into chTabCounts
     file("v_multiBamSummary") into chMultiBamSummaryVersion
 
     script:
@@ -1092,7 +1092,7 @@ if (useSpike){
                    -b $allBams \\
                    --binSize 10000 \\
                    -o results.npz \\
-                   --outRawCounts readCounts_10kbins.tab
+                   --outRawCounts readCounts_spike_10kbins.tab
     """
   }
 
@@ -1100,7 +1100,7 @@ if (useSpike){
     label 'r'
     label 'lowCpu'
     label 'medMem'
-    publishDir "${params.outdir}/bigWig", mode: "copy"
+    publishDir "${params.outdir}/bigWigSpike", mode: "copy"
 
     input:
     file(tab) from chTabCounts
@@ -1130,7 +1130,7 @@ if (useSpike){
     label 'deeptools'
     label 'medCpu'
     label 'medMem'
-    publishDir "${params.outdir}/bigWig", mode: "copy"
+    publishDir "${params.outdir}/bigWigSpike", mode: "copy"
 
     input:
     set val(prefix), file(filteredBams), val(normFactor) from chBigWigScaleFactor

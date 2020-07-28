@@ -23,9 +23,6 @@ def argsParse():
     singleEnd = args.singleEnd
     baseDir = args.baseDir
     inputBam = args.bam
-
-    print(inputBam)
-
     return inputDesign, inputData, singleEnd, baseDir, inputBam
 
 
@@ -86,6 +83,7 @@ def check_designs(inputDesign, inputData, isSingleEnd, baseDir, isInputBam):
                         .format(dict_design['SAMPLEID'][index], 
                         ', '.join(peaktype_list)))
                 index += 1
+
     ### Checks for sampleplan file
     with open(inputData, 'r') as dataFile:
         lines = csv.reader(dataFile)
@@ -104,6 +102,7 @@ def check_designs(inputDesign, inputData, isSingleEnd, baseDir, isInputBam):
                     dict_reads['FASTQR2'].append(readfile)
                 else:
                     dict_reads['FASTQR2'].append(sample[3])
+
         if inputDesign is not None:
             # Check if there is a missing ID in the design or sample file
             for ID in dict_reads['SAMPLEID']:
