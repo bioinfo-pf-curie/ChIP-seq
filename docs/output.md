@@ -1,30 +1,140 @@
-# nf-core/mypipeline: Output
+# Outputs
 
 This document describes the output produced by the pipeline. Most of the plots are taken from the MultiQC report, which summarises results at the end of the pipeline.
 
-<!-- TODO nf-core: Write this documentation describing your workflow's output -->
-
 ## Pipeline overview
 The pipeline is built using [Nextflow](https://www.nextflow.io/)
-and processes data using the following steps:
+and processes ChIP-seq data using the steps presented in the main README file.  
+Briefly, its goal is to process ChIP-seq data for any protocol, with or without control samples, and with or without spike-ins.
 
-* [FastQC](#fastqc) - read quality control
-* [MultiQC](#multiqc) - aggregate report, describing results of the whole pipeline
+The directories listed below will be created in the output directory after the pipeline has finished. 
 
-## FastQC
+## Sequencing quality
+
+### FastQC
 [FastQC](http://www.bioinformatics.babraham.ac.uk/projects/fastqc/) gives general quality metrics about your reads. It provides information about the quality score distribution across your reads, the per base sequence content (%T/A/G/C). You get information about adapter contamination and other overrepresented sequences.
 
 For further reading and documentation see the [FastQC help](http://www.bioinformatics.babraham.ac.uk/projects/fastqc/Help/).
 
-> **NB:** The FastQC plots displayed in the MultiQC report shows _untrimmed_ reads. They may contain adapter sequence and potentially regions with low quality. To see how your reads look after trimming, look at the FastQC reports in the `trim_galore` directory.
-
-**Output directory: `results/fastqc`**
+**Output directory: `fastqc`**
 
 * `sample_fastqc.html`
   * FastQC report, containing quality metrics for your untrimmed raw fastq files
 * `zips/sample_fastqc.zip`
   * zip file containing the FastQC report, tab-delimited data file and plot images
 
+## Reads mapping
+
+### Alignment
+
+Different tools can be used for read alignment (`STAR`, `BWA-mem`, `Bowtie2`). The mapping statistics (`Total Reads`, `Aligned Reads`, `Unique Reads`, `Multiple Reads`) are also presented in the main summary table.
+
+> **NB:** that by default, one alignment is randomly reported in case of multiple mapping sites. If necessary, those reads can be filtered using the `--mapq` option. In addition, in case of paired-end sequencing reads, singleton are discarded from the analysis
+
+**Output directory: `mapping`**
+
+* `sample.bam`
+  * Aligned reads. Available only if (`--saveAlignedIntermediates`) is used.
+* `sample_sorted.bam`
+  * Aligned reads sorted by chromosome position. Available only if (`--saveAlignedIntermediates`) is used.
+* `sample_sorted.bam.bai`
+  * Index of aligned and sorted reads. Available only if (`--saveAlignedIntermediates`) is used.
+
+The mapping statistics are presented in the MultiQC report as follows.  
+In general, we expect more than 80% of aligned reads. Samples with less than 50% of mapped reads should be further investigated, and check for adapter content, contamination, etc.
+
+![MultiQC - BWA-mem stats plot](images/bwa.png)
+
+### Duplicates
+
+[Picard MarkDuplicates](https://broadinstitute.github.io/picard/command-line-overview.html) is used to mark and remove the duplicates. 
+The results are presented in the `General Metrics` table. Duplicate reads are **removed** by default from the aligned reads to mitigate for fragments in the library that may have been sequenced more than once due to PCR biases. There is an option to keep duplicate reads with the `--keepDups` parameter but its generally recommended to remove them to avoid the wrong interpretation of the results.	
+
+**Output directory: `mapping`**
+
+* `sample_filtered.bam`
+  * Aligned reads after filtering (`--mapq`, `--keepDups`)
+  * `sample_filtered.bam.bai`
+    * Index of aligned reads after filtering
+	
+From our experience, a ChIP-seq sample with less than 25% of duplicates is usually of good quality. Samples with more than 50% of duplicates should be interpreted with caution.
+
+![MultiQC - Picard MarkDup stats plot](images/picard_deduplication.png)
+
+## Quality controls
+
+From the filtered and aligned reads files, the pipeline then runs several quality control steps presented below.
+
+### Sequencing complexity
+
+The [Preseq](http://smithlabresearch.org/software/preseq/) package is aimed at predicting and estimating the complexity of a genomic sequencing library, equivalent to predicting and estimating the number of redundant reads from a given sequencing depth and how many will be expected from additional sequencing using an initial sequencing experiment. The estimates can then be used to examine the utility of further sequencing, optimize the sequencing depth, or to screen multiple libraries to avoid low complexity samples. The dashed line shows a perfectly complex library where total reads = unique reads. Note that these are predictive numbers only, not absolute. The MultiQC plot can sometimes give extreme sequencing depth on the X axis - click and drag from the left side of the plot to zoom in on more realistic numbers.
+
+**Output directory: `preseq`**
+
+* `sample_ccurve.txt`
+  * Preseq expected future yield file.
+
+![MultiQC - Preseq library complexity plot](images/preseq_plot.png)
+
+### Fingerprint
+
+[deepTools](https://deeptools.readthedocs.io/en/develop/content/list_of_tools.html) plotFingerprint is a useful QC for ChIP-seq data in order to see the relative enrichment of the IP samples with respect to the controls on a genome-wide basis. The results, however, are expected to look different for example when comparing narrow marks such as transcription factors and broader marks such as histone modifications (see [plotFingerprint docs](https://deeptools.readthedocs.io/en/develop/content/tools/plotFingerprint.html)).
+
+![MultiQC - deepTools plotFingerprint plot](images/deeptools_fingerprint_plot.png)
+
+**Output directory: `deepTools/fingerprintQC/`**
+
+* `*.plotFingerprint.pdf`, `*.plotFingerprint.qcmetrics.txt`, `*.plotFingerprint.raw.txt`: plotFingerprint output files.
+
+### Read distribution
+
+The results from deepTools plotProfile gives you a quick visualisation for the genome-wide enrichment of your samples at the TSS, and across the gene body. During the downstream analysis, you may want to refine the features/genes used to generate these plots in order to see a more specific condition-related effect.
+
+![MultiQC - deepTools plotProfile plot](images/read_distribution_profile.png)
+
+> **NB:** Note that when very different profiles (active and repressive histone marks) are presented in the same plots, it is usually difficult to see any enrichment of the repressive marks.
+
+**Output directory: `deepTools/computeMatrix/`**
+
+*  * `*.computeMatrix.mat.gz`, `*.computeMatrix.vals.mat.tab`, `*.plotProfile.pdf`: plotProfile output files
+
+### Sample correlation
+
+The read coverages for entire genome is first calculated using [deepTools](https://deeptools.readthedocs.io/en/develop/content/list_of_tools.html) multiBamSummary and all BAM files. Bins of 10kb are used. Then, the Spearman correlations between all coverage profiles are calculated and presented as a heatmap using the plotCorrelation tool.
+
+**Output directory: `deepTools/correlationQC/`**
+
+* `bams_correlation.pdf`,`bams_correlation.tab`: plotProfile output files
+
+### Strand-shift correlation plot
+
+[phantompeakqualtools](https://github.com/kundajelab/phantompeakqualtools) plots the strand cross-correlation of aligned reads for each sample. In a strand cross-correlation plot, reads are shifted in the direction of the strand they map to by an increasing number of base pairs and the Pearson correlation between the per-position read count for each strand is calculated. Two cross-correlation peaks are usually observed in a ChIP experiment, one corresponding to the read length ("phantom" peak) and one to the average fragment length of the library. The absolute and relative height of the two peaks are useful determinants of the success of a ChIP-seq experiment. A high-quality IP is characterized by a ChIP peak that is much higher than the "phantom" peak, while often very small or no such peak is seen in failed experiments.
+
+![MultiQC - spp strand-correlation plot](images/spp_strand_correlation_plot.png)
+
+Normalized strand coefficient (**NSC**) is the normalized ratio between the fragment-length cross-correlation peak and the background cross-correlation. NSC values range from a minimum of 1 to larger positive numbers. 1.1 is the critical threshold. Datasets with NSC values much less than 1.1 tend to have low signal to noise or few peaks (this could be biological e.g. a factor that truly binds only a few sites in a particular tissue type OR it could be due to poor quality).
+
+Relative strand correlation (RSC) is the ratio between the fragment-length peak and the read-length peak. RSC values range from 0 to larger positive values. 1 is the critical threshold. RSC values significantly lower than 1 (< 0.8) tend to have low signal to noise. The low scores can be due to failed and poor quality ChIP, low read sequence quality and hence lots of mis-mappings, shallow sequencing depth (significantly below saturation) or a combination of these. Like the NSC, datasets with few binding sites (< 200), which is biologically justifiable, also show low RSC scores.
+
+The NSC and RSC values are reported in the `General Metrics` table. We then applied the threshold from the [ENCODE guidelines](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3431496/) which usually considers as low quality samples, the experiments with a NSC < 1.1 or RSC < 0.8.
+
+> **NB:** Note that the interpretation of the strand-shift cross correlation may vary according to the type of experiments. For instance, repressive histone marks with broad domains such as H3K27me3, usually have low NSC/RSC values.
+
+## Big Wig tracks
+
+The [bigWig](https://genome.ucsc.edu/goldenpath/help/bigWig.html) format is in an indexed binary format useful for displaying dense, continuous data in Genome Browsers such as the [UCSC](https://genome.ucsc.edu/cgi-bin/hgTracks) and [IGV](http://software.broadinstitute.org/software/igv/). This mitigates the need to load the much larger BAM files for data visualisation purposes which will be slower and result in memory issues. The coverage values represented in the bigWig file can also be normalised in order to be able to compare the coverage across multiple samples - this is not possible with BAM files. The bigWig format is also supported by various bioinformatics software for downstream processing such as meta-profile plotting.
+
+**Output directory: `bigWig`**
+
+* `sample_rpgc.bigwig` : bigwig files
+
+## Spike-in
+
+## Peak calling
+
+### Peak counts
+
+### Peak annotation
 
 ## MultiQC
 [MultiQC](http://multiqc.info) is a visualisation tool that generates a single HTML report summarising all samples in your project. Most of the pipeline QC results are visualised in the report and further statistics are available in within the report data directory.
@@ -33,9 +143,9 @@ The pipeline has special steps which allow the software versions used to be repo
 
 **Output directory: `results/multiqc`**
 
-* `Project_multiqc_report.html`
+* `chipseq_report.html`
   * MultiQC report - a standalone HTML file that can be viewed in your web browser
-* `Project_multiqc_data/`
+* `multiqc_data/`
   * Directory containing parsed statistics from the different tools used in the pipeline
 
 For more information about how to use MultiQC reports, see http://multiqc.info
