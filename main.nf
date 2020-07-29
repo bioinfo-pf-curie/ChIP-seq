@@ -733,7 +733,7 @@ def check_log(logs) {
   }
   logname = logs.getBaseName() - '_ref_bamcomp.mqc'
   percent_spike = nb_spike.toFloat() / (nb_spike.toFloat() + nb_ref.toFloat()) * 100
-  percent_spike = percent_spike.round(3)
+  percent_spike = percent_spike.round(5)
   if(percent_spike.toFloat() <= '1'.toFloat() ){
       log.info "#################### VERY POOR SPIKE ALIGNMENT RATE! IGNORING FOR FURTHER DOWNSTREAM ANALYSIS! ($logname)    >> ${percent_spike}% <<"
       spikes_poor_alignment << logname
