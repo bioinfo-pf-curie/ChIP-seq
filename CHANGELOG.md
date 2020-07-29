@@ -5,6 +5,10 @@ SIGNIFICANT USER-VISIBLE CHANGES
 
   o Update doc
 
+BUG FIXES
+
+  o Fix bug in mapping stat for bowtie2 with paired-end data
+
 ***********************************
 CHANGES IN VERSION 1.0.1
 
