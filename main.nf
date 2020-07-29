@@ -1084,7 +1084,6 @@ if (useSpike){
 
     output:
     file "readCounts_spike_10kbins.tab" into chTabCounts
-    file("v_multiBamSummary") into chMultiBamSummaryVersion
 
     script:
     """
