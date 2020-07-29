@@ -43,14 +43,14 @@ Different tools can be used for read alignment (`STAR`, `BWA-mem`, `Bowtie2`). T
 The mapping statistics are presented in the MultiQC report as follows.  
 In general, we expect more than 80% of aligned reads. Samples with less than 50% of mapped reads should be further investigated, and check for adapter content, contamination, etc.
 
-![MultiQC - BWA-mem stats plot](images/bwa.png)
+![MultiQC - Bowtie2 stats plot](images/bowtie2.png)
 
 ### Spike-in
 
 In the case of spike-in data, reads are aligned both on the reference and on the spike genome (`--spike`).  
 Alignments are then compared for a given sample in order to extract reference and spike-in specific BAM files.
 
-![MultiQC - Spike-in plot](images/spike.png)
+![MultiQC - Spike-in plot](images/spikes.png)
 
 The number of reads aligned to the spike-in genome are then used to calculate a scaling factor for each sample. This scaling factor will be then applied to generated spike-in normalized `bigwig`
  files.
@@ -121,6 +121,8 @@ The results from deepTools plotProfile gives you a quick visualisation for the g
 
 The read coverages for entire genome is first calculated using [deepTools](https://deeptools.readthedocs.io/en/develop/content/list_of_tools.html) multiBamSummary and all BAM files. Bins of 10kb are used. Then, the Spearman correlations between all coverage profiles are calculated and presented as a heatmap using the plotCorrelation tool.
 
+![MultiQC - deepTools plotFingerprint plot](images/deeptools_correlation_plot.png)  
+
 **Output directory: `deepTools/correlationQC/`**
 
 * `bams_correlation.pdf`,`bams_correlation.tab`: plotProfile output files
@@ -139,7 +141,7 @@ The NSC and RSC values are reported in the `General Metrics` table. We then appl
 
 > **NB:** Note that the interpretation of the strand-shift cross correlation may vary according to the type of experiments. For instance, repressive histone marks with broad domains such as H3K27me3, usually have low NSC/RSC values.
 
-## Big Wig tracks
+## BigWig tracks
 
 The [bigWig](https://genome.ucsc.edu/goldenpath/help/bigWig.html) format is in an indexed binary format useful for displaying dense, continuous data in Genome Browsers such as the [UCSC](https://genome.ucsc.edu/cgi-bin/hgTracks) and [IGV](http://software.broadinstitute.org/software/igv/). This mitigates the need to load the much larger BAM files for data visualisation purposes which will be slower and result in memory issues. The coverage values represented in the bigWig file can also be normalised in order to be able to compare the coverage across multiple samples - this is not possible with BAM files. The bigWig format is also supported by various bioinformatics software for downstream processing such as meta-profile plotting.
 
