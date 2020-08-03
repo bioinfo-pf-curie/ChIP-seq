@@ -7,6 +7,7 @@ SIGNIFICANT USER-VISIBLE CHANGES
 
 BUG FIXES
 
+  o Add dmelr6.22 annotation genome
   o Fix bug in mapping stat for bowtie2 with paired-end data
 
 ***********************************
