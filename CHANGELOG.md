@@ -3,6 +3,7 @@ CAHNGES IN VERSION 1.0.2
 
 SIGNIFICANT USER-VISIBLE CHANGES
 
+  o Add dmel6.22 annotation
   o Update doc
 
 BUG FIXES
