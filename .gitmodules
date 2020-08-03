@@ -1,0 +1,3 @@
+[submodule "geniac"]
+	path = geniac
+	url = ssh://git@gitlab.curie.fr:2222/pipeline_templates/nf-geniac.git
