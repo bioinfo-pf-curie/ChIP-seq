@@ -837,7 +837,7 @@ process bamSort{
   samtools stats ${prefix}_sorted.bam > ${prefix}_sorted.stats
 
   aligned="\$(samtools view -@ $task.cpus -F 0x100 -F 0x4 -F 0x800 -c ${prefix}_sorted.bam)"
-  hqbam="\$(samtools view -@ $task.cpus -F 0x100 -F 0x4 -q 10 -c ${prefix}_sorted.bam)"
+  hqbam="\$(samtools view -@ $task.cpus -F 0x100 -F 0x800 -F 0x4 -q 10 -c ${prefix}_sorted.bam)"
   lqbam="\$((\$aligned - \$hqbam))"
   echo -e "Mapped,\${aligned}" > ${prefix}_mappingstats.mqc
   echo -e "HighQual,\${hqbam}" >> ${prefix}_mappingstats.mqc
