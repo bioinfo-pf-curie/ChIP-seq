@@ -60,11 +60,11 @@ do
 	nb_reads=$(grep "reads;" mapping/${sample}_bowtie2.log | sed 's/ .*//')
 	if [[ $is_pe == "1" ]]; then
            nb_uniq_reads=$(grep "concordantly exactly" mapping/${sample}_bowtie2.log | awk '{print $1}')
-           perc_uniq_reads=$(echo "${nb_uniq_reads} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')                                                                                                   
+           perc_uniq_reads=$(echo "${nb_uniq_reads} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
            nb_mult_reads=$(grep "concordantly >1" mapping/${sample}_bowtie2.log | awk '{print $1}')
-           perc_mult_reads=$(echo "${nb_mult_reads} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')                                                                                                   
-           nb_mapped=$(($nb_uniq_reads + $nb_mult_reads))                                                                                                                                                   
-           perc_mapped=$(echo "${nb_mapped} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')                                                                                                           
+           perc_mult_reads=$(echo "${nb_mult_reads} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
+           nb_mapped=$(($nb_uniq_reads + $nb_mult_reads))
+           perc_mapped=$(echo "${nb_mapped} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
 	else 
 	    nb_uniq_reads=$(grep "exactly" mapping/${sample}_bowtie2.log | awk '{print $1}')
 	    perc_uniq_reads=$(echo "${nb_uniq_reads} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
