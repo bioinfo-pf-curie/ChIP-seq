@@ -3,6 +3,7 @@ CAHNGES IN VERSION 1.0.2
 
 SIGNIFICANT USER-VISIBLE CHANGES
 
+  o Report high/low quality reads instead of unique/multi reads
   o Update doc
   o Use paired and single reads in duplicates level calculation
 
