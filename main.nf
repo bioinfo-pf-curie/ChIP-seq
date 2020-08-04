@@ -1779,7 +1779,7 @@ process multiqc {
  * Sub-routine
  */
 process outputDocumentation {
-    label 'python'
+    label 'markdown'
     label 'lowCpu'
     label 'lowMem'
     publishDir "${params.outdir}/pipeline_info", mode: 'copy'
