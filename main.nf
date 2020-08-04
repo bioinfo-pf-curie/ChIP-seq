@@ -999,7 +999,7 @@ chFlagstatChip
 
 process PPQT{
   tag "${prefix}"
-  label 'r'
+  label 'ppqt'
   label 'medCpu'
   label 'medMem'
   publishDir "${params.outdir}/ppqt", mode: "copy"

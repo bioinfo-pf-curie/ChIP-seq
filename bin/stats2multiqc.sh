@@ -96,10 +96,10 @@ do
     #Mapping stats
     nb_mapped=$(awk -F, '$1=="Mapped"{print $2}' mapping/${sample}_mappingstats.mqc)
     perc_mapped=$(echo "${nb_mapped} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
-    nb_mapped_hq=$(awk -F, '$1=="HighQual"{print $3}' mapping/${sample}_mappingstats.mqc)
+    nb_mapped_hq=$(awk -F, '$1=="HighQual"{print $2}' mapping/${sample}_mappingstats.mqc)
     perc_mapped_hq=$(echo "${nb_mapped_hq} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
-    nb_mapped_lq=$(awk -F, '$1=="LowQual"{print $4}' mapping/${sample}_mappingstats.mqc)
-    perc_mapped_lq=$(echo "${nb_uniq_reads} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ') 
+    nb_mapped_lq=$(awk -F, '$1=="LowQual"{print $2}' mapping/${sample}_mappingstats.mqc)
+    perc_mapped_lq=$(echo "${nb_mapped_lq} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ') 
 
     #PICARD
     if [[ -e mapping/${sample}.MarkDuplicates.metrics.txt ]]; then

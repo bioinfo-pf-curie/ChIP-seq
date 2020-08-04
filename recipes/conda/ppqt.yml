@@ -1,0 +1,7 @@
+name: ppqt
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - bioconda::phantompeakqualtools=1.2
