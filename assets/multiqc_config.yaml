@@ -55,14 +55,14 @@ High-quality ChIP-seq experiment produces significant clustering of enriched DNA
               format: '{:,.1f}'
               placement: 4000
             Number_of_hq_mapped_reads:
-              title: 'HQ Mapped Reads'
+              title: 'High-Quality Alignment'
               description: 'High-Quality Mapped Reads (mapQ > 10)'
               scale: 'RdYlGn'
               format: '{:,.0f}'
               hidden: true
               placement: 5000
             Percent_of_hq_mapped_reads:
-              title: 'HQ Mapped Reads (%)'
+              title: 'High-Quality Alignment (%)'
               description: 'High-Quality Mapped Reads (mapQ > 10)'
               min: 0
               max: 100
@@ -71,14 +71,14 @@ High-quality ChIP-seq experiment produces significant clustering of enriched DNA
               suffix: '%'
               placement: 6000
             Number_of_lq_mapped_reads:
-              title: 'LQ Mapped Reads'
+              title: 'Low-Quality Alignment'
               description: 'Low-Quality Mapped Reads (mapQ < 10)'
               scale: 'RdYlGn'
               format: '{:,.0f}'
               hidden: true
               placement: 7000
             Percent_of_lq_mapped_reads:
-              title: 'LQ Mapped Reads (%)'
+              title: 'Low-Quality Alignment (%)'
               description: 'Low-Quality Mapped Reads (mapQ < 10)'
               min: 0
               max: 100
@@ -152,7 +152,7 @@ sp:
   spikes:
       fn: '*bamcomp.mqc'
   bwa_logs:
-      fn: '*bwa.log'
+      fn: '*bwa.mqc'
 
 table_cond_formatting_rules:
     Fragment_length:

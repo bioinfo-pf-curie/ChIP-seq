@@ -372,6 +372,7 @@ summary['Genes']        = params.geneBed
 if (params.blacklist)  summary['Blacklist '] = params.blacklist
 summary['Data Type']    = params.singleEnd ? 'Single-End' : 'Paired-End'
 if (params.singleEnd)  summary['Fragment Size '] = params.fragmentSize
+summary['Aligner'] = params.aligner
 if (params.keepDups)  summary['Keep Duplicates'] = 'Yes'
 if (params.mapq)  summary['Min MapQ'] = params.mapq
 summary['Max Memory']   = params.maxMemory

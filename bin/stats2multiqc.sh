@@ -74,7 +74,8 @@ do
 #	    perc_mapped=$(echo "${nb_mapped} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
 #	fi
     elif [ $aligner == "bwa-mem" ]; then
-	nb_reads=$(grep 'Total' mapping/${sample}_bwa.log | awk -F "\t" '{print $2}') 
+	nb_reads=$(grep 'Total' mapping/${sample}_bwa.log | awk -F "\t" '{print $2}')
+	tail -n +3 mapping/${sample}_bwa.log > mapping/${sample}_bwa.mqc
 #	nb_unmapped=$(grep 'Unmapped' mapping/${sample}_bwa.log | awk -F "\t" '{print $2}')
 #	nb_uniq_reads=$(grep 'Uniquely' mapping/${sample}_bwa.log | awk -F "\t" '{print $2}')
 #	nb_mult_reads=$(grep 'Multi' mapping/${sample}_bwa.log | awk -F "\t" '{print $2}')
