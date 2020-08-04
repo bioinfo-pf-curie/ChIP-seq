@@ -813,7 +813,7 @@ process bamSort{
   label 'medMem'
   publishDir path: "${params.outdir}/mapping", mode: 'copy',
     saveAs: {filename ->
-             if ( !filename.endsWith(".bam") && !filename.endsWith(".bam.bai") && params.saveAlignedIntermediates ) "stats/$filename"
+             if ( filename.endsWith("stats") && params.saveAlignedIntermediates ) "stats/$filename"
              else if ( (filename.endsWith(".bam") || (filename.endsWith(".bam.bai"))) && params.saveAlignedIntermediates ) filename
              else null
             }
@@ -823,7 +823,8 @@ process bamSort{
 
   output:
   set val(prefix), file('*sorted.{bam,bam.bai}') into chSortBams
-  file("*stats") into chStatsMqc
+  file("*stats") into chStats
+  file("*mqc") into chStatsMqc
   file("v_samtools.txt") into chSamtoolsVersionBamSort
 
   script:
@@ -834,6 +835,13 @@ process bamSort{
   samtools flagstat ${prefix}_sorted.bam > ${prefix}_sorted.flagstats
   samtools idxstats ${prefix}_sorted.bam > ${prefix}_sorted.idxstats
   samtools stats ${prefix}_sorted.bam > ${prefix}_sorted.stats
+
+  aligned="\$(samtools view -@ $task.cpus -F 0x100 -F 0x4 -F 0x800 -c ${prefix}_sorted.bam)"
+  hqbam="\$(samtools view -@ $task.cpus -F 0x100 -F 0x4 -q 10 -c ${prefix}_sorted.bam)"
+  lqbam="\$((\$aligned - \$hqbam))"
+  echo -e "Mapped,\${aligned}" > ${prefix}_mappingstats.mqc
+  echo -e "HighQual,\${hqbam}" >> ${prefix}_mappingstats.mqc
+  echo -e "LowQual,\${lqbam}" >> ${prefix}_mappingstats.mqc
   """
 }
 
@@ -960,9 +968,6 @@ chFilteredBams
   .into{ chBams; chGroupBamNameFeatCounts }
 chFilteredFlagstat
   .set{ chFlagstat }
-chFilteredStats
-  .set{ chStatsMqc }
-
 
 /*
  * Separate sample BAMs and spike BAMs
@@ -1729,31 +1734,24 @@ process multiqc {
   file metadata from chMetadata.ifEmpty([])
   file multiqcConfig from chMultiqcConfig
   file design from chDesignMqc.collect().ifEmpty([])
-
   file ('software_versions/*') from softwareVersionsYaml.collect().ifEmpty([])
   file ('workflow_summary/*') from workflowSummaryYaml.collect()
-
   file ('fastqc/*') from chFastqcMqc.collect().ifEmpty([])
-
   file ('mapping/*') from chMappingMqc.collect().ifEmpty([])
   file ('mapping/*') from chMappingSpikeMqc.collect().ifEmpty([])
-
   file ('mapping/*') from chMarkedPicstats.collect().ifEmpty([])
+  file ('mapping/*') from chStatsMqc.collect().ifEmpty([])
   file ('preseq/*') from chPreseqStats.collect().ifEmpty([])
-
   file ('ppqt/*') from chPpqtOutMqc.collect().ifEmpty([])
   file ('ppqt/*') from chPpqtCsvMqc.collect().ifEmpty([])
-
   file ('deepTools/*') from chDeeptoolsSingleMqc.collect().ifEmpty([])
   file ("deepTools/*") from chDeeptoolsCorrelMqc.collect().ifEmpty([])
   file ("deepTools/*") from chDeeptoolsFingerprintMqc.collect().ifEmpty([])
-
   file ('peakCalling/sharp/*') from chMacsOutputSharp.collect().ifEmpty([])
   file ('peakCalling/broad/*') from chMacsOutputBroad.collect().ifEmpty([])
   file ('peakCalling/sharp/*') from chMacsCountsSharp.collect().ifEmpty([])
   file ('peakCalling/broad/*') from chMacsCountsBroad.collect().ifEmpty([])
   file ('peakCalling/very-broad/*') from chMacsCountsVbroad.collect().ifEmpty([])
-  
   file('peakQC/*') from chPeakMqc.collect().ifEmpty([])
   
   output:

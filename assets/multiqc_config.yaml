@@ -54,28 +54,32 @@ High-quality ChIP-seq experiment produces significant clustering of enriched DNA
               suffix: '%'
               format: '{:,.1f}'
               placement: 4000
-            Number_of_uniquely_mapped_reads:
-              title: 'Unique Reads'
+            Number_of_hq_mapped_reads:
+              title: 'HQ Mapped Reads'
+              description: 'High-Quality Mapped Reads (mapQ > 10)'
               scale: 'RdYlGn'
               format: '{:,.0f}'
               hidden: true
               placement: 5000
-            Percent_of_uniquely_mapped_reads:
-              title: 'Unique Reads (%)'
+            Percent_of_hq_mapped_reads:
+              title: 'HQ Mapped Reads (%)'
+              description: 'High-Quality Mapped Reads (mapQ > 10)'
               min: 0
               max: 100
               scale: 'RdYlGn'
               format: '{:,.1f}'
               suffix: '%'
               placement: 6000
-            Number_of_multiple_mapped_reads:
-              title: 'Multiple reads'
+            Number_of_lq_mapped_reads:
+              title: 'LQ Mapped Reads'
+              description: 'Low-Quality Mapped Reads (mapQ < 10)'
               scale: 'RdYlGn'
               format: '{:,.0f}'
               hidden: true
               placement: 7000
-            Percent_of_multiple_mapped_reads:
-              title: 'Multiple reads (%)'
+            Percent_of_lq_mapped_reads:
+              title: 'LQ Mapped Reads (%)'
+              description: 'Low-Quality Mapped Reads (mapQ < 10)'
               min: 0
               max: 100
               scale: 'RdYlGn'
