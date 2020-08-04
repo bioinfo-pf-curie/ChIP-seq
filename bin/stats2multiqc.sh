@@ -102,11 +102,10 @@ do
   
     #PICARD
     if [[ -e mapping/${sample}.MarkDuplicates.metrics.txt ]]; then
-	if [[ $is_pe == "1" ]]; then
-	    nb_dups=$(grep -a2 "## METRICS" mapping/${sample}.MarkDuplicates.metrics.txt | tail -1 | awk -F"\t" '{print $7}')
-	else
-	    nb_dups=$(grep -a2 "## METRICS" mapping/${sample}.MarkDuplicates.metrics.txt | tail -1 | awk -F"\t" '{print $6}')
-	fi
+	nb_dups_pair=$(grep -a2 "## METRICS" mapping/${sample}.MarkDuplicates.metrics.txt | tail -1 | awk -F"\t" '{print $7}')
+	nb_dups_single=$(grep -a2 "## METRICS" mapping/${sample}.MarkDuplicates.metrics.txt | tail -1 | awk -F"\t" '{print $6}')
+	nb_dups_optical=$(grep -a2 "## METRICS" mapping/${sample}.MarkDuplicates.metrics.txt | tail -1 | awk -F"\t" '{print $8}')
+	nb_dups=$(($nb_dups_pair + $nb_dups_single + $nb_dups_optical))
 	perc_dups=$(echo "${nb_dups} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
     else
 	nb_dups='NA'
