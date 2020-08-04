@@ -1,4 +1,4 @@
-C1;5202;0cname: idr
+name: idr
 channels:
   - bioconda
 dependencies:
