@@ -9,6 +9,7 @@ SIGNIFICANT USER-VISIBLE CHANGES
 
 BUG FIXES
 
+  o export plots in output documentation (#35)
   o Add dmelr6.22 annotation genome
   o Fix bug in mapping stat for bowtie2 with paired-end data
 

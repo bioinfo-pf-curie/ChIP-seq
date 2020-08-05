@@ -332,9 +332,8 @@ Channel
 Channel
   .fromPath(params.multiqcConfig, checkIfExists: true)
   .set{chMultiqcConfig}
-Channel
-  .fromPath(params.outputDoc, checkIfExists: true)
-  .set{chOutputDocs}
+chOutputDocs = file("$baseDir/docs/output.md", checkIfExists: true)
+chOutputDocsImages = file("$baseDir/docs/images/", checkIfExists: true)
 
 //Has the run name been specified by the user?
 //This has the bonus effect of catching both -name and --name
@@ -1785,6 +1784,7 @@ process outputDocumentation {
 
     input:
     file output_docs from chOutputDocs
+    file images from chOutputDocsImages
 
     output:
     file "results_description.html"
