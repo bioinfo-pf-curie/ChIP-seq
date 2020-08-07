@@ -465,14 +465,14 @@ if (params.samplePlan){
        .collectFile() {
          item -> ["sample_plan.csv", item[0] + ',' + item[0] + ',' + item[1][0] + '\n']
         }
-       .set{ chSplan; chSplanCheck }
+       .into{ chSplan; chSplanCheck }
   }else{
      Channel
        .from(params.readPaths)
        .collectFile() {
          item -> ["sample_plan.csv", item[0] + ',' + item[0] + ',' + item[1][0] + ',' + item[1][1] + '\n']
         }
-       .set{ chSplan; chSplanCheck }
+       .into{ chSplan; chSplanCheck }
   }
 } else if(params.bamPaths){
   Channel
@@ -480,7 +480,7 @@ if (params.samplePlan){
      .collectFile() {
        item -> ["sample_plan.csv", item[0] + ',' + item[0] + ',' + item[1][0] + '\n']
       }
-     .set{ chSplan; chSplanCheck }
+     .into{ chSplan; chSplanCheck }
   params.aligner = false
 } else {
   if (params.singleEnd){
@@ -489,14 +489,14 @@ if (params.samplePlan){
        .collectFile() {
           item -> ["sample_plan.csv", item[0] + ',' + item[0] + ',' + item[1][0] + '\n']
        }     
-       .set { chSplan; chSplanCheck }
+       .into { chSplan; chSplanCheck }
   }else{
     Channel
        .fromFilePairs( params.reads, size: 2 )
        .collectFile() {
           item -> ["sample_plan.csv", item[0] + ',' + item[0] + ',' + item[1][0] + ',' + item[1][1] + '\n']
        }     
-       .set { chSplan; chSplanCheck }
+       .into { chSplan; chSplanCheck }
    }
 }
 /******************************
@@ -1837,7 +1837,7 @@ workflow.onComplete {
   // Write summary e-mail HTML to a file
   def output_d = new File( "${params.outdir}/pipeline_info/" )
   if( !output_d.exists() ) {
-  output_d.mkdirs()
+    output_d.mkdirs()
   }
   def output_hf = new File( output_d, "pipeline_report.html" )
   output_hf.withWriter { w -> w << report_html }
@@ -1857,7 +1857,6 @@ workflow.onComplete {
   String execInfo = "Execution summary\n${logSep}\n${endWfSummary}\n${logSep}\n"
   woc.write(execInfo)
 
-  /*]      = workflow.success     endSummary['exit status']  = workflow.exitStatus     endSummary['Error report'] = workflow.errorReport ?: '-' final logs*/
   if(spikes_poor_alignment.size() > 0){
     log.info "[chIP-seq] WARNING - ${spikes_poor_alignment.size()} samples skipped due to poor alignment scores!"
   }                                                                                                                                                                                                        
