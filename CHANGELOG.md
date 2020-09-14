@@ -1,5 +1,19 @@
 ***********************************
-CAHNGES IN VERSION 1.0.2
+CHANGES IN VERSION 1.0.3
+
+NEW FEATURES
+
+   o Add --spikePercentFilter to fix the minimum percentage of reads which should align on spike-in genome
+   o Add --keepSingleton option
+
+BUG FIXES
+
+   o Fix bug in spike-in reads cleaning
+   o Update BWA stats for PE data. Report pairs and not reads
+   o Dups % is calculated over the number of mapped reads (not total reads)
+
+***********************************
+CHANGES IN VERSION 1.0.2
 
 SIGNIFICANT USER-VISIBLE CHANGES
 

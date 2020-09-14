@@ -65,9 +65,11 @@ def helpMessage() {
   --spikeBowtie2Index [file]         Spike-in Index for Bowtie2 aligner
 
   Filtering:
-  --mapq [int]                       Minimum mapping quality to consider. Default: false
+  --mapq [int]                       Minimum mapping quality to consider. Default: 0
   --keepDups [bool]                  Do not remove duplicates afer marking. Default: false
+  --keepSingleton [bool]             Keep unpaired reads. Default: false
   --blacklist [file]                 Path to black list regions (.bed).
+  --spikePercentFilter [float]       Minimum percent of reads aligned to spike-in genome. Default: 1
 
   Annotation:          If not specified in the configuration file or you wish to overwrite any of the references given by the --genome field
   --genomeAnnotationPath             Path to genome annotations.
@@ -721,7 +723,7 @@ if (params.inputBam){
  */
 
 spikes_poor_alignment = []
-def check_log(logs) {
+def check_log(logs, t='1') {
   def nb_ref = 0;
   def nb_spike = 0;
   def percent_spike = 0;
@@ -735,7 +737,7 @@ def check_log(logs) {
   logname = logs.getBaseName() - '_ref_bamcomp.mqc'
   percent_spike = nb_spike.toFloat() / (nb_spike.toFloat() + nb_ref.toFloat()) * 100
   percent_spike = percent_spike.round(5)
-  if(percent_spike.toFloat() <= '1'.toFloat() ){
+  if(percent_spike.toFloat() <= t.toFloat() ){
       log.info "#################### VERY POOR SPIKE ALIGNMENT RATE! IGNORING FOR FURTHER DOWNSTREAM ANALYSIS! ($logname)    >> ${percent_spike}% <<"
       spikes_poor_alignment << logname
       return false
@@ -786,7 +788,7 @@ if (useSpike){
 
   // Filter removes all 'aligned' channels that fail the check
   chSpikeBams
-        .filter { sample, logs, bams -> check_log(logs) }
+        .filter { sample, logs, bams -> check_log(logs, t="$params.spikePercentFilter") }
         .map { row -> [row[0], row[2]]}
         .set { chSpikeCheckBams }
 
@@ -944,16 +946,15 @@ process bamFiltering {
   file("v_samtools.txt") into chSamtoolsVersionBamFiltering
 
   script:
-  filterParams = params.singleEnd ? "-F 0x004" : "-F 0x004 -F 0x0008 -f 0x001"
+  filterParams = params.singleEnd ? "-F 0x004" : params.keepSingleton ? "-F 0x004" : "-F 0x004 -F 0x0008 -f 0x001"
   dupParams = params.keepDups ? "" : "-F 0x0400"
-  mapqParams = params.mapq ? "-q ${params.mapq}" : ""
+  mapqParams = params.mapq > 0 ? "-q ${params.mapq}" : ""
   nameSortBam = params.singleEnd ? "" : "samtools sort -n -@ $task.cpus -o ${prefix}.bam -T $prefix ${prefix}_filtered.bam"
   """
   samtools --version &> v_samtools.txt
   samtools view \\
     $filterParams \\
     $dupParams \\
-    -F 0x08 \\
     $mapqParams \\
     -b ${markedBam[0]} > ${prefix}_filtered.bam
   samtools index ${prefix}_filtered.bam

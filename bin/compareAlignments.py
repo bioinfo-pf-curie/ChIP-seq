@@ -177,7 +177,7 @@ def compareBams(bam1, bam2, out1, out2, score="mapq", debug=False):
                         counter_alignments["bam1"] += 1
                         for r in g1Aln:
                             out1.write(r)
-                    elif flag == 4 and flag == 0:
+                    elif flag == 4 or flag == 0:
                         counter_alignments["bam2"] += 1
                         for r in g2Aln:
                             out2.write(r)
