@@ -1041,7 +1041,10 @@ process bigWig {
   label 'deeptools'
   label 'medCpu'
   label 'medMem'
-  publishDir "${params.outdir}/bigWig", mode: "copy"
+  publishDir "${params.outdir}/bigWig", mode: "copy",
+    saveAs: {filename ->
+    	     if ( filename.endsWith(".bigwig") ) "$filename"
+             else null}
 
   input:
   set val(prefix), file(filteredBams) from chBamsBigWig
@@ -1137,7 +1140,10 @@ if (useSpike){
     label 'medCpu'
     label 'medMem'
     publishDir "${params.outdir}/bigWigSpike", mode: "copy"
-
+      saveAs: {filename ->
+        if ( filename.endsWith(".bigwig") ) "$filename"
+        else null}
+ 
     input:
     set val(prefix), file(filteredBams), val(normFactor) from chBigWigScaleFactor
     file(BLbed) from chBlacklistBigWigSpike.collect()
