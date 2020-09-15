@@ -41,42 +41,40 @@ do
     esac
 done
 
-
 ##########################################################
-nb_pairs=$(samtools view -h $input | head -n1000 | samtools view -@ $proc -f 0x1 -c -)
+nb_pairs=$(samtools view -@ $proc -f 0x1 -c $input)
 tot=$(samtools view -@ $proc -F 0x100 -F 0x800 -c $input)
 mapped=$(samtools view -@ $proc -F 0x4 -F 0x100 -F 0x800 -c $input)
 unmapped=$(( $tot - $mapped))
-uniq=$(samtools view -@ $proc -q 1 -F 0x4 -F 0x100 -F 0x800 $input | grep -v XA:Z | grep -v SA:Z | wc -l )
+uniq=$(samtools view -@ $proc -q 1 -F 0x4 -F 0x100 -F 0x800 $input | grep -v -e 'XA:Z:' -e 'SA:Z:' | wc -l )
 multi=$(( $mapped - $uniq ))
 
 if [[ ${nb_pairs} -gt 0 ]]; then
-    paired=$(samtools view -@ $proc -F 0x4 -F 0x100 -F 0x800 -f 0x1 -c $input)
+    paired=$(samtools view -@ $proc -F 0x100 -F 0x800 -F 0x004 -F 0x0008 -f 0x001 -c $input)
     single=$(( $mapped - $paired ))
-    uniq_paired=$(samtools view -@ $proc -q 1 -F 0x4 -F 0x100 -F 0x800 -f 0x1 $input | grep -v XA:X | grep -v SA:Z | wc -l)
+    echo "SINGLE=$single"
+    uniq_paired=$(samtools view -@ $proc -q 1 -F 0x4 -F 0x100 -F 0x800 -F 0x0008 -f 0x1 $input | grep -v -e 'XA:Z:' -e 'SA:Z:' | wc -l)
     uniq_single=$(( $uniq - $uniq_paired ))
     multi_paired=$(( $paired - $uniq_paired ))
     multi_single=$(( $single - $uniq_single ))
     unmapped=$(samtools view -@ $proc -f 12 -c $input)
 
-    tot=$(( $tot / 2 ))
-    mapped=$(( $mapped / 2))
-    paired=$(( $paired / 2 ))
+    # Back to fragment for PE
     uniq_paired=$(( $uniq_paired / 2 ))
     multi_paired=$(( $multi_paired / 2 ))
     unmapped=$(( $unmapped / 2 ))
 
-    echo -e "Total\t${tot}" > $2
-    echo -e "Mapped\t${mapped}" >> $2
-    echo -e "PE neither mate aligned\t${unmapped}" >> $2
-    echo -e "PE mapped uniquely\t${uniq_paired}" >> $2
-    echo -e "PE one mate mapped uniquely\t${uniq_single}" >> $2
-    echo -e "PE multi mapped\t${multi_paired}" >> $2
-    echo -e "PE one mate multi\t${multi_single}" >> $2
+    echo -e "Total\t${tot}" 
+    echo -e "Mapped\t${mapped}" 
+    echo -e "PE neither mate aligned\t${unmapped}" 
+    echo -e "PE mapped uniquely\t${uniq_paired}" 
+    echo -e "PE one mate mapped uniquely\t${uniq_single}" 
+    echo -e "PE multi mapped\t${multi_paired}" 
+    echo -e "PE one mate multi\t${multi_single}" 
 else
-    echo -e "Total\t${tot}" > $2
-    echo -e "Mapped\t${mapped}" >> $2
-    echo -e "Unmapped\t${unmapped}" >> $2
-    echo -e "Uniquely mapped reads\t${uniq}" >> $2
-    echo -e "Multi mapped reads\t${multi}" >> $2
+    echo -e "Total\t${tot}" 
+    echo -e "Mapped\t${mapped}" 
+    echo -e "Unmapped\t${unmapped}" 
+    echo -e "Uniquely mapped reads\t${uniq}" 
+    echo -e "Multi mapped reads\t${multi}" 
 fi

@@ -9,7 +9,7 @@ NEW FEATURES
 BUG FIXES
 
    o Fix bug in spike-in reads cleaning
-   o Update BWA stats for PE data. Report pairs and not reads
+   o Update BWA stats for PE data. Report pairs and not reads for mqc
    o Dups % is calculated over the number of mapped reads (not total reads)
 
 ***********************************
