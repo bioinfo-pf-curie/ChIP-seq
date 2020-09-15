@@ -3,7 +3,7 @@ CHANGES IN VERSION 1.0.3
 
 NEW FEATURES
 
-   o Add --spikePercentFilter to fix the minimum percentage of reads which should align on spike-in genome
+   o Add --spikePercentFilter to fix the minimum percentage of reads which should align on spike-in genome (#23)
    o Add --keepSingleton option
 
 BUG FIXES
