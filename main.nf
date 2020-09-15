@@ -559,7 +559,7 @@ process checkDesign{
   optSE = params.singleEnd ? "--singleEnd" : ""
   optBAM = params.inputBam ? "--bam" : ""
   """
-  check_designs.py -d $design -s $samplePlan --baseDir ${baseDir} ${optSE} ${optBAM}
+  checkDesign.py -d $design -s $samplePlan --baseDir ${baseDir} ${optSE} ${optBAM}
   """
 }
 

@@ -55,14 +55,14 @@ def check_designs(inputDesign, inputData, isSingleEnd, baseDir, isInputBam):
             header = next(lines)
             for i in range(0, len(header)):
                 try:
-                    header[i] == [*dict_design][i]
+                    if not header[i] == [*dict_design][i]:
+                        raise()
                 except:
                     print('Design file columns are not valid, should be : {}'
                           .format([*dict_design]))
                     sys.exit(1)
             # Fill dict to check all input design data
             for sample in lines:
-                print(sample)
                 dict_design['SAMPLEID'].append(sample[0])
                 dict_design['CONTROLID'].append(sample[1])
                 dict_design['SAMPLENAME'].append(sample[2])
@@ -74,6 +74,7 @@ def check_designs(inputDesign, inputData, isSingleEnd, baseDir, isInputBam):
                     print('The sample {} is both qualified as a control and a sample'
                         .format(ID))
                     sys.exit(1)
+            print("[DESIGN] Check samples/controls IDs ... ok")
             # Check if peaktypes are correct for every sample
             peaktype_list = ['sharp', 'broad', 'very-broad']
             index = 0
@@ -83,6 +84,7 @@ def check_designs(inputDesign, inputData, isSingleEnd, baseDir, isInputBam):
                         .format(dict_design['SAMPLEID'][index], 
                         ', '.join(peaktype_list)))
                 index += 1
+            print("[DESIGN] Check peak type information ... ok")
 
     ### Checks for sampleplan file
     with open(inputData, 'r') as dataFile:
@@ -121,10 +123,12 @@ def check_designs(inputDesign, inputData, isSingleEnd, baseDir, isInputBam):
                     if not ID in dict_reads['SAMPLEID']:
                         print('Missing input control in design file ({})'.format(ID))
                         sys.exit(1)
-            # Check paths to files
+            print("[SAMPLEPLAN/DESIGN] Check that design/samplePlan IDs are matching ... ok")
+
+        # Check paths to files
         for samplePath in dict_reads['FASTQR1']:
             if not os.path.exists(samplePath):
-                print('The path to {} does not lead to a file'
+                print('File not found {}'
                       .format(os.path.basename(samplePath)))
                 sys.exit(1)
         # Check file extensions to match fastq or sam/bam ones
@@ -133,7 +137,7 @@ def check_designs(inputDesign, inputData, isSingleEnd, baseDir, isInputBam):
                     or (samplePath.endswith('fastq.gz'))
                     or (samplePath.endswith('fastq'))
                     or (samplePath.endswith('fq'))):
-                    print('The file {} is not a fastq file'
+                    print('File not found {}'
                           .format(os.path.basename(samplePath)))
                     sys.exit(1)
             else:
@@ -142,6 +146,7 @@ def check_designs(inputDesign, inputData, isSingleEnd, baseDir, isInputBam):
                     print('The file {} is not a sam/bam file'
                           .format(os.path.basename(samplePath)))
                     sys.exit(1)
+        print("[SAMPLEPLAN] Check file paths ... ok")
 
 
 if __name__ == '__main__':

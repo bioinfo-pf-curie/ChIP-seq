@@ -5,6 +5,7 @@ NEW FEATURES
 
    o Add --spikePercentFilter to fix the minimum percentage of reads which should align on spike-in genome (#23)
    o Add --keepSingleton option
+   o Improve checkDesign function (#22)
 
 BUG FIXES
 
