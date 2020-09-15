@@ -625,7 +625,7 @@ process bwaMem{
            ${index}/${genomeBase} \\
           -M \\
           $reads | samtools view -bS - > ${prefix}.bam
-  getBWAstats.sh ${prefix}.bam ${prefix}_bwa.log
+  getBWAstats.sh -i ${prefix}.bam -p ${task.cpus} > ${prefix}_bwa.log
   """
 }
 
@@ -1139,7 +1139,7 @@ if (useSpike){
     label 'deeptools'
     label 'medCpu'
     label 'medMem'
-    publishDir "${params.outdir}/bigWigSpike", mode: "copy"
+    publishDir "${params.outdir}/bigWigSpike", mode: "copy",
       saveAs: {filename ->
         if ( filename.endsWith(".bigwig") ) "$filename"
         else null}
