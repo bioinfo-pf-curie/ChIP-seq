@@ -402,9 +402,9 @@ if ( params.metadata ){
   Channel
     .fromPath( params.metadata )
     .ifEmpty { exit 1, "Metadata file not found: ${params.metadata}" }
-    .set { metadataCh }
+    .set { chMetadata }
 }else{
-  metadataCh=Channel.empty()
+  chMetadata=Channel.empty()
 }                                                                                                                                                                                           
  
 
@@ -1743,7 +1743,7 @@ process multiqc {
   file splan from chSplan.collect()
   file multiqcConfig from chMultiqcConfig
   file design from chDesignMqc.collect().ifEmpty([])
-  file metadata from ch_metadata.ifEmpty([])
+  file metadata from chMetadata.ifEmpty([])
   file ('software_versions/*') from softwareVersionsYaml.collect().ifEmpty([])
   file ('workflow_summary/*') from workflowSummaryYaml.collect()
   file ('fastqc/*') from chFastqcMqc.collect().ifEmpty([])
