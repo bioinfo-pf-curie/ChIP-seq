@@ -24,7 +24,7 @@ https://gitlab.curie.fr/data-analysis/chip-seq
 
 def helpMessage() {
   if ("${workflow.manifest.version}" =~ /dev/ ){
-  devMess = file("$baseDir/assets/dev_message.txt")
+  devMess = file("$baseDir/assets/devMessage.txt")
   log.info devMess.text
   }
 
@@ -346,7 +346,7 @@ if( !(workflow.runName ==~ /[a-z]+_[a-z]+/) ){
 
 //Header log info
 if ("${workflow.manifest.version}" =~ /dev/ ){
-  devMess = file("$baseDir/assets/dev_message.txt")
+  devMess = file("$baseDir/assets/devMessage.txt")
   log.info devMess.text
 }
 
@@ -402,53 +402,56 @@ if ( params.metadata ){
   Channel
     .fromPath( params.metadata )
     .ifEmpty { exit 1, "Metadata file not found: ${params.metadata}" }
-    .set { chMetadata }
-}
+    .set { metadataCh }
+}else{
+  metadataCh=Channel.empty()
+}                                                                                                                                                                                           
+ 
 
 /*
  * Create a channel for input read files
  */
 
 if(params.samplePlan){
-   if(params.singleEnd && !params.inputBam){
-      Channel
-         .from(file("${params.samplePlan}"))
-         .splitCsv(header: false)
-         .map{ row -> [ row[0], [file(row[2])]] }
-         .into { rawReadsFastqc; rawReadsBWA; rawReadsBt2; rawReadsSTAR; rawSpikeReadsBWA; rawSpikeReadsBt2; rawSpikeReadsSTAR }
-   }else if (!params.singleEnd && !params.inputBam){
-      Channel
-         .from(file("${params.samplePlan}"))
-         .splitCsv(header: false)
-         .map{ row -> [ row[0], [file(row[2]), file(row[3])]] }
-         .into { rawReadsFastqc; rawReadsBWA; rawReadsBt2; rawReadsSTAR; rawSpikeReadsBWA; rawSpikeReadsBt2; rawSpikeReadsSTAR }
-   }else{
-      Channel
-         .from(file("${params.samplePlan}"))
-         .splitCsv(header: false)
-         .map{ row -> [ row[0], [file(row[2])]]}
-         .set { chAlignReads }
+  if(params.singleEnd && !params.inputBam){
+    Channel
+      .from(file("${params.samplePlan}"))
+      .splitCsv(header: false)
+      .map{ row -> [ row[0], [file(row[2])]] }
+      .into { rawReadsFastqc; rawReadsBWA; rawReadsBt2; rawReadsSTAR; rawSpikeReadsBWA; rawSpikeReadsBt2; rawSpikeReadsSTAR }
+  }else if (!params.singleEnd && !params.inputBam){
+    Channel
+      .from(file("${params.samplePlan}"))
+      .splitCsv(header: false)
+      .map{ row -> [ row[0], [file(row[2]), file(row[3])]] }
+      .into { rawReadsFastqc; rawReadsBWA; rawReadsBt2; rawReadsSTAR; rawSpikeReadsBWA; rawSpikeReadsBt2; rawSpikeReadsSTAR }
+  }else{
+    Channel
+      .from(file("${params.samplePlan}"))
+      .splitCsv(header: false)
+      .map{ row -> [ row[0], [file(row[2])]]}
+      .set { chAlignReads }
    params.reads=false
   }
 } else if(params.readPaths){
-    if(params.singleEnd){
-        Channel
-            .from(params.readPaths)
-            .map { row -> [ row[0], [file(row[1][0])]] }
-            .ifEmpty { exit 1, "params.readPaths was empty - no input files supplied" }
-            .into { rawReadsFastqc; rawReadsBWA; rawReadsBt2; rawReadsSTAR; rawSpikeReadsBWA; rawSpikeReadsBt2; rawSpikeReadsSTAR }
-    } else {
-        Channel
-            .from(params.readPaths)
-            .map { row -> [ row[0], [file(row[1][0]), file(row[1][1])]] }
-            .ifEmpty { exit 1, "params.readPaths was empty - no input files supplied" }
-            .into { rawReadsFastqc; rawReadsBWA; rawReadsBt2; rawReadsSTAR; rawSpikeReadsBWA; rawSpikeReadsBt2; rawSpikeReadsSTAR }
-    }
-} else {
+  if(params.singleEnd){
     Channel
-        .fromFilePairs( params.reads, size: params.singleEnd ? 1 : 2 )
-        .ifEmpty { exit 1, "Cannot find any reads matching: ${params.reads}\nNB: Path needs to be enclosed in quotes!\nNB: Path requires at least one * wildcard!\nIf this is single-end data, please specify --singleEnd on the command line." }
-        .into { rawReadsFastqc; rawReadsBWA; rawReadsBt2; rawReadsSTAR; rawSpikeReadsBWA; rawSpikeReadsBt2; rawSpikeReadsSTAR }
+      .from(params.readPaths)
+      .map { row -> [ row[0], [file(row[1][0])]] }
+      .ifEmpty { exit 1, "params.readPaths was empty - no input files supplied" }
+      .into { rawReadsFastqc; rawReadsBWA; rawReadsBt2; rawReadsSTAR; rawSpikeReadsBWA; rawSpikeReadsBt2; rawSpikeReadsSTAR }
+   } else {
+     Channel
+       .from(params.readPaths)
+       .map { row -> [ row[0], [file(row[1][0]), file(row[1][1])]] }
+       .ifEmpty { exit 1, "params.readPaths was empty - no input files supplied" }
+       .into { rawReadsFastqc; rawReadsBWA; rawReadsBt2; rawReadsSTAR; rawSpikeReadsBWA; rawSpikeReadsBt2; rawSpikeReadsSTAR }
+   }
+} else {
+  Channel
+    .fromFilePairs( params.reads, size: params.singleEnd ? 1 : 2 )
+    .ifEmpty { exit 1, "Cannot find any reads matching: ${params.reads}\nNB: Path needs to be enclosed in quotes!\nNB: Path requires at least one * wildcard!\nIf this is single-end data, please specify --singleEnd on the command line." }
+    .into { rawReadsFastqc; rawReadsBWA; rawReadsBt2; rawReadsSTAR; rawSpikeReadsBWA; rawSpikeReadsBt2; rawSpikeReadsSTAR }
 }
 
 
@@ -463,11 +466,11 @@ if (params.samplePlan){
 }else if(params.readPaths){
   if (params.singleEnd){
     Channel
-       .from(params.readPaths)
-       .collectFile() {
-         item -> ["sample_plan.csv", item[0] + ',' + item[0] + ',' + item[1][0] + '\n']
-        }
-       .into{ chSplan; chSplanCheck }
+      .from(params.readPaths)
+      .collectFile() {
+        item -> ["sample_plan.csv", item[0] + ',' + item[0] + ',' + item[1][0] + '\n']
+       }
+      .into{ chSplan; chSplanCheck }
   }else{
      Channel
        .from(params.readPaths)
@@ -478,27 +481,27 @@ if (params.samplePlan){
   }
 } else if(params.bamPaths){
   Channel
-     .from(params.bamPaths)
-     .collectFile() {
-       item -> ["sample_plan.csv", item[0] + ',' + item[0] + ',' + item[1][0] + '\n']
-      }
-     .into{ chSplan; chSplanCheck }
+    .from(params.bamPaths)
+    .collectFile() {
+      item -> ["sample_plan.csv", item[0] + ',' + item[0] + ',' + item[1][0] + '\n']
+     }
+    .into{ chSplan; chSplanCheck }
   params.aligner = false
 } else {
   if (params.singleEnd){
     Channel
-       .fromFilePairs( params.reads, size: 1 )
-       .collectFile() {
-          item -> ["sample_plan.csv", item[0] + ',' + item[0] + ',' + item[1][0] + '\n']
-       }     
-       .into { chSplan; chSplanCheck }
+      .fromFilePairs( params.reads, size: 1 )
+      .collectFile() {
+         item -> ["sample_plan.csv", item[0] + ',' + item[0] + ',' + item[1][0] + '\n']
+      }     
+      .into { chSplan; chSplanCheck }
   }else{
     Channel
-       .fromFilePairs( params.reads, size: 2 )
-       .collectFile() {
-          item -> ["sample_plan.csv", item[0] + ',' + item[0] + ',' + item[1][0] + ',' + item[1][1] + '\n']
-       }     
-       .into { chSplan; chSplanCheck }
+      .fromFilePairs( params.reads, size: 2 )
+      .collectFile() {
+         item -> ["sample_plan.csv", item[0] + ',' + item[0] + ',' + item[1][0] + ',' + item[1][1] + '\n']
+      }     
+      .into { chSplan; chSplanCheck }
    }
 }
 /******************************
@@ -1738,9 +1741,9 @@ process multiqc {
 
   input:
   file splan from chSplan.collect()
-  file metadata from chMetadata.ifEmpty([])
   file multiqcConfig from chMultiqcConfig
   file design from chDesignMqc.collect().ifEmpty([])
+  file metadata from ch_metadata.ifEmpty([])
   file ('software_versions/*') from softwareVersionsYaml.collect().ifEmpty([])
   file ('workflow_summary/*') from workflowSummaryYaml.collect()
   file ('fastqc/*') from chFastqcMqc.collect().ifEmpty([])
@@ -1759,7 +1762,7 @@ process multiqc {
   file ('peakCalling/sharp/*') from chMacsCountsSharp.collect().ifEmpty([])
   file ('peakCalling/broad/*') from chMacsCountsBroad.collect().ifEmpty([])
   file ('peakCalling/very-broad/*') from chMacsCountsVbroad.collect().ifEmpty([])
-  file('peakQC/*') from chPeakMqc.collect().ifEmpty([])
+  file ('peakQC/*') from chPeakMqc.collect().ifEmpty([])
   
   output:
   file splan
@@ -1832,12 +1835,12 @@ workflow.onComplete {
 
   // Render the TXT template
   def engine = new groovy.text.GStringTemplateEngine()
-  def tf = new File("$baseDir/assets/oncomplete_template.txt")
+  def tf = new File("$baseDir/assets/oncompleteTemplate.txt")
   def txt_template = engine.createTemplate(tf).make(report_fields)
   def report_txt = txt_template.toString()
 
   // Render the HTML template
-  def hf = new File("$baseDir/assets/oncomplete_template.html")
+  def hf = new File("$baseDir/assets/oncompleteTemplate.html")
   def html_template = engine.createTemplate(hf).make(report_fields)
   def report_html = html_template.toString()
 
@@ -1866,8 +1869,7 @@ workflow.onComplete {
 
   if(spikes_poor_alignment.size() > 0){
     log.info "[chIP-seq] WARNING - ${spikes_poor_alignment.size()} samples skipped due to poor alignment scores!"
-  }                                                                                                                                                                                                        
- 
+  }                                                                                                                                                                                         
   if(workflow.success){
     log.info "[ChIP-seq] Pipeline Complete"
   }else{

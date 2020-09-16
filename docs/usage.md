@@ -36,7 +36,7 @@
     * [`--maxMemory`](#--maxMemory)
     * [`--maxTime`](#--maxTime)
     * [`--maxCpus`](#--maxCpus)
-    * [`--multiqc_config`](#--multiqc_config)
+    * [`--multiqcConfig`](#--multiqcConfig)
 
 
 ## General Nextflow info
@@ -290,8 +290,8 @@ The following `-profile` are available. If `-profile` is not specified at all th
 
 The pipeline is made with a few *skip* options that allow to skip optional steps in the workflow.
 The following options can be used:
-- `--skip_fastqc` - Skip FastQC
-- `--skip_multiqc` - Skip MultiQC
+- `--skipFastqc` - Skip FastQC
+- `--skipMultiqc` - Skip MultiQC
 				
 ### `--metadata`
 
@@ -344,7 +344,7 @@ Should be a string in the format integer-unit. eg. `--maxTime '2.h'`
 Use to set a top-limit for the default CPU requirement for each process.
 Should be a string in the format integer-unit. eg. `--maxCpus 1`
 
-### `--multiqc_config`
+### `--multiqcConfig`
 
 Specify a path to a custom MultiQC configuration file.
 
