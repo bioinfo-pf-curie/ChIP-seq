@@ -1,0 +1,49 @@
+========================================
+Chip-seq pipeline v${version}
+========================================
+Run Name: $runName
+
+<% if (success){
+    out << "## Chip-seq pipeline execution completed successfully! ##"
+} else {
+    out << """####################################################
+## Chip-seq pipeline execution completed unsuccessfully! ##
+####################################################
+The exit status of the task that caused the workflow execution to fail was: $exitStatus.
+The full error message was:
+
+${errorReport}
+"""
+} %>
+
+
+<% if (!success){
+    out << """####################################################
+## Chip-seq pipeline execution completed unsuccessfully! ##
+####################################################
+The exit status of the task that caused the workflow execution to fail was: $exitStatus.
+The full error message was:
+
+${errorReport}
+"""
+} else {
+    out << "## Chip-seq pipeline execution completed successfully! ##"
+}
+%>
+
+
+The workflow was completed at $dateComplete (duration: $duration)
+
+The command used to launch the workflow was as follows:
+
+  $commandLine
+
+
+
+Pipeline Configuration:
+-----------------------
+<% out << summary.collect{ k,v -> " - $k: $v" }.join("\n") %>
+
+--
+Chip-seq pipeline
+https://gitlab.com/data-analysis/Chip-seq pipeline
