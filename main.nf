@@ -723,7 +723,7 @@ if (params.inputBam){
  */
 
 spikes_poor_alignment = []
-def check_log(logs, t='1') {
+def checkMappingLog(logs, t='1') {
   def nb_ref = 0;
   def nb_spike = 0;
   def percent_spike = 0;
@@ -788,7 +788,7 @@ if (useSpike){
 
   // Filter removes all 'aligned' channels that fail the check
   chSpikeBams
-        .filter { sample, logs, bams -> check_log(logs, t="$params.spikePercentFilter") }
+        .filter { sample, logs, bams -> checkMappingLog(logs, t="$params.spikePercentFilter") }
         .map { row -> [row[0], row[2]]}
         .set { chSpikeCheckBams }
 

@@ -52,7 +52,6 @@ multi=$(( $mapped - $uniq ))
 if [[ ${nb_pairs} -gt 0 ]]; then
     paired=$(samtools view -@ $proc -F 0x100 -F 0x800 -F 0x004 -F 0x0008 -f 0x001 -c $input)
     single=$(( $mapped - $paired ))
-    echo "SINGLE=$single"
     uniq_paired=$(samtools view -@ $proc -q 1 -F 0x4 -F 0x100 -F 0x800 -F 0x0008 -f 0x1 $input | grep -v -e 'XA:Z:' -e 'SA:Z:' | wc -l)
     uniq_single=$(( $uniq - $uniq_paired ))
     multi_paired=$(( $paired - $uniq_paired ))
@@ -66,15 +65,15 @@ if [[ ${nb_pairs} -gt 0 ]]; then
 
     echo -e "Total\t${tot}" 
     echo -e "Mapped\t${mapped}" 
-    echo -e "PE neither mate aligned\t${unmapped}" 
     echo -e "PE mapped uniquely\t${uniq_paired}" 
     echo -e "PE one mate mapped uniquely\t${uniq_single}" 
     echo -e "PE multi mapped\t${multi_paired}" 
-    echo -e "PE one mate multi\t${multi_single}" 
+    echo -e "PE one mate multi\t${multi_single}"
+    echo -e "PE neither mate aligned\t${unmapped}" 
 else
     echo -e "Total\t${tot}" 
     echo -e "Mapped\t${mapped}" 
-    echo -e "Unmapped\t${unmapped}" 
     echo -e "Uniquely mapped reads\t${uniq}" 
     echo -e "Multi mapped reads\t${multi}" 
+    echo -e "Unmapped\t${unmapped}"
 fi

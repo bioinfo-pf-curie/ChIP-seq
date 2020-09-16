@@ -59,11 +59,27 @@ do
     #ALIGNMENT
     if [ $aligner == "bowtie2" ]; then
 	nb_frag=$(grep "reads;" mapping/${sample}_bowtie2.log | sed 's/ .*//')
+	if [[ $is_pe == 1 ]]; then
+            nb_reads=$(( $nb_frag * 2 ))
+	else
+            nb_reads=$nb_frag
+	fi
     elif [ $aligner == "bwa-mem" ]; then
-	nb_frag=$(grep 'Total' mapping/${sample}_bwa.log | awk -F "\t" '{print $2}')
+	# bwa.log file is in reads number (not pairs)
+	nb_reads=$(grep 'Total' mapping/${sample}_bwa.log | awk -F "\t" '{print $2}')
+	if [[ $is_pe == 1 ]]; then
+	    nb_frag=$(( $nb_reads / 2 ))
+	else
+	    nb_frag=$nb_reads
+	fi
 	tail -n +3 mapping/${sample}_bwa.log > mapping/${sample}_bwa.mqc
     elif [ $aligner == "star" ]; then
 	nb_frag=$(grep "Number of input reads" mapping/${sample}Log.final.out | cut -d"|" -f 2 | sed -e 's/\t//g')
+	if [[ $is_pe == 1 ]]; then
+            nb_reads=$(( $nb_frag * 2 ))
+	else
+            nb_reads=$nb_frag
+	fi
     fi
 
     #Mapping stats (always in reads - so must be converted for PE)
@@ -71,12 +87,6 @@ do
     nb_mapped=$(awk -F, '$1=="Mapped"{print $2}' mapping/${sample}_mappingstats.mqc)
     nb_mapped_hq=$(awk -F, '$1=="HighQual"{print $2}' mapping/${sample}_mappingstats.mqc)
     nb_mapped_lq=$(awk -F, '$1=="LowQual"{print $2}' mapping/${sample}_mappingstats.mqc)
-
-    if [[ $is_pe == 1 ]]; then
-	nb_reads=$(( $nb_frag * 2 ))
-    else
-	nb_reads=$nb_frag
-    fi
     perc_mapped=$(echo "${nb_mapped} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
     perc_mapped_hq=$(echo "${nb_mapped_hq} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
     perc_mapped_lq=$(echo "${nb_mapped_lq} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
