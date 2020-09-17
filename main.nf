@@ -800,7 +800,6 @@ if (useSpike){
   chRefBams
     .concat(chSpikeCheckBams)
     .set {chAllBams}
-
 }else{
   chAllBams = chAlignReads
   chMappingSpikeMqc = Channel.empty()
