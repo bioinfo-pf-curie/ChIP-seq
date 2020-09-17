@@ -260,6 +260,7 @@ fn_clean_exts:
     - '_ref_bamcomp.mqc'
     - '_sorted.bam'
     - '_peaks.count_mqc'
+    - '_bwa.mqc'
 
 #############################
 ## Display
