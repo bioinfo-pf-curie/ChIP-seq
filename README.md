@@ -64,6 +64,7 @@ Inputs:
 --spike [str]                      Name of the genome used for spike-in analysis
 
 References           If not specified in the configuration file or you wish to overwrite any of the references given by the --genome field
+--genomeAnnotationPath [file]      Path to genome annotation folder
 --fasta [file]                     Path to Fasta reference
 --spikeFasta [file]                Path to Fasta reference for spike-in
 

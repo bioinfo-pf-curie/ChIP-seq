@@ -51,6 +51,7 @@ def helpMessage() {
   --spike [str]                      Name of the genome used for spike-in analysis. Default: false
 
   References           If not specified in the configuration file or you wish to overwrite any of the references given by the --genome field
+  --genomeAnnotationPath [file]      Path  to genome annotation folder
   --fasta [file]                     Path to Fasta reference
   --spikeFasta [file]                Path to Fasta reference for spike-in
 
@@ -1066,13 +1067,16 @@ process bigWig {
   effGsize = params.effGenomeSize ? "--effectiveGenomeSize ${params.effGenomeSize}" : ""
   """
   bamCoverage --version &> v_deeptools.txt
+  nbreads=\$(samtools view -c ${bamTag})
+  sf=\$(echo "10000000 \$nbreads" | awk '{printf "%.2f", \$1/\$2}')
+
   bamCoverage -b ${filteredBams[0]} \\
               -o ${prefix}_rpgc.bigwig \\
               -p ${task.cpus} \\
               ${blacklistParams} \\
               ${effGsize} \\
               ${extend} \\
-              --normalizeUsing RPGC
+              --scaleFactor \$sf
   """
 }
 
