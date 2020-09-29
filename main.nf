@@ -66,7 +66,7 @@ def helpMessage() {
   --spikeBowtie2Index [file]         Spike-in Index for Bowtie2 aligner
 
   Filtering:
-  --mapq [int]                       Minimum mapping quality to consider. Default: 0
+  --mapq [int]                       Minimum mapping quality to consider. Default: 10
   --keepDups [bool]                  Do not remove duplicates afer marking. Default: false
   --keepSingleton [bool]             Keep unpaired reads. Default: false
   --blacklist [file]                 Path to black list regions (.bed).
@@ -280,9 +280,8 @@ if (params.geneBed) {
   Channel
     .fromPath(params.geneBed, checkIfExists: true)
     .ifEmpty {exit 1, "BED file ${geneBed} not found"}
-    .into{chGeneBed; chGeneBedDeeptools; chGenePrepareAnnot; chGeneFeatCounts}
+    .into{chGeneBedDeeptools; chGenePrepareAnnot; chGeneFeatCounts}
 }else{
-  chGeneBed = Channel.empty()
   chGeneBedDeeptools = Channel.empty()
   chGenePrepareAnnot = Channel.empty()
   chGeneFeatCounts = Channel.empty()
@@ -940,7 +939,6 @@ process bamFiltering {
 
   input:
   set val(prefix), file(markedBam) from chMarkedBamsFilt
-  file bed from chGeneBed.collect()
 
   output:
   set val(prefix), file("*filtered.{bam,bam.bai}") into chFilteredBams
@@ -1071,7 +1069,7 @@ process bigWig {
   sf=\$(echo "10000000 \$nbreads" | awk '{printf "%.2f", \$1/\$2}')
 
   bamCoverage -b ${filteredBams[0]} \\
-              -o ${prefix}_rpgc.bigwig \\
+              -o ${prefix}_norm.bigwig \\
               -p ${task.cpus} \\
               ${blacklistParams} \\
               ${effGsize} \\
@@ -1196,24 +1194,24 @@ process deepToolsComputeMatrix{
   file geneBed from chGeneBedDeeptools.collect()
 
   output:
-  file("*.{gz,pdf}") into chDeeptoolsSingle
-  file("*_corrected.tab") into chDeeptoolsSingleMqc
+  file("*.{mat,gz,pdf}") into chDeeptoolsSingle
+  file("*mqc.tab") into chDeeptoolsSingleMqc
 
   script:
   """
   computeMatrix scale-regions \\
-                -R $geneBed \\
+                -R ${geneBed} \\
                 -S ${bigwig} \\
                 -o ${prefix}_matrix.mat.gz \\
-                --outFileNameMatrix ${prefix}.computeMatrix.vals.mat.gz \\
-                --downstream 1000 --upstream 1000 --skipZeros --binSize 100\\
+                --outFileNameMatrix ${prefix}.computeMatrix.vals.mat \\
+                --downstream 2000 --upstream 2000 --skipZeros --binSize 150\\
                 -p ${task.cpus}
 
   plotProfile -m ${prefix}_matrix.mat.gz \\
               -o ${prefix}_bams_profile.pdf \\
               --outFileNameData ${prefix}.plotProfile.tab
   
-  sed -e 's/.0\t/\t/g' ${prefix}.plotProfile.tab | sed -e 's@.0\$@@g' > ${prefix}_plotProfile_corrected.tab
+  sed -e 's/.0\t/\t/g' ${prefix}.plotProfile.tab | sed -e 's@.0\$@@g' > ${prefix}_plotProfile_mqc.tab
   """
 }
 
@@ -1243,6 +1241,7 @@ process deepToolsCorrelationQC{
   allPrefix = allPrefix.replace("]","")
   """
   multiBamSummary bins -b $allBams \\
+                       --binSize=50000 \\
                         -o bams_summary.npz \\
                         -p ${task.cpus} \\
                         ${blacklistParams}
