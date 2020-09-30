@@ -1867,7 +1867,7 @@ workflow.onComplete {
 
   String endWfSummary = endSummary.collect { k,v -> "${k.padRight(30, '.')}: $v" }.join("\n")
   println endWfSummary
-  String execInfo = "Execution summary\n${logSep}\n${endWfSummary}\n${logSep}\n"
+  String execInfo = "Execution summary\n${endWfSummary}\n"
   woc.write(execInfo)
 
   if(spikes_poor_alignment.size() > 0){
