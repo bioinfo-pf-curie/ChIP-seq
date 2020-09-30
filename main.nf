@@ -1065,7 +1065,7 @@ process bigWig {
   effGsize = params.effGenomeSize ? "--effectiveGenomeSize ${params.effGenomeSize}" : ""
   """
   bamCoverage --version &> v_deeptools.txt
-  nbreads=\$(samtools view -c ${bamTag})
+  nbreads=\$(samtools view -@ $task.cpus -F 0x100 -F 0x4 -F 0x800 -c ${filteredBams[0]})
   sf=\$(echo "10000000 \$nbreads" | awk '{printf "%.2f", \$1/\$2}')
 
   bamCoverage -b ${filteredBams[0]} \\
@@ -1204,7 +1204,7 @@ process deepToolsComputeMatrix{
                 -S ${bigwig} \\
                 -o ${prefix}_matrix.mat.gz \\
                 --outFileNameMatrix ${prefix}.computeMatrix.vals.mat \\
-                --downstream 2000 --upstream 2000 --skipZeros --binSize 150\\
+                --downstream 2000 --upstream 2000 --skipZeros --binSize 100\\
                 -p ${task.cpus}
 
   plotProfile -m ${prefix}_matrix.mat.gz \\
@@ -1865,7 +1865,8 @@ workflow.onComplete {
   endSummary['exit status']  = workflow.exitStatus
   endSummary['Error report'] = workflow.errorReport ?: '-'
 
-  String endWfSummary = endSummary.collect { k,v -> "${k.padRight(30, '.')}: $v" }.join("\n")    println endWfSummary
+  String endWfSummary = endSummary.collect { k,v -> "${k.padRight(30, '.')}: $v" }.join("\n")
+  println endWfSummary
   String execInfo = "Execution summary\n${logSep}\n${endWfSummary}\n${logSep}\n"
   woc.write(execInfo)
 
