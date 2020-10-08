@@ -669,8 +669,8 @@ process bowtie2{
 process star{
   tag "${sample} on ${genomeBase}"
   label 'star'
-  label 'highCpu'
-  label 'highMem'
+  label 'extraCpu'
+  label 'extraMem'
   publishDir "${params.outdir}/mapping", mode: 'copy',
              saveAs: {filename ->
 	     if (filename.indexOf(".log") > 0) "logs/$filename"  
@@ -1002,8 +1002,8 @@ chFlagstatChip
 process PPQT{
   tag "${prefix}"
   label 'ppqt'
-  label 'medCpu'
-  label 'medMem'
+  label 'highCpu'
+  label 'highMem'
   publishDir "${params.outdir}/ppqt", mode: "copy"
 
   when:
