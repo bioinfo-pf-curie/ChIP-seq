@@ -84,6 +84,9 @@ Filtering:
 --blacklist [file]                 Path to black list regions (.bed).
 --spikePercentFilter [float]       Minimum percent of reads aligned to spike-in genome. Default: 1
 
+Analysis:
+--noReadExtension                  Do not extend reads to fragment length. Default: false
+
 Annotation:          If not specified in the configuration file or you wish to overwrite any of the references given by the --genome field
 --geneBed [file]                   BED annotation file with gene coordinate.
 --gtf [file]                       GTF annotation file. Used in HOMER peak annotation

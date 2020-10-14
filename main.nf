@@ -72,6 +72,9 @@ def helpMessage() {
   --blacklist [file]                 Path to black list regions (.bed).
   --spikePercentFilter [float]       Minimum percent of reads aligned to spike-in genome. Default: 1
 
+  Analysis:
+  --noReadExtension [bool]           Do not extend reads to fragment length. Default: false
+
   Annotation:          If not specified in the configuration file or you wish to overwrite any of the references given by the --genome field
   --genomeAnnotationPath             Path to genome annotations.
   --geneBed [file]                   BED annotation file with gene coordinate.
@@ -622,11 +625,12 @@ process bwaMem{
 
   script:
   prefix = genomeBase == genomeRef ? sample : sample + '_spike'
+  opts = params.bwaOpts
   """
   echo \$(bwa 2>&1) &> v_bwa.txt
-  bwa mem -t ${task.cpus} \\
-           ${index}/${genomeBase} \\
-          -M \\
+  bwa mem -t ${task.cpus} \
+           ${index}/${genomeBase} \
+          ${opts} \
           $reads | samtools view -bS - > ${prefix}.bam
   getBWAstats.sh -i ${prefix}.bam -p ${task.cpus} > ${prefix}_bwa.log
   """
@@ -656,11 +660,12 @@ process bowtie2{
   script:
   prefix = genomeBase == genomeRef ? sample : sample + '_spike'
   readCommand = params.singleEnd ? "-U ${reads[0]}" : "-1 ${reads[0]} -2 ${reads[1]}"
+  opts = params.bowtie2Opts
   """
   bowtie2 --version &> v_bowtie2.txt
-  bowtie2 -p ${task.cpus} \\
-          --very-sensitive --end-to-end --reorder \\
-           -x ${index}/${genomeBase} \\
+  bowtie2 -p ${task.cpus} \
+          ${opts} \
+           -x ${index}/${genomeBase} \
           $readCommand > ${prefix}.bam 2> ${prefix}_bowtie2.log
   """
 }
@@ -688,6 +693,7 @@ process star{
 
   script:
   prefix = genomeBase == genomeRef ? sample : sample + '_spike'
+  opts = params.starOpts
   """
   STAR --version &> v_star.txt
   STAR --genomeDir $index \
@@ -700,7 +706,8 @@ process star{
        --outSAMunmapped Within \
        --outTmpDir /local/scratch/rnaseq_\$(date +%d%s%S%N) \
        --outFileNamePrefix $prefix  \
-       --outSAMattrRGline ID:$prefix SM:$prefix LB:Illumina PL:Illumina
+       --outSAMattrRGline ID:$prefix SM:$prefix LB:Illumina PL:Illumina \
+       ${opts}
   """
 }
 
@@ -1057,9 +1064,9 @@ process bigWig {
 
   script:
   if (params.singleEnd){
-    extend = params.fragmentSize > 0 ? "--extendReads ${params.fragmentSize}" : ""
+    extend = params.fragmentSize > 0 && !params.noReadExtension ? "--extendReads ${params.fragmentSize}" : ""
   }else{
-    extend = "--extendReads"
+    extend = params.noReadExtension ? "" : "--extendReads"
   }
   blacklistParams = params.blacklist ? "--blackListFileName ${BLbed}" : ""
   effGsize = params.effGenomeSize ? "--effectiveGenomeSize ${params.effGenomeSize}" : ""
@@ -1157,9 +1164,9 @@ if (useSpike){
 
     script:
     if (params.singleEnd){
-      extend = params.fragmentSize > 0 ? "--extendReads ${params.fragmentSize}" : ""
+      extend = params.fragmentSize > 0 && !params.noReadExtension ? "--extendReads ${params.fragmentSize}" : ""
     }else{
-      extend = "--extendReads"
+      extend = params.noReadExtension ? "" : "--extendReads"
     }
     blacklistParams = params.blacklist ? "--blackListFileName ${BLbed}" : ""
     effGsize = params.effGenomeSize ? "--effectiveGenomeSize ${params.effGenomeSize}" : ""
@@ -1275,7 +1282,7 @@ process deepToolsFingerprint{
   if (params.singleEnd){
     extend = params.fragmentSize > 0 ? "--extendReads ${params.fragmentSize}" : ""
   }else{
-    extend = "--extendReads"
+    extend = params.noReadExtension ? "" : "--extendReads"
   }
   allPrefix = allPrefix.toString().replace("[","")
   allPrefix = allPrefix.replace(","," ") 
