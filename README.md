@@ -106,6 +106,7 @@ Skip options:        All are false by default
 
 Other options:
 --outdir [file]                    The output directory where the results will be saved
+-w/--work-dir [file]               The temporary directory where intermediate data will be saved
 --email [str]                      Set this parameter to your e-mail address to get a summary e-mail with details of the run sent to you when the workflow exits
 -name [str]                        Name for the pipeline run. If not specified, Nextflow will automatically generate a random mnemonic.
 
