@@ -57,8 +57,9 @@ if args.splan is not None:
     sampledict = dict()
     with open(args.splan, 'r') as fp:
         for line in fp:
-            row = line.split(',')
-            sampledict[row[0]] = row[1].strip()
+            if line not in ['\n', '\r\n']:
+                row = line.split(',')
+                sampledict[row[0]] = row[1].strip()
 
     multiqc_list += [
         '    - ["{}","{}"]'.format(key, value)

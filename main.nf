@@ -50,7 +50,7 @@ def helpMessage() {
   --fragmentSize [int]               Estimated fragment length used to extend single-end reads. Default: 200
   --spike [str]                      Name of the genome used for spike-in analysis. Default: false
 
-  References           If not specified in the configuration file or you wish to overwrite any of the references given by the --genome field
+  References: If not specified in the configuration file or you wish to overwrite any of the references given by the --genome field
   --genomeAnnotationPath [file]      Path  to genome annotation folder
   --fasta [file]                     Path to Fasta reference
   --spikeFasta [file]                Path to Fasta reference for spike-in
@@ -58,8 +58,8 @@ def helpMessage() {
   Alignment:
   --aligner [str]                    Alignment tool to use ['bwa-mem', 'star', 'bowtie2']. Default: 'bwa-mem'
   --saveAlignedIntermediates [bool]  Save all intermediates mapping files. Default: false  
-  --starIndex [file]                 Index for STAR aligner
-  --spikeStarIndex [file]            Spike-in Index for STAR aligner
+  --starIndex [dir]                  Index for STAR aligner
+  --spikeStarIndex [dir]             Spike-in Index for STAR aligner
   --bwaIndex [file]                  Index for Bwa-mem aligner
   --spikeBwaIndex [file]             Spike-in Index for Bwa-mem aligner
   --bowtie2Index [file]              Index for Bowtie2 aligner
@@ -76,7 +76,7 @@ def helpMessage() {
   --noReadExtension [bool]           Do not extend reads to fragment length. Default: false
 
   Annotation:          If not specified in the configuration file or you wish to overwrite any of the references given by the --genome field
-  --genomeAnnotationPath             Path to genome annotations.
+  --genomeAnnotationPath [dir]       Path to genome annotations.
   --geneBed [file]                   BED annotation file with gene coordinate.
   --gtf [file]                       GTF annotation file. Used in HOMER peak annotation
   --effGenomeSize [int]              Effective Genome size
@@ -95,8 +95,8 @@ def helpMessage() {
 
   Other options:
   --metadata [file]                  Path to metadata file for MultiQC report
-  --outdir [file]                    The output directory where the results will be saved
-  --email [str]                      Set this parameter to your e-mail address to get a summary e-mail with details of the run sent to you when the workflow exits
+  --outdir [dir]                     The output directory where the results will be saved
+  -w/--work-dir [dir]                The temporary directory where intermediate data will be saved
   -name [str]                        Name for the pipeline run. If not specified, Nextflow will automatically generate a random mnemonic.
 
   =======================================================
