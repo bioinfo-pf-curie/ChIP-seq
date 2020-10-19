@@ -1729,7 +1729,7 @@ process workflowSummaryMqc {
   id: 'summary'
   description: " - this information is collected when the pipeline is started."
   section_name: 'Workflow Summary'
-  section_href: 'https://gitlab.curie.fr/chip-seq'
+  section_href: 'https://gitlab.curie.fr/data-analysis/chip-seq'
   plot_type: 'html'
   data: |
         <dl class=\"dl-horizontal\">
