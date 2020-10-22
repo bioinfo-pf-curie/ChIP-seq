@@ -8,6 +8,7 @@
     * [`--reads`](#--reads)
     * [`--samplePlan`](#--samplePlan)
     * [`--design`](#--design)
+* [Inputs](#inputs)
     * [`--singleEnd`](#--singleend)
     * [`--fragmentSize`](#--fragmentSize)
 * [Reference genomes](#reference-genomes)
@@ -19,6 +20,9 @@
 * [Filtering](#filtering)
     * [`--mapq`](#--mapq)
     * [`--keepDups`](#--keepDups)
+	* [`--spikePercentFilter`](#--spikePercentFilter)
+* [Analysis](#analysis)
+    * [`noReadExtension`](#--noReadExtension)
 * [Annotation](#annotation)
     * [`--tssSize`](#--tssSize)
 * [Nextflow profiles](#nextflow-profiles)
@@ -110,6 +114,8 @@ SAMPLE_ID | CONTROL_ID | SAMPLE_NAME | GROUP | PEAK_TYPE
 The `--samplePlan` and the `--design` will be checked by the pipeline and have to be rigorously defined in order to make the pipeline work.  
 Note that the control is optional if not available but is highly recommanded.  
 If the `design` file is not specified, the pipeline will run until the alignment, QCs and track generation. The peak calling and the annotation will be skipped.
+
+## Inputs
 
 ### `--singleEnd`
 
@@ -218,10 +224,10 @@ Specify which tool must be used for reads alignment. The expected values are `st
 ### `--mapq`
 
 Filter all reads in the alignment files with a mapping quality lower than this threshold.
-By default, no mapq filtering is performed.
+By default, reads with a  mapq lower than 10 are performed.
 
 ```bash
---mapq 20
+--mapq 10
 ```
 
 ### `--keepDups`
@@ -231,6 +237,25 @@ Use this option to keep the duplicates.
 
 ```bash
 --keepDuplicates
+```
+
+### `--spikePercentFilter`
+
+Minimum percent of reads aligned to the spike-in genome (Default: 0.2%).
+If the number of reads aligned on the spike-in genome is lower than this threshold, the sample is discarded from the analysis.
+
+```bash
+--spikePercentFilter 0.2
+```
+
+## Analysis
+
+### `--noReadExtension`
+
+Do not extend reads (with the fragment size) when generates the bigwig files and the deeptools QC.
+
+```bash
+--noReadExtension
 ```
 
 ## Annotation

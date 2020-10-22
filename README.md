@@ -79,10 +79,10 @@ Alignment:
 --spikeBowtie2Index [file]         Spike-in Index for Bowtie2 aligner
 
 Filtering:
---mapq [int]                       Minimum mapping quality to consider. Default: 0
+--mapq [int]                       Minimum mapping quality to consider. Default: 10
 --keepDups [bool]                  Do not remove duplicates afer marking. Default: false
 --blacklist [file]                 Path to black list regions (.bed).
---spikePercentFilter [float]       Minimum percent of reads aligned to spike-in genome. Default: 1
+--spikePercentFilter [float]       Minimum percent of reads aligned to spike-in genome. Default: 0.2
 
 Analysis:
 --noReadExtension [bool]           Do not extend reads to fragment length. Default: false
