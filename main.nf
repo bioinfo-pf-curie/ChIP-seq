@@ -95,7 +95,7 @@ def helpMessage() {
 
   Other options:
   --metadata [file]                  Path to metadata file for MultiQC report
-  --outdir [dir]                     The output directory where the results will be saved
+  --outDir [dir]                     The output directory where the results will be saved
   -w/--work-dir [dir]                The temporary directory where intermediate data will be saved
   -name [str]                        Name for the pipeline run. If not specified, Nextflow will automatically generate a random mnemonic.
 
@@ -382,17 +382,16 @@ if (params.mapq)  summary['Min MapQ'] = params.mapq
 summary['Max Memory']   = params.maxMemory
 summary['Max CPUs']     = params.maxCpus
 summary['Max Time']     = params.maxTime
-summary['Output dir']   = params.outdir
+summary['Output dir']   = params.outDir
 summary['Working dir']  = workflow.workDir
 summary['Current home']   = "$HOME"
 summary['Current user']   = "$USER"
 summary['Current path']   = "$PWD"
 summary['Working dir']    = workflow.workDir
-summary['Output dir']     = params.outdir
+summary['Output dir']     = params.outDir
 summary['Script dir']     = workflow.projectDir
 summary['Config Profile'] = workflow.profile
 
-if(params.email) summary['E-mail Address'] = params.email
 log.info summary.collect { k,v -> "${k.padRight(15)}: $v" }.join("\n")
 log.info "========================================="
 
@@ -552,7 +551,7 @@ process checkDesign{
   label 'python'
   label 'lowCpu'
   label 'lowMem'
-  publishDir "${params.outdir}/pipeline_info", mode: 'copy'
+  publishDir "${params.outDir}/pipeline_info", mode: 'copy'
 
   when:
   params.design
@@ -578,7 +577,7 @@ process fastQC{
   label 'fastqc'
   label 'medCpu'
   label 'medMem'
-  publishDir "${params.outdir}/fastqc", mode: 'copy'
+  publishDir "${params.outDir}/fastqc", mode: 'copy'
 
   when:
   !params.skipFastqc && !params.inputBam
@@ -607,7 +606,7 @@ process bwaMem{
   label 'bwa'
   label 'highCpu'
   label 'highMem'
-  publishDir "${params.outdir}/mapping", mode: 'copy',
+  publishDir "${params.outDir}/mapping", mode: 'copy',
              saveAs: {filename -> 
 	     if (filename.indexOf(".log") > 0) "logs/$filename" 
 	     else if (params.saveAlignedIntermediates) filename}
@@ -642,7 +641,7 @@ process bowtie2{
   label 'bowtie2'
   label 'highCpu'
   label 'medMem'
-  publishDir "${params.outdir}/mapping", mode: 'copy',
+  publishDir "${params.outDir}/mapping", mode: 'copy',
               saveAs: {filename ->
 	      if (filename.indexOf(".log") > 0) "logs/$filename"  
 	      else if (params.saveAlignedIntermediates) filename}
@@ -676,7 +675,7 @@ process star{
   label 'star'
   label 'extraCpu'
   label 'extraMem'
-  publishDir "${params.outdir}/mapping", mode: 'copy',
+  publishDir "${params.outDir}/mapping", mode: 'copy',
              saveAs: {filename ->
 	     if (filename.indexOf(".log") > 0) "logs/$filename"  
  	     else if (params.saveAlignedIntermediates) filename}
@@ -773,7 +772,7 @@ if (useSpike){
      label 'compbam'
      label 'lowCpu'
      label 'medMem'
-     publishDir "${params.outdir}/spike", mode: 'copy',
+     publishDir "${params.outDir}/spike", mode: 'copy',
               saveAs: {filename ->
               if (filename.indexOf(".log") > 0) "logs/$filename"
               else filename }
@@ -822,7 +821,7 @@ process bamSort{
   label 'samtools'
   label 'medCpu'
   label 'medMem'
-  publishDir path: "${params.outdir}/mapping", mode: 'copy',
+  publishDir path: "${params.outDir}/mapping", mode: 'copy',
     saveAs: {filename ->
              if ( filename.endsWith("stats") && params.saveAlignedIntermediates ) "stats/$filename"
              else if ( (filename.endsWith(".bam") || (filename.endsWith(".bam.bai"))) && params.saveAlignedIntermediates ) filename
@@ -865,7 +864,7 @@ process markDuplicates{
   label 'picard'
   label 'medCpu'
   label 'medMem'
-  publishDir path: "${params.outdir}/mapping", mode: 'copy',
+  publishDir path: "${params.outDir}/mapping", mode: 'copy',
     saveAs: {filename ->
              if (!filename.endsWith(".bam") && !filename.endsWith(".bam.bai") && params.saveAlignedIntermediates ) "stats/$filename"
              else if ( (filename.endsWith(".bam") || (filename.endsWith(".bam.bai"))) && params.saveAlignedIntermediates ) filename
@@ -909,7 +908,7 @@ process preseq {
   label 'preseq'
   label 'lowCpu'
   label 'medMem'
-  publishDir "${params.outdir}/preseq", mode: 'copy'
+  publishDir "${params.outDir}/preseq", mode: 'copy'
 
   when:
   !params.skipPreseq
@@ -938,7 +937,7 @@ process bamFiltering {
   label 'samtools'
   label 'lowCpu'
   label 'medMem'
-  publishDir path: "${params.outdir}/mapping", mode: 'copy',
+  publishDir path: "${params.outDir}/mapping", mode: 'copy',
     saveAs: {filename ->
              if (!filename.endsWith(".bam") && (!filename.endsWith(".bam.bai"))) "stats/$filename"
              else if (filename.endsWith("_filtered.bam") || (filename.endsWith("_filtered.bam.bai"))) filename
@@ -1011,7 +1010,7 @@ process PPQT{
   label 'ppqt'
   label 'highCpu'
   label 'highMem'
-  publishDir "${params.outdir}/ppqt", mode: "copy"
+  publishDir "${params.outDir}/ppqt", mode: "copy"
 
   when:
   !params.skipPPQT
@@ -1049,7 +1048,7 @@ process bigWig {
   label 'deeptools'
   label 'medCpu'
   label 'medMem'
-  publishDir "${params.outdir}/bigWig", mode: "copy",
+  publishDir "${params.outDir}/bigWig", mode: "copy",
     saveAs: {filename ->
     	     if ( filename.endsWith(".bigwig") ) "$filename"
              else null}
@@ -1097,7 +1096,7 @@ if (useSpike){
     label 'deeptools'
     label 'medCpu'
     label 'medMem'
-    publishDir "${params.outdir}/bigWigSpike", mode: "copy"
+    publishDir "${params.outDir}/bigWigSpike", mode: "copy"
 
     input:
     file(allBams) from chBamsSpikesBam.map{it[1][0]}.collect()
@@ -1120,7 +1119,7 @@ if (useSpike){
     label 'r'
     label 'lowCpu'
     label 'medMem'
-    publishDir "${params.outdir}/bigWigSpike", mode: "copy"
+    publishDir "${params.outDir}/bigWigSpike", mode: "copy"
 
     input:
     file(tab) from chTabCounts
@@ -1150,7 +1149,7 @@ if (useSpike){
     label 'deeptools'
     label 'medCpu'
     label 'medMem'
-    publishDir "${params.outdir}/bigWigSpike", mode: "copy",
+    publishDir "${params.outDir}/bigWigSpike", mode: "copy",
       saveAs: {filename ->
         if ( filename.endsWith(".bigwig") ) "$filename"
         else null}
@@ -1191,7 +1190,7 @@ process deepToolsComputeMatrix{
   label 'deeptools'
   label 'medCpu'
   label 'medMem'
-  publishDir "${params.outdir}/deepTools/computeMatrix", mode: "copy"
+  publishDir "${params.outDir}/deepTools/computeMatrix", mode: "copy"
 
   when:
   !params.skipDeepTools
@@ -1226,7 +1225,7 @@ process deepToolsCorrelationQC{
   label 'deeptools'
   label 'medCpu'
   label 'medMem'
-  publishDir "${params.outdir}/deepTools/correlationQC", mode: "copy"
+  publishDir "${params.outDir}/deepTools/correlationQC", mode: "copy"
 
   when:
   allPrefix.size() >= 2 && !params.skipDeepTools
@@ -1264,7 +1263,7 @@ process deepToolsFingerprint{
   label 'deeptools'
   label 'medCpu'
   label 'medMem'
-  publishDir "${params.outdir}/deepTools/fingerprintQC", mode: "copy"
+  publishDir "${params.outDir}/deepTools/fingerprintQC", mode: "copy"
 
   when:
   !params.skipDeepTools
@@ -1352,7 +1351,7 @@ process sharpMACS2{
   label 'macs2'
   label 'medCpu'
   label 'medMem'
-  publishDir path: "${params.outdir}/peakCalling/sharp", mode: 'copy',
+  publishDir path: "${params.outDir}/peakCalling/sharp", mode: 'copy',
     saveAs: { filename ->
             if (filename.endsWith(".tsv")) "stats/$filename"
             else filename
@@ -1400,7 +1399,7 @@ process broadMACS2{
   label 'macs2'
   label 'medCpu'
   label 'medMem'
-  publishDir path: "${params.outdir}/peakCalling/broad", mode: 'copy',
+  publishDir path: "${params.outDir}/peakCalling/broad", mode: 'copy',
     saveAs: { filename ->
             if (filename.endsWith(".tsv")) "stats/$filename"
             else filename
@@ -1450,7 +1449,7 @@ process veryBroadEpic2{
   label 'epic2'
   label 'medCpu'
   label 'medMem'
-  publishDir path: "${params.outdir}/peakCalling/very-broad", mode: 'copy',
+  publishDir path: "${params.outDir}/peakCalling/very-broad", mode: 'copy',
     saveAs: { filename ->
             if (filename.endsWith(".tsv")) "stats/$filename"
             else filename
@@ -1508,7 +1507,7 @@ process peakAnnoHomer{
   label 'homer'
   label 'medCpu'
   label 'medMem'
-  publishDir path: "${params.outdir}/peakCalling/annotation/", mode: 'copy'
+  publishDir path: "${params.outDir}/peakCalling/annotation/", mode: 'copy'
 
   when:
   !params.skipPeakAnno
@@ -1540,7 +1539,7 @@ process peakQC{
   label 'r'
   label 'medCpu'
   label 'medMem'
-  publishDir "${params.outdir}/peakCalling/QC/", mode: 'copy'
+  publishDir "${params.outDir}/peakCalling/QC/", mode: 'copy'
 
   when:
   !params.skipPeakQC && params.design
@@ -1590,7 +1589,7 @@ process IDR{
   label 'idr'
   label 'medCpu'
   label 'medMem'
-  publishDir path: "${params.outdir}/IDR", mode: 'copy'
+  publishDir path: "${params.outDir}/IDR", mode: 'copy'
 
   when:
   allPeaks.toList().size > 1 && !params.skipIDR
@@ -1625,7 +1624,7 @@ process prepareAnnotation{
   label 'unix'
   label 'lowCpu'
   label 'lowMem'
-  publishDir "${params.outdir}/featCounts/", mode: "copy"
+  publishDir "${params.outDir}/featCounts/", mode: "copy"
 
   when:
   !params.skipFeatCounts
@@ -1648,7 +1647,7 @@ process featureCounts{
   label 'featureCounts'
   label 'medCpu'
   label 'medMem'
-  publishDir "${params.outdir}/featCounts/", mode: "copy"
+  publishDir "${params.outDir}/featCounts/", mode: "copy"
 
   when:
   !params.skipFeatCounts
@@ -1684,7 +1683,7 @@ process getSoftwareVersions{
   label 'python'
   label 'lowCpu'
   label 'lowMem'
-  publishDir path: "${params.outdir}/software_versions", mode: "copy"
+  publishDir path: "${params.outDir}/software_versions", mode: "copy"
 
   when:
   !params.skipSoftVersions
@@ -1743,7 +1742,7 @@ process multiqc {
   label 'multiqc'
   label 'lowCpu'
   label 'lowMem'
-  publishDir "${params.outdir}/MultiQC", mode: 'copy'
+  publishDir "${params.outDir}/MultiQC", mode: 'copy'
 
   when:
   !params.skipMultiQC
@@ -1799,7 +1798,7 @@ process outputDocumentation {
     label 'python'
     label 'lowCpu'
     label 'lowMem'
-    publishDir "${params.outdir}/pipeline_info", mode: 'copy'
+    publishDir "${params.outDir}/pipeline_info", mode: 'copy'
 
     input:
     file output_docs from chOutputDocs
@@ -1854,7 +1853,7 @@ workflow.onComplete {
   def report_html = html_template.toString()
 
   // Write summary e-mail HTML to a file
-  def output_d = new File( "${params.outdir}/pipeline_info/" )
+  def output_d = new File( "${params.outDir}/pipeline_info/" )
   if( !output_d.exists() ) {
     output_d.mkdirs()
   }
@@ -1864,7 +1863,7 @@ workflow.onComplete {
   output_tf.withWriter { w -> w << report_txt }
 
   /*oncomplete file*/
-  File woc = new File("${params.outdir}/workflow.oncomplete.txt")
+  File woc = new File("${params.outDir}/workflow.oncomplete.txt")
   Map endSummary = [:]
   endSummary['Completed on'] = workflow.complete
   endSummary['Duration']     = workflow.duration

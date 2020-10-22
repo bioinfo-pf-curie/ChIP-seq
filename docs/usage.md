@@ -21,10 +21,8 @@
     * [`--keepDups`](#--keepDups)
 * [Annotation](#annotation)
     * [`--tssSize`](#--tssSize)
-* [Profiles](#profiles)
+* [Nextflow profiles](#nextflow-profiles)
 * [Job resources](#job-resources)
-* [Automatic resubmission](#automatic-resubmission)
-* [Custom resource requests](#custom-resource-requests)
 * [Other command line parameters](#other-command-line-parameters)
     * [`--skip*`](#--skip*)
     * [`--metadata`](#--metadta)
@@ -245,44 +243,15 @@ Defines the regions upstream/downstream as the transcription start site use in t
 --tssSize '2000' 
 ```
 
-## Profiles
+## Nextflow profiles
 
-Use this parameter to choose a configuration profile. Profiles can give configuration presets for different compute environments. Note that multiple profiles can be loaded, for example: `-profile docker` - the order of arguments is important!
+Different Nextflow profiles can be used. See [Profiles](profiles.md) for details.
 
-The following `-profile` are available. If `-profile` is not specified at all the pipeline will be run locally and expects all software to be installed and available on the `PATH`.
+## Job resources
 
-  - `test`
-  
-  A profile with a complete configuration for automated testing. It includes links to test data so needs no other parameters.
-
-  - `conda`
-  
-  Build a new conda environment before running the pipeline. Use the option `--condaCacheDir` to change the default conda cache directory.
-  
-  - `multiconda`
-  
-  Build a new conda environment for each process before running the pipeline. Use the option ``--condaCacheDir` to change the default conda cache directory.
-
-  - `path`
-  
-  Use a global path for all tools. Use the option `--globalPath` to define the path the use.
-  
-  - `multipath`
-  
-  Use the paths defined in configuration for each tool.
-  
-  - `docker`
-  
-  Use the Docker images for each process.
-  
-  - `singularity`
-  
-  Use the Singularity images for each process. Use the option `--singularityImagePath` to specify where the images are available.
-  
-  - `cluster`
-  
-  Submit the jobs on the cluster instead of running them locally.
-												
+Each step in the pipeline has a default set of requirements for number of CPUs, memory and time (see the [`conf/process.conf`](../conf/process.config) file). 
+For most of the steps in the pipeline, if the job exits with an error code of `143` (exceeded requested resources) it will automatically resubmit with higher requests (2 x original, then 3 x original). If 
+it still fails after three times then the pipeline is stopped.
 
 ## Other command line parameters
 

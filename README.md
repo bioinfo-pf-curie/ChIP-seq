@@ -70,7 +70,7 @@ References           If not specified in the configuration file or you wish to o
 
 Alignment:
 --aligner [str]                    Alignment tool to use ['bwa-mem', 'star', 'bowtie2']. Default: 'bwa-mem'
---saveAlignedIntermediates [bool]  Save all intermediates mapping files. Default: false  
+--saveAlignedIntermediates [bool]  Save all intermediates mapping files. Default: false
 --starIndex [dir]                  Index for STAR aligner
 --spikeStarIndex [dir]             Spike-in Index for STAR aligner
 --bwaIndex [file]                  Index for Bwa-mem aligner
@@ -105,7 +105,7 @@ Skip options:        All are false by default
 --skipMultiQC [bool]               Skips MultiQC step
 
 Other options:
---outdir [dir]                     The output directory where the results will be saved
+--outDir [dir]                     The output directory where the results will be saved
 -w/--work-dir [dir]                The temporary directory where intermediate data will be saved
 -name [str]                        Name for the pipeline run. If not specified, Nextflow will automatically generate a random mnemonic.
 
@@ -136,7 +136,7 @@ nextflow run main.nf -profile test,conda
 
 #### Run the pipeline from a `sample plan` and a `design` file
 ```
-nextflow run main.nf --samplePlan MY_SAMPLE_PLAN --design MY_DESIGN --genome 'hg19' --genomeAnnotationPath ANNOTATION_PATH --outdir MY_OUTPUT_DIR
+nextflow run main.nf --samplePlan MY_SAMPLE_PLAN --design MY_DESIGN --genome 'hg19' --genomeAnnotationPath ANNOTATION_PATH --outDir MY_OUTPUT_DIR
 
 ```
 
