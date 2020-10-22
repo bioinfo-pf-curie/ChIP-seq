@@ -924,7 +924,7 @@ process preseq {
   defectMode = params.preseqDefect ? '-D' : ''
   """
   preseq &> v_preseq.txt
-  preseq lc_extrap -v $defectMode -output ${prefix}.ccurve.txt -bam ${bam[0]}
+  preseq lc_extrap -v $defectMode -output ${prefix}.ccurve.txt -bam ${bam[0]} -e 200e+06
   """
 }
 
