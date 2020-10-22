@@ -22,7 +22,7 @@
     * [`--keepDups`](#--keepDups)
 	* [`--spikePercentFilter`](#--spikePercentFilter)
 * [Analysis](#analysis)
-    * [`noReadExtension`](#--noReadExtension)
+    * [`--noReadExtension`](#--noReadExtension)
 * [Annotation](#annotation)
     * [`--tssSize`](#--tssSize)
 * [Nextflow profiles](#nextflow-profiles)
