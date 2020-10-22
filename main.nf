@@ -1853,17 +1853,17 @@ workflow.onComplete {
   def report_html = html_template.toString()
 
   // Write summary e-mail HTML to a file
-  def output_d = new File( "${params.outDir}/pipeline_info/" )
+  def output_d = new File( "${params.outDir}/pipelineInfo/" )
   if( !output_d.exists() ) {
     output_d.mkdirs()
   }
-  def output_hf = new File( output_d, "pipeline_report.html" )
+  def output_hf = new File( output_d, "pipelineReport.html" )
   output_hf.withWriter { w -> w << report_html }
-  def output_tf = new File( output_d, "pipeline_report.txt" )
+  def output_tf = new File( output_d, "pipelineReport.txt" )
   output_tf.withWriter { w -> w << report_txt }
 
   /*oncomplete file*/
-  File woc = new File("${params.outDir}/workflow.oncomplete.txt")
+  File woc = new File("${params.outDir}/workflowOnComplete.txt")
   Map endSummary = [:]
   endSummary['Completed on'] = workflow.complete
   endSummary['Duration']     = workflow.duration
@@ -1878,7 +1878,8 @@ workflow.onComplete {
 
   if(spikes_poor_alignment.size() > 0){
     log.info "[chIP-seq] WARNING - ${spikes_poor_alignment.size()} samples skipped due to poor alignment scores!"
-  }                                                                                                                                                                                         
+  }
+                                                                                                                                                                                         
   if(workflow.success){
     log.info "[ChIP-seq] Pipeline Complete"
   }else{
