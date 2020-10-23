@@ -1845,12 +1845,12 @@ workflow.onComplete {
 
   // Render the TXT template
   def engine = new groovy.text.GStringTemplateEngine()
-  def tf = new File("$baseDir/assets/oncompleteTemplate.txt")
+  def tf = new File("$baseDir/assets/onCompleteTemplate.txt")
   def txt_template = engine.createTemplate(tf).make(report_fields)
   def report_txt = txt_template.toString()
 
   // Render the HTML template
-  def hf = new File("$baseDir/assets/oncompleteTemplate.html")
+  def hf = new File("$baseDir/assets/onCompleteTemplate.html")
   def html_template = engine.createTemplate(hf).make(report_fields)
   def report_html = html_template.toString()
 
