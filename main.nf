@@ -1821,6 +1821,7 @@ workflow.onComplete {
   /*pipeline_report.html*/
 
   def report_fields = [:]
+  report_fields['pipeline'] = workflow.manifest.name
   report_fields['version'] = workflow.manifest.version
   report_fields['runName'] = customRunName ?: workflow.runName
   report_fields['success'] = workflow.success
