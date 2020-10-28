@@ -551,7 +551,7 @@ process checkDesign{
   label 'python'
   label 'lowCpu'
   label 'lowMem'
-  publishDir "${params.outDir}/pipeline_info", mode: 'copy'
+  publishDir "${params.summaryDir}/", mode: 'copy'
 
   when:
   params.design
@@ -1799,7 +1799,7 @@ process outputDocumentation {
     label 'python'
     label 'lowCpu'
     label 'lowMem'
-    publishDir "${params.outDir}/pipeline_info", mode: 'copy'
+    publishDir "${params.summaryDir}/", mode: 'copy'
 
     input:
     file output_docs from chOutputDocs
@@ -1855,7 +1855,7 @@ workflow.onComplete {
   def report_html = html_template.toString()
 
   // Write summary e-mail HTML to a file
-  def output_d = new File( "${params.outDir}/pipelineInfo/" )
+  def output_d = new File( "${params.summaryDir}/" )
   if( !output_d.exists() ) {
     output_d.mkdirs()
   }
