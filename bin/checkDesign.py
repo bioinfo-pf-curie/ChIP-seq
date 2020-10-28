@@ -15,140 +15,135 @@ def argsParse():
     parser.add_argument("-d", "--design", dest="design", help="Design file (csv)", default=None)
     parser.add_argument("-s", "--sampleplan", dest="sampleplan", help="SamplePlan file (csv)")
     parser.add_argument("--singleEnd", help="Specify that input reads are single-end", action="store_true")
-    parser.add_argument("--baseDir", help="Base dir if needed", default=".")
-    parser.add_argument("--bam", help="Specify that input files are BAM files", action="store_true")
     args = parser.parse_args()
     inputDesign = args.design
     inputData = args.sampleplan
     singleEnd = args.singleEnd
-    baseDir = args.baseDir
-    inputBam = args.bam
-    return inputDesign, inputData, singleEnd, baseDir, inputBam
+    return inputDesign, inputData, singleEnd
 
+def loadSamplePlan(inputFile, isSingleEnd=False):
+    """
+    Load SamplePlan file with sampleId,sampelName,fastqR1,[fastqr2]
+    """
+    dictSamplePlan={'SAMPLEID':[], 'SAMPLENAME':[], 'FASTQR1':[]}
+    if not isSingleEnd:
+        dictSamplePlan['FASTQR2']=[]
 
-def check_designs(inputDesign, inputData, isSingleEnd, baseDir, isInputBam):
-    dict_design = {
-        'SAMPLEID': [],
-        'CONTROLID': [],
-        'SAMPLENAME': [],
-        'GROUP': [],
-        'PEAKTYPE': []
-    }
-    if (isSingleEnd):
-        dict_reads = {
-            'SAMPLEID': [],
-            'SAMPLENAME': [],
-            'FASTQR1': [],
-        }
-    else:
-        dict_reads = {
-            'SAMPLEID': [],
-            'SAMPLENAME': [],
-            'FASTQR1': [],
-            'FASTQR2': []
-        }
-
-    ### Checks for design file
-    if inputDesign is not None:
-        with open(inputDesign, 'r') as designFile:
-            lines = csv.reader(designFile)
-            header = next(lines)
-            for i in range(0, len(header)):
-                try:
-                    if not header[i] == [*dict_design][i]:
-                        raise()
-                except:
-                    print('Design file columns are not valid, should be : {}'
-                          .format([*dict_design]))
-                    sys.exit(1)
-            # Fill dict to check all input design data
-            for sample in lines:
-                dict_design['SAMPLEID'].append(sample[0])
-                dict_design['CONTROLID'].append(sample[1])
-                dict_design['SAMPLENAME'].append(sample[2])
-                dict_design['GROUP'].append(sample[3])
-                dict_design['PEAKTYPE'].append(sample[4])
-            # Check if samples and controls are correctly separated
-            for ID in dict_design['CONTROLID']:
-                if ID in dict_design['SAMPLEID']:
-                    print('The sample {} is both qualified as a control and a sample'
-                        .format(ID))
-                    sys.exit(1)
-            print("[DESIGN] Check samples/controls IDs ... ok")
-            # Check if peaktypes are correct for every sample
-            peaktype_list = ['sharp', 'broad', 'very-broad']
-            index = 0
-            for peaktype in dict_design['PEAKTYPE']:
-                if not peaktype in peaktype_list:
-                    print('Peaktype for {} is invalid, can be : {}'
-                        .format(dict_design['SAMPLEID'][index], 
-                        ', '.join(peaktype_list)))
-                index += 1
-            print("[DESIGN] Check peak type information ... ok")
-
-    ### Checks for sampleplan file
-    with open(inputData, 'r') as dataFile:
+    with open(inputFile, 'r') as dataFile:
         lines = csv.reader(dataFile)
-        # Fill dict to check all input sample data
         for sample in lines:
-            dict_reads['SAMPLEID'].append(sample[0])
-            dict_reads['SAMPLENAME'].append(sample[1])
-            if sample[2][0] != '/':
-                readfile = baseDir + '/' + sample[2]
-                dict_reads['FASTQR1'].append(readfile)
-            else:
-                dict_reads['FASTQR1'].append(sample[2])
+            dictSamplePlan['SAMPLEID'].append(sample[0])
+            dictSamplePlan['SAMPLENAME'].append(sample[1])
+            dictSamplePlan['FASTQR1'].append(sample[2])
             if not isSingleEnd:
-                if sample[3][0] != '/':
-                    readfile = baseDir + '/' + sample[3]
-                    dict_reads['FASTQR2'].append(readfile)
+                dictSamplePlan['FASTQR2'].append(sample[3])
+    return(dictSamplePlan)
+
+
+def loadDesign(inputFile, headers):
+    """
+    Load Design file using the defined headers
+    """
+    dictDesign = dict.fromkeys(headers, '')
+    with open(inputFile, 'r') as designFile:
+        lines = csv.reader(designFile)
+        for sample in lines:
+            for i in range(len(headers)):
+                if dictDesign[headers[i]]=='':
+                    dictDesign[headers[i]]=[]
                 else:
-                    dict_reads['FASTQR2'].append(sample[3])
+                    dictDesign[headers[i]].append(sample[i])
+    return(dictDesign)
 
-        if inputDesign is not None:
-            # Check if there is a missing ID in the design or sample file
-            for ID in dict_reads['SAMPLEID']:
-                if not (ID in dict_design['SAMPLEID'] or 
-                        ID in dict_design['CONTROLID']):
-                    print('Sample plan contains an ID that is not in the '
-                        'design file ({})'.format(ID))
-                    sys.exit(1)
-            for ID in dict_design['SAMPLEID']:
-                if not ID in dict_reads['SAMPLEID']:
-                    print('Missing sample in design file ({})'.format(ID))
-                    sys.exit(1)
-            # Check if there is an input control given in the design
-            if not '' in dict_design['CONTROLID']:
-                for ID in dict_design['CONTROLID']:
-                    if not ID in dict_reads['SAMPLEID']:
-                        print('Missing input control in design file ({})'.format(ID))
-                        sys.exit(1)
-            print("[SAMPLEPLAN/DESIGN] Check that design/samplePlan IDs are matching ... ok")
 
-        # Check paths to files
-        for samplePath in dict_reads['FASTQR1']:
-            if not os.path.exists(samplePath):
-                print('File not found {}'
-                      .format(os.path.basename(samplePath)))
+def checkHeaders(inputDesign, headerDict):
+    """
+    Check headers on the design file
+    """
+    ### Checks for design file
+    with open(inputDesign, 'r') as designFile:
+        lines = csv.reader(designFile)
+        header = next(lines)
+        for i in range(0, len(header)):
+            try:
+                if not header[i] == [*headerDict][i]:
+                    raise()
+            except:
+                print('\nError: Headers are not valid, should be : {}'
+                      .format([*headerDict]))
                 sys.exit(1)
-        # Check file extensions to match fastq or sam/bam ones
-            if(isInputBam == False):
-                if not ((samplePath.endswith('fq.gz'))
-                    or (samplePath.endswith('fastq.gz'))
-                    or (samplePath.endswith('fastq'))
-                    or (samplePath.endswith('fq'))):
-                    print('File not found {}'
-                          .format(os.path.basename(samplePath)))
-                    sys.exit(1)
+
+
+def checkColumnContent(column, values):
+    """
+    Check the content of a column
+    """
+    for val in column:
+        if not val in values:
+            print('\nError: The value \'{}\' is invalid, should be : {}'
+                  .format(val, [*values]))
+            sys.exit(1)
+
+def checkColumnsMatch(col1, col2, exclusive=False):
+    """
+    Check that values in col1 are (not) in col2
+    """
+    ## Remove empty values from col1/col2
+    col1 = [i for i in col1 if i]
+    col2 = [i for i in col2 if i]
+
+    match=[]
+    for ID in col1:
+        if ID in col2:
+            if exclusive:
+                print('\nError: The value {} cannot be set in two columns'
+                      .format(ID))
+                sys.exit(1)
             else:
-                if not  ((samplePath.endswith('sam'))
-                    or  (samplePath.endswith('bam'))):
-                    print('The file {} is not a sam/bam file'
-                          .format(os.path.basename(samplePath)))
-                    sys.exit(1)
-        print("[SAMPLEPLAN] Check file paths ... ok")
+                if not ID in match:
+                    match.append(ID)
+
+    if not exclusive and len(match) != len(col1):
+        print('\nError: All values in column1 are not found in column2')
+        sys.exit(1)
 
 
 if __name__ == '__main__':
-    inputDesign, inputData, singleEnd, baseDir, inputBam = argsParse()
-    check_designs(inputDesign, inputData, singleEnd, baseDir, inputBam)
+
+    designHeader=['SAMPLEID', 'CONTROLID', 'SAMPLENAME', 'GROUP', 'PEAKTYPE']
+
+    ## Get args
+    inputDesign, inputSamplePlan, isSingleEnd = argsParse()
+    
+    ## Load SamplePlan
+    print("[SAMPLEPLAN] Load data ", end='...')
+    dictSamplePlan=loadSamplePlan(inputSamplePlan, isSingleEnd)
+    print("ok") 
+
+    ## Check Design headers
+    print("[DESIGN] Check headers ", end='...')
+    checkHeaders(inputDesign, designHeader)
+    print("ok")
+
+    ## Load Design
+    print("[DESIGN] Load data ", end="...")
+    dictDesign=loadDesign(inputDesign, designHeader)
+    print("ok")
+
+    ## Checks for design file
+    print("[DESIGN] Check peak type content ", end='...')
+    checkColumnContent(dictDesign['PEAKTYPE'], ['sharp', 'broad', 'very-broad'])
+    print("ok")
+
+    ## Check that a sample is not a control
+    print("[DESIGN] Check samples/controls IDs ", end='...') 
+    checkColumnsMatch(dictDesign['SAMPLEID'], dictDesign['CONTROLID'], exclusive=True)
+    print("ok")
+
+    ## Check that all samples from samplePlan are also in the design file (and the reverse)
+    print("[DESIGN] Check samples matches between samplePlan and design ", end='...')
+    checkColumnsMatch(dictSamplePlan['SAMPLEID'], dictDesign['SAMPLEID'] + dictDesign['CONTROLID'])
+    checkColumnsMatch(dictDesign['SAMPLEID'] + dictDesign['CONTROLID'], dictSamplePlan['SAMPLEID'])
+    print("ok")
+
+
