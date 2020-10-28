@@ -103,8 +103,13 @@ def checkColumnsMatch(col1, col2, exclusive=False):
                 if not ID in match:
                     match.append(ID)
 
-    if not exclusive and len(match) != len(col1):
-        print('\nError: All values in column1 are not found in column2')
+    #print("\n")
+    #print(set(col1))
+    #print(set(col2))
+
+    if not exclusive and len(set(col1).difference(match)) != 0:
+        print('\nError: Values {} are not found in {}'
+              .format(set(col1).difference(match), set(col2)))
         sys.exit(1)
 
 
