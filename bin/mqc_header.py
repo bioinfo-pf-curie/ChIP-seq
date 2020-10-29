@@ -20,11 +20,11 @@ import argparse
 from collections import OrderedDict
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-n", "--name", help="Pipeline name")
-parser.add_argument("-v", "--version", help="Pipeline version", default='')
-parser.add_argument("-m", "--metadata", help="Metatdata file", default=None)
-parser.add_argument("-s", "--splan", help="Sample plan", default=None)
-parser.add_argument("-x", "--nbreads", help="Number of reads to display on the graph", default=0)
+parser.add_argument("-n", "--name", help="Pipeline name", type=str, default='')
+parser.add_argument("-v", "--version", help="Pipeline version", type=str, default='')
+parser.add_argument("-m", "--metadata", help="Metatdata file", type=str, default=None)
+parser.add_argument("-s", "--splan", help="Sample plan", type=str, default=None)
+parser.add_argument("-x", "--nbreads", help="Number of reads to display on the graph", type=int, default=0)
 
 args = parser.parse_args()
 
