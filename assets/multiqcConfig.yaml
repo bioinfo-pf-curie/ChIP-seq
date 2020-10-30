@@ -233,7 +233,7 @@ report_section_order:
     order: -1700
   read_distribution_profile_plot:
     order: -1900
-  Chip-seq_pipeline_software_versions:
+  software_versions:
     order: -2000
   summary:
     order: -2100
