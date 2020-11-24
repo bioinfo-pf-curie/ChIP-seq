@@ -549,8 +549,8 @@ if (params.design){
 
 process checkDesign{
   label 'python'
-  label 'lowCpu'
-  label 'lowMem'
+  label 'minCpu'
+  label 'minMem'
   publishDir "${params.summaryDir}/", mode: 'copy'
 
   when:
@@ -574,8 +574,8 @@ process checkDesign{
 process fastQC{
   tag "${prefix}"
   label 'fastqc'
-  label 'interCpu'
-  label 'lowMem'
+  label 'lowCpu'
+  label 'minMem'
   publishDir "${params.outDir}/fastqc", mode: 'copy'
 
   when:
@@ -603,7 +603,7 @@ process fastQC{
 process bwaMem{
   tag "${sample} on ${genomeBase}"
   label 'bwa'
-  label 'largeCpu' 
+  label 'highCpu' 
   label 'highMem'
   publishDir "${params.outDir}/mapping", mode: 'copy',
              saveAs: {filename -> 
@@ -638,7 +638,7 @@ process bwaMem{
 process bowtie2{
   tag "${sample} on ${genomeBase}"
   label 'bowtie2'
-  label 'largeCpu' 
+  label 'highCpu' 
   label 'highMem'
   publishDir "${params.outDir}/mapping", mode: 'copy',
               saveAs: {filename ->
@@ -672,7 +672,7 @@ process bowtie2{
 process star{
   tag "${sample} on ${genomeBase}"
   label 'star'
-  label 'largeCpu'
+  label 'highCpu'
   label 'extraMem'
   publishDir "${params.outDir}/mapping", mode: 'copy',
              saveAs: {filename ->
@@ -769,7 +769,7 @@ if (useSpike){
    process compareRefSpike{
      tag "${sample}"
      label 'compbam'
-     label 'lowCpu'
+     label 'minCpu'
      label 'medMem'
      publishDir "${params.outDir}/spike", mode: 'copy',
               saveAs: {filename ->
@@ -818,8 +818,8 @@ if (useSpike){
 process bamSort{
   tag "${prefix}"
   label 'samtools'
-  label 'interCpu'
-  label 'interMem'
+  label 'lowCpu'
+  label 'lowMem'
   publishDir path: "${params.outDir}/mapping", mode: 'copy',
     saveAs: {filename ->
              if ( filename.endsWith("stats") && params.saveAlignedIntermediates ) "stats/$filename"
@@ -861,7 +861,7 @@ process bamSort{
 process markDuplicates{
   tag "${prefix}"
   label 'picard'
-  label 'interCpu'
+  label 'lowCpu'
   label 'medMem'
   publishDir path: "${params.outDir}/mapping", mode: 'copy',
     saveAs: {filename ->
@@ -905,8 +905,8 @@ process markDuplicates{
 process preseq {
   tag "${prefix}"
   label 'preseq'
-  label 'interCpu'
-  label 'lowMem'
+  label 'lowCpu'
+  label 'minMem'
   publishDir "${params.outDir}/preseq", mode: 'copy'
 
   when:
@@ -934,8 +934,8 @@ process preseq {
 process bamFiltering {
   tag "${prefix}"
   label 'samtools'
-  label 'interCpu'
-  label 'interMem'
+  label 'lowCpu'
+  label 'lowMem'
   publishDir path: "${params.outDir}/mapping", mode: 'copy',
     saveAs: {filename ->
              if (!filename.endsWith(".bam") && (!filename.endsWith(".bam.bai"))) "stats/$filename"
@@ -1116,7 +1116,7 @@ if (useSpike){
 
  process getSpikeScalingFactor {
     label 'r'
-    label 'lowCpu'
+    label 'minCpu'
     label 'medMem'
     publishDir "${params.outDir}/bigWigSpike", mode: "copy"
 
@@ -1188,7 +1188,7 @@ process deepToolsComputeMatrix{
   tag "${prefix}"
   label 'deeptools'
   label 'medCpu'
-  label 'interMem'
+  label 'lowMem'
   publishDir "${params.outDir}/deepTools/computeMatrix", mode: "copy"
 
   when:
@@ -1223,7 +1223,7 @@ process deepToolsComputeMatrix{
 process deepToolsCorrelationQC{
   label 'deeptools'
   label 'extraCpu'
-  label 'interMem'
+  label 'lowMem'
   publishDir "${params.outDir}/deepTools/correlationQC", mode: "copy"
 
   when:
@@ -1261,7 +1261,7 @@ process deepToolsCorrelationQC{
 process deepToolsFingerprint{
   label 'deeptools'
   label 'highCpu'
-  label 'interMem'
+  label 'lowMem'
   publishDir "${params.outDir}/deepTools/fingerprintQC", mode: "copy"
 
   when:
@@ -1621,8 +1621,8 @@ process IDR{
 
 process prepareAnnotation{
   label 'unix'
-  label 'lowCpu'
-  label 'lowMem'
+  label 'minCpu'
+  label 'minMem'
   publishDir "${params.outDir}/featCounts/", mode: "copy"
 
   when:
@@ -1680,8 +1680,8 @@ process featureCounts{
  */
 process getSoftwareVersions{
   label 'python'
-  label 'lowCpu'
-  label 'lowMem'
+  label 'minCpu'
+  label 'minMem'
   publishDir path: "${params.outDir}/softwareVersions", mode: "copy"
 
   when:
@@ -1739,8 +1739,8 @@ process workflowSummaryMqc {
 
 process multiqc {
   label 'multiqc'
-  label 'lowCpu'
-  label 'lowMem'
+  label 'minCpu'
+  label 'minMem'
   publishDir "${params.outDir}/MultiQC", mode: 'copy'
 
   when:
@@ -1796,8 +1796,8 @@ process multiqc {
  */
 process outputDocumentation {
     label 'python'
-    label 'lowCpu'
-    label 'lowMem'
+    label 'minCpu'
+    label 'minMem'
     publishDir "${params.summaryDir}/", mode: 'copy'
 
     input:
