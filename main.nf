@@ -603,7 +603,7 @@ process fastQC{
 process bwaMem{
   tag "${sample} on ${genomeBase}"
   label 'bwa'
-  label 'highCpu' 
+  label 'extraCpu' 
   label 'highMem'
   publishDir "${params.outDir}/mapping", mode: 'copy',
              saveAs: {filename -> 
