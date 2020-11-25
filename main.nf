@@ -603,7 +603,7 @@ process fastQC{
 process bwaMem{
   tag "${sample} on ${genomeBase}"
   label 'bwa'
-  label 'extraCpu' 
+  label 'highCpu' 
   label 'highMem'
   publishDir "${params.outDir}/mapping", mode: 'copy',
              saveAs: {filename -> 
@@ -1222,7 +1222,7 @@ process deepToolsComputeMatrix{
 
 process deepToolsCorrelationQC{
   label 'deeptools'
-  label 'extraCpu'
+  label 'highCpu'
   label 'lowMem'
   publishDir "${params.outDir}/deepTools/correlationQC", mode: "copy"
 
