@@ -20,9 +20,14 @@ The current workflow was initiated from the [nf-core ChIP-seq pipeline](https://
 2. Align reads on reference genome ([`BWA`](http://bio-bwa.sourceforge.net/) / [`Bowtie2`](http://bowtie-bio.sourceforge.net/bowtie2/index.shtml) / [`STAR`](https://github.com/alexdobin/STAR))
     * If spike-in are used, mapping on spike genome is run and ambiguous reads are removed from both BAM files ([`pysam`](https://pysam.readthedocs.io/en/latest/api.html))
 3. Sort aligned reads ([`SAMTools`](http://www.htslib.org/))
-4. Remove duplicates ([`Picard`](https://broadinstitute.github.io/picard/))
+4. Mark duplicates ([`Picard`](https://broadinstitute.github.io/picard/))
 5. Library complexity analysis ([`Preseq`](http://smithlabresearch.org/software/preseq/))
 6. Filtering aligned BAM files ([`SAMTools`](http://www.htslib.org/) & [`BAMTools`](https://github.com/pezmaster31/bamtools))
+   - reads mapped to blacklisted regions
+   - reads marked as duplicates
+   - reads that arent marked as primary alignments
+   - reads that are unmapped
+   - reads mapped with a low mapping quality (multiple hits, secondary alignments, etc.)
 7. Computing Normalized and Relative Strand Cross-correlation (NSC/RSC) ([`phantompeakqualtools`](https://github.com/kundajelab/phantompeakqualtools))
 8. Diverse alignment QCs and bigWig file creation ([`deepTools`](https://deeptools.readthedocs.io/en/develop/index.html))
     * If spike-in are used, a scaling factor is computed and additional bigWig are generated ([`DESeq2`](https://bioconductor.org/packages/release/bioc/html/DESeq2.html))
@@ -59,23 +64,28 @@ Inputs:
 --spike [str]                      Name of the genome used for spike-in analysis
 
 References           If not specified in the configuration file or you wish to overwrite any of the references given by the --genome field
+--genomeAnnotationPath [dir]       Path to genome annotation folder
 --fasta [file]                     Path to Fasta reference
 --spikeFasta [file]                Path to Fasta reference for spike-in
 
 Alignment:
 --aligner [str]                    Alignment tool to use ['bwa-mem', 'star', 'bowtie2']. Default: 'bwa-mem'
---saveAlignedIntermediates [bool]  Save all intermediates mapping files. Default: false  
---starIndex [file]                 Index for STAR aligner
---spikeStarIndex [file]            Spike-in Index for STAR aligner
+--saveAlignedIntermediates [bool]  Save all intermediates mapping files. Default: false
+--starIndex [dir]                  Index for STAR aligner
+--spikeStarIndex [dir]             Spike-in Index for STAR aligner
 --bwaIndex [file]                  Index for Bwa-mem aligner
 --spikeBwaIndex [file]             Spike-in Index for Bwa-mem aligner
 --bowtie2Index [file]              Index for Bowtie2 aligner
 --spikeBowtie2Index [file]         Spike-in Index for Bowtie2 aligner
 
 Filtering:
---mapq [int]                       Minimum mapping quality to consider. Default: false
+--mapq [int]                       Minimum mapping quality to consider. Default: 10
 --keepDups [bool]                  Do not remove duplicates afer marking. Default: false
 --blacklist [file]                 Path to black list regions (.bed).
+--spikePercentFilter [float]       Minimum percent of reads aligned to spike-in genome. Default: 0.2
+
+Analysis:
+--noReadExtension [bool]           Do not extend reads to fragment length. Default: false
 
 Annotation:          If not specified in the configuration file or you wish to overwrite any of the references given by the --genome field
 --geneBed [file]                   BED annotation file with gene coordinate.
@@ -95,8 +105,8 @@ Skip options:        All are false by default
 --skipMultiQC [bool]               Skips MultiQC step
 
 Other options:
---outdir [file]                    The output directory where the results will be saved
---email [str]                      Set this parameter to your e-mail address to get a summary e-mail with details of the run sent to you when the workflow exits
+--outDir [dir]                     The output directory where the results will be saved
+-w/--work-dir [dir]                The temporary directory where intermediate data will be saved
 -name [str]                        Name for the pipeline run. If not specified, Nextflow will automatically generate a random mnemonic.
 
 =======================================================
@@ -126,7 +136,7 @@ nextflow run main.nf -profile test,conda
 
 #### Run the pipeline from a `sample plan` and a `design` file
 ```
-nextflow run main.nf --samplePlan MY_SAMPLE_PLAN --design MY_DESIGN --genome 'hg19' --genomeAnnotationPath ANNOTATION_PATH --outdir MY_OUTPUT_DIR
+nextflow run main.nf --samplePlan MY_SAMPLE_PLAN --design MY_DESIGN --genome 'hg19' --genomeAnnotationPath ANNOTATION_PATH --outDir MY_OUTPUT_DIR
 
 ```
 

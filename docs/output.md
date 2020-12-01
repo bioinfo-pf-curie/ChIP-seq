@@ -29,7 +29,7 @@ For further reading and documentation see the [FastQC help](http://www.bioinform
 
 Different tools can be used for read alignment (`STAR`, `BWA-mem`, `Bowtie2`). The mapping statistics (`Total Reads`, `Aligned Reads`, `Unique Reads`, `Multiple Reads`) are also presented in the main summary table.
 
-> **NB:** that by default, one alignment is randomly reported in case of multiple mapping sites. If necessary, those reads can be filtered using the `--mapq` option. In addition, in case of paired-end sequencing reads, singleton are discarded from the analysis
+> **NB:** By default, we set a minimum mapping quality to 10, meaning that most alignments associated with multiple mapping sites should be discarded. If necessary, the `--mapq` option can be changed. In addition, in case of paired-end sequencing reads, singleton are discarded from the analysis
 
 **Output directory: `mapping`**
 
@@ -62,12 +62,31 @@ The number of reads aligned to the spike-in genome are then used to calculate a 
  * `*_clean.bam` : Alignment file reads aligned on reference genome only
  * `*_clean_spike.bam` : Alignment file with reads aligned on spike genome only
   
-  >**NB:** Note that by default, spike-in data with less than 1% of reads are discarded from the analysis, to avoid computational error due to low read number.
+>**NB:** By default, spike-in data with less than 0.2% of reads are discarded from the analysis, to avoid computational error due to low read number. You can change this threshold using `--spikePercentFilter`
+>**NB:** Note that by default, these mapping files are not saved. Use `--saveAlignedIntermediates` to save them.
 
 ### Duplicates
 
 [Picard MarkDuplicates](https://broadinstitute.github.io/picard/command-line-overview.html) is used to mark and remove the duplicates. 
 The results are presented in the `General Metrics` table. Duplicate reads are **removed** by default from the aligned reads to mitigate for fragments in the library that may have been sequenced more than once due to PCR biases. There is an option to keep duplicate reads with the `--keepDups` parameter but its generally recommended to remove them to avoid the wrong interpretation of the results.	
+
+From our experience, a ChIP-seq sample with less than 25% of duplicates is usually of good quality. Samples with more than 50% of duplicates should be interpreted with caution.
+
+**Output directory: `mapping`** 
+
+* `sample_marked.bam`
+  * Aligned reads marked for duplicates
+
+>**NB:** Note that by default, these mapping files are not saved. Use `--saveAlignedIntermediates` to save them.
+
+![MultiQC - Picard MarkDup stats plot](images/picard_deduplication.png) 
+
+### Reads filtering
+
+Before downstream analysis, the mapped reads are cleaned and filtered out as follow :
+- In case of paired-end sequencing, only paired reads are kept
+- Reads duplicates are removed
+- Only alignments with a mapping quality of 10 are reported (mostly unique hits)
 
 **Output directory: `mapping`**
 
@@ -75,10 +94,6 @@ The results are presented in the `General Metrics` table. Duplicate reads are **
   * Aligned reads after filtering (`--mapq`, `--keepDups`)
   * `sample_filtered.bam.bai`
     * Index of aligned reads after filtering
-	
-From our experience, a ChIP-seq sample with less than 25% of duplicates is usually of good quality. Samples with more than 50% of duplicates should be interpreted with caution.
-
-![MultiQC - Picard MarkDup stats plot](images/picard_deduplication.png)
 
 ## Quality controls
 

@@ -15,8 +15,7 @@ custom_data:
     my_stats:
         file_format: 'csv'
         section_name: 'General Metrics'
-        description: ' of sequenced data. Note that in the context of paired-end data, the number pairs are reported (as reads).
-High-quality ChIP-seq experiment produces significant clustering of enriched DNA sequence tags at locations bound by the protein of interest. Thus, the sequence tag density is expected to accumulate on forward and reverse strands centered around the binding site. Low normalized strand coefficient (<b>NSC < 1.1</b>) and relative strand correlation (<b>RSC < 0.8</b>) values can be due to failed and poor quality ChIP, low read sequence quality and hence lots of mismappings, shallow sequencing depth or a combination of these. Also, datasets with few binding sites (< 200) which could be due to biological reasons (i.e. a factor that truly binds only a few sites in a particular tissue type) or broad histone marks would output lower NSC and RSC scores. The fraction of reads in peaks (<b>FRiP</b>) is also presented. The different thresholds applied here follow the ENCODE Consortium recommandation.'
+        description: ' of sequenced data. High-quality ChIP-seq experiment produces significant clustering of enriched DNA sequence tags at locations bound by the protein of interest. Thus, the sequence tag density is expected to accumulate on forward and reverse strands centered around the binding site. Low normalized strand coefficient (<b>NSC < 1.1</b>) and relative strand correlation (<b>RSC < 0.8</b>) values can be due to failed and poor quality ChIP, low read sequence quality and hence lots of mismappings, shallow sequencing depth or a combination of these. Also, datasets with few binding sites (< 200) which could be due to biological reasons (i.e. a factor that truly binds only a few sites in a particular tissue type) or broad histone marks would output lower NSC and RSC scores. The fraction of reads in peaks (<b>FRiP</b>) is also presented. The different thresholds applied here follow the ENCODE Consortium recommandation.'
         plot_type: 'table'
         pconfig:
             namespace: 'stats'
@@ -31,7 +30,7 @@ High-quality ChIP-seq experiment produces significant clustering of enriched DNA
               format: '{:.0f}'
               placement: 1000
             Number_of_reads:
-              title: 'Total Reads'
+              title: 'Total Fragments'
               scale: 'RdYlGn'
               format: '{:,.0f}'
               placement: 2000
@@ -54,28 +53,32 @@ High-quality ChIP-seq experiment produces significant clustering of enriched DNA
               suffix: '%'
               format: '{:,.1f}'
               placement: 4000
-            Number_of_uniquely_mapped_reads:
-              title: 'Unique Reads'
+            Number_of_hq_mapped_reads:
+              title: 'High-Quality Alignment'
+              description: 'High-Quality Mapped Reads (mapQ > 10)'
               scale: 'RdYlGn'
               format: '{:,.0f}'
               hidden: true
               placement: 5000
-            Percent_of_uniquely_mapped_reads:
-              title: 'Unique Reads (%)'
+            Percent_of_hq_mapped_reads:
+              title: 'High-Quality Alignment (%)'
+              description: 'High-Quality Mapped Reads (mapQ > 10)'
               min: 0
               max: 100
               scale: 'RdYlGn'
               format: '{:,.1f}'
               suffix: '%'
               placement: 6000
-            Number_of_multiple_mapped_reads:
-              title: 'Multiple reads'
+            Number_of_lq_mapped_reads:
+              title: 'Low-Quality Alignment'
+              description: 'Low-Quality Mapped Reads (mapQ < 10)'
               scale: 'RdYlGn'
               format: '{:,.0f}'
               hidden: true
               placement: 7000
-            Percent_of_multiple_mapped_reads:
-              title: 'Multiple reads (%)'
+            Percent_of_lq_mapped_reads:
+              title: 'Low-Quality Alignment (%)'
+              description: 'Low-Quality Mapped Reads (mapQ < 10)'
               min: 0
               max: 100
               scale: 'RdYlGn'
@@ -148,7 +151,7 @@ sp:
   spikes:
       fn: '*bamcomp.mqc'
   bwa_logs:
-      fn: '*bwa.log'
+      fn: '*bwa.mqc'
 
 table_cond_formatting_rules:
     Fragment_length:
@@ -230,7 +233,7 @@ report_section_order:
     order: -1700
   read_distribution_profile_plot:
     order: -1900
-  Chip-seq_pipeline_software_versions:
+  software_versions:
     order: -2000
   summary:
     order: -2100
@@ -257,6 +260,7 @@ fn_clean_exts:
     - '_ref_bamcomp.mqc'
     - '_sorted.bam'
     - '_peaks.count_mqc'
+    - '_bwa.mqc'
 
 #############################
 ## Display

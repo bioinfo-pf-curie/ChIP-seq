@@ -2,4 +2,5 @@ name: deeptools
 channels:
   - bioconda
 dependencies:
+  - bioconda::samtools=1.9
   - bioconda::deeptools=3.2.1

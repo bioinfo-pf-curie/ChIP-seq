@@ -24,7 +24,7 @@ https://gitlab.curie.fr/data-analysis/chip-seq
 
 def helpMessage() {
   if ("${workflow.manifest.version}" =~ /dev/ ){
-  devMess = file("$baseDir/assets/dev_message.txt")
+  devMess = file("$baseDir/assets/devMessage.txt")
   log.info devMess.text
   }
 
@@ -50,27 +50,33 @@ def helpMessage() {
   --fragmentSize [int]               Estimated fragment length used to extend single-end reads. Default: 200
   --spike [str]                      Name of the genome used for spike-in analysis. Default: false
 
-  References           If not specified in the configuration file or you wish to overwrite any of the references given by the --genome field
+  References: If not specified in the configuration file or you wish to overwrite any of the references given by the --genome field
+  --genomeAnnotationPath [file]      Path  to genome annotation folder
   --fasta [file]                     Path to Fasta reference
   --spikeFasta [file]                Path to Fasta reference for spike-in
 
   Alignment:
   --aligner [str]                    Alignment tool to use ['bwa-mem', 'star', 'bowtie2']. Default: 'bwa-mem'
   --saveAlignedIntermediates [bool]  Save all intermediates mapping files. Default: false  
-  --starIndex [file]                 Index for STAR aligner
-  --spikeStarIndex [file]            Spike-in Index for STAR aligner
+  --starIndex [dir]                  Index for STAR aligner
+  --spikeStarIndex [dir]             Spike-in Index for STAR aligner
   --bwaIndex [file]                  Index for Bwa-mem aligner
   --spikeBwaIndex [file]             Spike-in Index for Bwa-mem aligner
   --bowtie2Index [file]              Index for Bowtie2 aligner
   --spikeBowtie2Index [file]         Spike-in Index for Bowtie2 aligner
 
   Filtering:
-  --mapq [int]                       Minimum mapping quality to consider. Default: false
+  --mapq [int]                       Minimum mapping quality to consider. Default: 10
   --keepDups [bool]                  Do not remove duplicates afer marking. Default: false
+  --keepSingleton [bool]             Keep unpaired reads. Default: false
   --blacklist [file]                 Path to black list regions (.bed).
+  --spikePercentFilter [float]       Minimum percent of reads aligned to spike-in genome. Default: 0.2
+
+  Analysis:
+  --noReadExtension [bool]           Do not extend reads to fragment length. Default: false
 
   Annotation:          If not specified in the configuration file or you wish to overwrite any of the references given by the --genome field
-  --genomeAnnotationPath             Path to genome annotations.
+  --genomeAnnotationPath [dir]       Path to genome annotations.
   --geneBed [file]                   BED annotation file with gene coordinate.
   --gtf [file]                       GTF annotation file. Used in HOMER peak annotation
   --effGenomeSize [int]              Effective Genome size
@@ -88,8 +94,9 @@ def helpMessage() {
   --skipMultiQC [bool]               Skips MultiQC step
 
   Other options:
-  --outdir [file]                    The output directory where the results will be saved
-  --email [str]                      Set this parameter to your e-mail address to get a summary e-mail with details of the run sent to you when the workflow exits
+  --metadata [file]                  Path to metadata file for MultiQC report
+  --outDir [dir]                     The output directory where the results will be saved
+  -w/--work-dir [dir]                The temporary directory where intermediate data will be saved
   -name [str]                        Name for the pipeline run. If not specified, Nextflow will automatically generate a random mnemonic.
 
   =======================================================
@@ -276,9 +283,8 @@ if (params.geneBed) {
   Channel
     .fromPath(params.geneBed, checkIfExists: true)
     .ifEmpty {exit 1, "BED file ${geneBed} not found"}
-    .into{chGeneBed; chGeneBedDeeptools; chGenePrepareAnnot; chGeneFeatCounts}
+    .into{chGeneBedDeeptools; chGenePrepareAnnot; chGeneFeatCounts}
 }else{
-  chGeneBed = Channel.empty()
   chGeneBedDeeptools = Channel.empty()
   chGenePrepareAnnot = Channel.empty()
   chGeneFeatCounts = Channel.empty()
@@ -331,9 +337,8 @@ Channel
 Channel
   .fromPath(params.multiqcConfig, checkIfExists: true)
   .set{chMultiqcConfig}
-Channel
-  .fromPath(params.outputDoc, checkIfExists: true)
-  .set{chOutputDocs}
+chOutputDocs = file("$baseDir/docs/output.md", checkIfExists: true)
+chOutputDocsImages = file("$baseDir/docs/images/", checkIfExists: true)
 
 //Has the run name been specified by the user?
 //This has the bonus effect of catching both -name and --name
@@ -344,7 +349,7 @@ if( !(workflow.runName ==~ /[a-z]+_[a-z]+/) ){
 
 //Header log info
 if ("${workflow.manifest.version}" =~ /dev/ ){
-  devMess = file("$baseDir/assets/dev_message.txt")
+  devMess = file("$baseDir/assets/devMessage.txt")
   log.info devMess.text
 }
 
@@ -371,22 +376,22 @@ summary['Genes']        = params.geneBed
 if (params.blacklist)  summary['Blacklist '] = params.blacklist
 summary['Data Type']    = params.singleEnd ? 'Single-End' : 'Paired-End'
 if (params.singleEnd)  summary['Fragment Size '] = params.fragmentSize
+summary['Aligner'] = params.aligner
 if (params.keepDups)  summary['Keep Duplicates'] = 'Yes'
 if (params.mapq)  summary['Min MapQ'] = params.mapq
 summary['Max Memory']   = params.maxMemory
 summary['Max CPUs']     = params.maxCpus
 summary['Max Time']     = params.maxTime
-summary['Output dir']   = params.outdir
+summary['Output dir']   = params.outDir
 summary['Working dir']  = workflow.workDir
 summary['Current home']   = "$HOME"
 summary['Current user']   = "$USER"
 summary['Current path']   = "$PWD"
 summary['Working dir']    = workflow.workDir
-summary['Output dir']     = params.outdir
+summary['Output dir']     = params.outDir
 summary['Script dir']     = workflow.projectDir
 summary['Config Profile'] = workflow.profile
 
-if(params.email) summary['E-mail Address'] = params.email
 log.info summary.collect { k,v -> "${k.padRight(15)}: $v" }.join("\n")
 log.info "========================================="
 
@@ -400,52 +405,55 @@ if ( params.metadata ){
     .fromPath( params.metadata )
     .ifEmpty { exit 1, "Metadata file not found: ${params.metadata}" }
     .set { chMetadata }
-}
+}else{
+  chMetadata=Channel.empty()
+}                                                                                                                                                                                           
+ 
 
 /*
  * Create a channel for input read files
  */
 
 if(params.samplePlan){
-   if(params.singleEnd && !params.inputBam){
-      Channel
-         .from(file("${params.samplePlan}"))
-         .splitCsv(header: false)
-         .map{ row -> [ row[0], [file(row[2])]] }
-         .into { rawReadsFastqc; rawReadsBWA; rawReadsBt2; rawReadsSTAR; rawSpikeReadsBWA; rawSpikeReadsBt2; rawSpikeReadsSTAR }
-   }else if (!params.singleEnd && !params.inputBam){
-      Channel
-         .from(file("${params.samplePlan}"))
-         .splitCsv(header: false)
-         .map{ row -> [ row[0], [file(row[2]), file(row[3])]] }
-         .into { rawReadsFastqc; rawReadsBWA; rawReadsBt2; rawReadsSTAR; rawSpikeReadsBWA; rawSpikeReadsBt2; rawSpikeReadsSTAR }
-   }else{
-      Channel
-         .from(file("${params.samplePlan}"))
-         .splitCsv(header: false)
-         .map{ row -> [ row[0], [file(row[2])]]}
-         .set { chAlignReads }
+  if(params.singleEnd && !params.inputBam){
+    Channel
+      .from(file("${params.samplePlan}"))
+      .splitCsv(header: false)
+      .map{ row -> [ row[0], [file(row[2])]] }
+      .into { rawReadsFastqc; rawReadsBWA; rawReadsBt2; rawReadsSTAR; rawSpikeReadsBWA; rawSpikeReadsBt2; rawSpikeReadsSTAR }
+  }else if (!params.singleEnd && !params.inputBam){
+    Channel
+      .from(file("${params.samplePlan}"))
+      .splitCsv(header: false)
+      .map{ row -> [ row[0], [file(row[2]), file(row[3])]] }
+      .into { rawReadsFastqc; rawReadsBWA; rawReadsBt2; rawReadsSTAR; rawSpikeReadsBWA; rawSpikeReadsBt2; rawSpikeReadsSTAR }
+  }else{
+    Channel
+      .from(file("${params.samplePlan}"))
+      .splitCsv(header: false)
+      .map{ row -> [ row[0], [file(row[2])]]}
+      .set { chAlignReads }
    params.reads=false
   }
 } else if(params.readPaths){
-    if(params.singleEnd){
-        Channel
-            .from(params.readPaths)
-            .map { row -> [ row[0], [file(row[1][0])]] }
-            .ifEmpty { exit 1, "params.readPaths was empty - no input files supplied" }
-            .into { rawReadsFastqc; rawReadsBWA; rawReadsBt2; rawReadsSTAR; rawSpikeReadsBWA; rawSpikeReadsBt2; rawSpikeReadsSTAR }
-    } else {
-        Channel
-            .from(params.readPaths)
-            .map { row -> [ row[0], [file(row[1][0]), file(row[1][1])]] }
-            .ifEmpty { exit 1, "params.readPaths was empty - no input files supplied" }
-            .into { rawReadsFastqc; rawReadsBWA; rawReadsBt2; rawReadsSTAR; rawSpikeReadsBWA; rawSpikeReadsBt2; rawSpikeReadsSTAR }
-    }
-} else {
+  if(params.singleEnd){
     Channel
-        .fromFilePairs( params.reads, size: params.singleEnd ? 1 : 2 )
-        .ifEmpty { exit 1, "Cannot find any reads matching: ${params.reads}\nNB: Path needs to be enclosed in quotes!\nNB: Path requires at least one * wildcard!\nIf this is single-end data, please specify --singleEnd on the command line." }
-        .into { rawReadsFastqc; rawReadsBWA; rawReadsBt2; rawReadsSTAR; rawSpikeReadsBWA; rawSpikeReadsBt2; rawSpikeReadsSTAR }
+      .from(params.readPaths)
+      .map { row -> [ row[0], [file(row[1][0])]] }
+      .ifEmpty { exit 1, "params.readPaths was empty - no input files supplied" }
+      .into { rawReadsFastqc; rawReadsBWA; rawReadsBt2; rawReadsSTAR; rawSpikeReadsBWA; rawSpikeReadsBt2; rawSpikeReadsSTAR }
+   } else {
+     Channel
+       .from(params.readPaths)
+       .map { row -> [ row[0], [file(row[1][0]), file(row[1][1])]] }
+       .ifEmpty { exit 1, "params.readPaths was empty - no input files supplied" }
+       .into { rawReadsFastqc; rawReadsBWA; rawReadsBt2; rawReadsSTAR; rawSpikeReadsBWA; rawSpikeReadsBt2; rawSpikeReadsSTAR }
+   }
+} else {
+  Channel
+    .fromFilePairs( params.reads, size: params.singleEnd ? 1 : 2 )
+    .ifEmpty { exit 1, "Cannot find any reads matching: ${params.reads}\nNB: Path needs to be enclosed in quotes!\nNB: Path requires at least one * wildcard!\nIf this is single-end data, please specify --singleEnd on the command line." }
+    .into { rawReadsFastqc; rawReadsBWA; rawReadsBt2; rawReadsSTAR; rawSpikeReadsBWA; rawSpikeReadsBt2; rawSpikeReadsSTAR }
 }
 
 
@@ -460,42 +468,42 @@ if (params.samplePlan){
 }else if(params.readPaths){
   if (params.singleEnd){
     Channel
-       .from(params.readPaths)
-       .collectFile() {
-         item -> ["sample_plan.csv", item[0] + ',' + item[0] + ',' + item[1][0] + '\n']
-        }
-       .set{ chSplan; chSplanCheck }
+      .from(params.readPaths)
+      .collectFile() {
+        item -> ["sample_plan.csv", item[0] + ',' + item[0] + ',' + item[1][0] + '\n']
+       }
+      .into{ chSplan; chSplanCheck }
   }else{
      Channel
        .from(params.readPaths)
        .collectFile() {
          item -> ["sample_plan.csv", item[0] + ',' + item[0] + ',' + item[1][0] + ',' + item[1][1] + '\n']
         }
-       .set{ chSplan; chSplanCheck }
+       .into{ chSplan; chSplanCheck }
   }
 } else if(params.bamPaths){
   Channel
-     .from(params.bamPaths)
-     .collectFile() {
-       item -> ["sample_plan.csv", item[0] + ',' + item[0] + ',' + item[1][0] + '\n']
-      }
-     .set{ chSplan; chSplanCheck }
+    .from(params.bamPaths)
+    .collectFile() {
+      item -> ["sample_plan.csv", item[0] + ',' + item[0] + ',' + item[1][0] + '\n']
+     }
+    .into{ chSplan; chSplanCheck }
   params.aligner = false
 } else {
   if (params.singleEnd){
     Channel
-       .fromFilePairs( params.reads, size: 1 )
-       .collectFile() {
-          item -> ["sample_plan.csv", item[0] + ',' + item[0] + ',' + item[1][0] + '\n']
-       }     
-       .set { chSplan; chSplanCheck }
+      .fromFilePairs( params.reads, size: 1 )
+      .collectFile() {
+         item -> ["sample_plan.csv", item[0] + ',' + item[0] + ',' + item[1][0] + '\n']
+      }     
+      .into { chSplan; chSplanCheck }
   }else{
     Channel
-       .fromFilePairs( params.reads, size: 2 )
-       .collectFile() {
-          item -> ["sample_plan.csv", item[0] + ',' + item[0] + ',' + item[1][0] + ',' + item[1][1] + '\n']
-       }     
-       .set { chSplan; chSplanCheck }
+      .fromFilePairs( params.reads, size: 2 )
+      .collectFile() {
+         item -> ["sample_plan.csv", item[0] + ',' + item[0] + ',' + item[1][0] + ',' + item[1][1] + '\n']
+      }     
+      .into { chSplan; chSplanCheck }
    }
 }
 /******************************
@@ -541,9 +549,9 @@ if (params.design){
 
 process checkDesign{
   label 'python'
-  label 'lowCpu'
-  label 'lowMem'
-  publishDir "${params.outdir}/pipeline_info", mode: 'copy'
+  label 'minCpu'
+  label 'minMem'
+  publishDir "${params.summaryDir}/", mode: 'copy'
 
   when:
   params.design
@@ -554,9 +562,8 @@ process checkDesign{
 
   script:
   optSE = params.singleEnd ? "--singleEnd" : ""
-  optBAM = params.inputBam ? "--bam" : ""
   """
-  check_designs.py -d $design -s $samplePlan --baseDir ${baseDir} ${optSE} ${optBAM}
+  checkDesign.py -d $design -s $samplePlan ${optSE}
   """
 }
 
@@ -567,9 +574,9 @@ process checkDesign{
 process fastQC{
   tag "${prefix}"
   label 'fastqc'
-  label 'medCpu'
-  label 'medMem'
-  publishDir "${params.outdir}/fastqc", mode: 'copy'
+  label 'lowCpu'
+  label 'minMem'
+  publishDir "${params.outDir}/fastqc", mode: 'copy'
 
   when:
   !params.skipFastqc && !params.inputBam
@@ -598,7 +605,7 @@ process bwaMem{
   label 'bwa'
   label 'highCpu'
   label 'highMem'
-  publishDir "${params.outdir}/mapping", mode: 'copy',
+  publishDir "${params.outDir}/mapping", mode: 'copy',
              saveAs: {filename -> 
 	     if (filename.indexOf(".log") > 0) "logs/$filename" 
 	     else if (params.saveAlignedIntermediates) filename}
@@ -616,13 +623,14 @@ process bwaMem{
 
   script:
   prefix = genomeBase == genomeRef ? sample : sample + '_spike'
+  opts = params.bwaOpts
   """
   echo \$(bwa 2>&1) &> v_bwa.txt
-  bwa mem -t ${task.cpus} \\
-           ${index}/${genomeBase} \\
-          -M \\
+  bwa mem -t ${task.cpus} \
+           ${index}/${genomeBase} \
+          ${opts} \
           $reads | samtools view -bS - > ${prefix}.bam
-  getBWAstats.sh ${prefix}.bam ${prefix}_bwa.log
+  getBWAstats.sh -i ${prefix}.bam -p ${task.cpus} > ${prefix}_bwa.log
   """
 }
 
@@ -630,9 +638,9 @@ process bwaMem{
 process bowtie2{
   tag "${sample} on ${genomeBase}"
   label 'bowtie2'
-  label 'highCpu'
-  label 'medMem'
-  publishDir "${params.outdir}/mapping", mode: 'copy',
+  label 'highCpu' 
+  label 'highMem'
+  publishDir "${params.outDir}/mapping", mode: 'copy',
               saveAs: {filename ->
 	      if (filename.indexOf(".log") > 0) "logs/$filename"  
 	      else if (params.saveAlignedIntermediates) filename}
@@ -650,11 +658,12 @@ process bowtie2{
   script:
   prefix = genomeBase == genomeRef ? sample : sample + '_spike'
   readCommand = params.singleEnd ? "-U ${reads[0]}" : "-1 ${reads[0]} -2 ${reads[1]}"
+  opts = params.bowtie2Opts
   """
   bowtie2 --version &> v_bowtie2.txt
-  bowtie2 -p ${task.cpus} \\
-          --very-sensitive --end-to-end --reorder \\
-           -x ${index}/${genomeBase} \\
+  bowtie2 -p ${task.cpus} \
+          ${opts} \
+           -x ${index}/${genomeBase} \
           $readCommand > ${prefix}.bam 2> ${prefix}_bowtie2.log
   """
 }
@@ -664,8 +673,8 @@ process star{
   tag "${sample} on ${genomeBase}"
   label 'star'
   label 'highCpu'
-  label 'highMem'
-  publishDir "${params.outdir}/mapping", mode: 'copy',
+  label 'extraMem'
+  publishDir "${params.outDir}/mapping", mode: 'copy',
              saveAs: {filename ->
 	     if (filename.indexOf(".log") > 0) "logs/$filename"  
  	     else if (params.saveAlignedIntermediates) filename}
@@ -682,6 +691,7 @@ process star{
 
   script:
   prefix = genomeBase == genomeRef ? sample : sample + '_spike'
+  opts = params.starOpts
   """
   STAR --version &> v_star.txt
   STAR --genomeDir $index \
@@ -694,7 +704,8 @@ process star{
        --outSAMunmapped Within \
        --outTmpDir /local/scratch/rnaseq_\$(date +%d%s%S%N) \
        --outFileNamePrefix $prefix  \
-       --outSAMattrRGline ID:$prefix SM:$prefix LB:Illumina PL:Illumina
+       --outSAMattrRGline ID:$prefix SM:$prefix LB:Illumina PL:Illumina \
+       ${opts}
   """
 }
 
@@ -720,7 +731,7 @@ if (params.inputBam){
  */
 
 spikes_poor_alignment = []
-def check_log(logs) {
+def checkMappingLog(logs, t='1') {
   def nb_ref = 0;
   def nb_spike = 0;
   def percent_spike = 0;
@@ -734,7 +745,7 @@ def check_log(logs) {
   logname = logs.getBaseName() - '_ref_bamcomp.mqc'
   percent_spike = nb_spike.toFloat() / (nb_spike.toFloat() + nb_ref.toFloat()) * 100
   percent_spike = percent_spike.round(5)
-  if(percent_spike.toFloat() <= '1'.toFloat() ){
+  if(percent_spike.toFloat() <= t.toFloat() ){
       log.info "#################### VERY POOR SPIKE ALIGNMENT RATE! IGNORING FOR FURTHER DOWNSTREAM ANALYSIS! ($logname)    >> ${percent_spike}% <<"
       spikes_poor_alignment << logname
       return false
@@ -758,9 +769,9 @@ if (useSpike){
    process compareRefSpike{
      tag "${sample}"
      label 'compbam'
-     label 'lowCpu'
+     label 'minCpu'
      label 'medMem'
-     publishDir "${params.outdir}/spike", mode: 'copy',
+     publishDir "${params.outDir}/spike", mode: 'copy',
               saveAs: {filename ->
               if (filename.indexOf(".log") > 0) "logs/$filename"
               else filename }
@@ -785,7 +796,7 @@ if (useSpike){
 
   // Filter removes all 'aligned' channels that fail the check
   chSpikeBams
-        .filter { sample, logs, bams -> check_log(logs) }
+        .filter { sample, logs, bams -> checkMappingLog(logs, t="$params.spikePercentFilter") }
         .map { row -> [row[0], row[2]]}
         .set { chSpikeCheckBams }
 
@@ -794,7 +805,6 @@ if (useSpike){
   chRefBams
     .concat(chSpikeCheckBams)
     .set {chAllBams}
-
 }else{
   chAllBams = chAlignReads
   chMappingSpikeMqc = Channel.empty()
@@ -808,11 +818,11 @@ if (useSpike){
 process bamSort{
   tag "${prefix}"
   label 'samtools'
-  label 'medCpu'
-  label 'medMem'
-  publishDir path: "${params.outdir}/mapping", mode: 'copy',
+  label 'lowCpu'
+  label 'lowMem'
+  publishDir path: "${params.outDir}/mapping", mode: 'copy',
     saveAs: {filename ->
-             if ( !filename.endsWith(".bam") && !filename.endsWith(".bam.bai") && params.saveAlignedIntermediates ) "stats/$filename"
+             if ( filename.endsWith("stats") && params.saveAlignedIntermediates ) "stats/$filename"
              else if ( (filename.endsWith(".bam") || (filename.endsWith(".bam.bai"))) && params.saveAlignedIntermediates ) filename
              else null
             }
@@ -822,7 +832,8 @@ process bamSort{
 
   output:
   set val(prefix), file('*sorted.{bam,bam.bai}') into chSortBams
-  file("*stats") into chStatsMqc
+  file("*stats") into chStats
+  file("*mqc") into chStatsMqc
   file("v_samtools.txt") into chSamtoolsVersionBamSort
 
   script:
@@ -833,6 +844,13 @@ process bamSort{
   samtools flagstat ${prefix}_sorted.bam > ${prefix}_sorted.flagstats
   samtools idxstats ${prefix}_sorted.bam > ${prefix}_sorted.idxstats
   samtools stats ${prefix}_sorted.bam > ${prefix}_sorted.stats
+
+  aligned="\$(samtools view -@ $task.cpus -F 0x100 -F 0x4 -F 0x800 -c ${prefix}_sorted.bam)"
+  hqbam="\$(samtools view -@ $task.cpus -F 0x100 -F 0x800 -F 0x4 -q 10 -c ${prefix}_sorted.bam)"
+  lqbam="\$((\$aligned - \$hqbam))"
+  echo -e "Mapped,\${aligned}" > ${prefix}_mappingstats.mqc
+  echo -e "HighQual,\${hqbam}" >> ${prefix}_mappingstats.mqc
+  echo -e "LowQual,\${lqbam}" >> ${prefix}_mappingstats.mqc
   """
 }
 
@@ -843,9 +861,9 @@ process bamSort{
 process markDuplicates{
   tag "${prefix}"
   label 'picard'
-  label 'medCpu'
+  label 'lowCpu'
   label 'medMem'
-  publishDir path: "${params.outdir}/mapping", mode: 'copy',
+  publishDir path: "${params.outDir}/mapping", mode: 'copy',
     saveAs: {filename ->
              if (!filename.endsWith(".bam") && !filename.endsWith(".bam.bai") && params.saveAlignedIntermediates ) "stats/$filename"
              else if ( (filename.endsWith(".bam") || (filename.endsWith(".bam.bai"))) && params.saveAlignedIntermediates ) filename
@@ -888,8 +906,8 @@ process preseq {
   tag "${prefix}"
   label 'preseq'
   label 'lowCpu'
-  label 'medMem'
-  publishDir "${params.outdir}/preseq", mode: 'copy'
+  label 'minMem'
+  publishDir "${params.outDir}/preseq", mode: 'copy'
 
   when:
   !params.skipPreseq
@@ -905,7 +923,7 @@ process preseq {
   defectMode = params.preseqDefect ? '-D' : ''
   """
   preseq &> v_preseq.txt
-  preseq lc_extrap -v $defectMode -output ${prefix}.ccurve.txt -bam ${bam[0]}
+  preseq lc_extrap -v $defectMode -output ${prefix}.ccurve.txt -bam ${bam[0]} -e 200e+06
   """
 }
 
@@ -917,8 +935,8 @@ process bamFiltering {
   tag "${prefix}"
   label 'samtools'
   label 'lowCpu'
-  label 'medMem'
-  publishDir path: "${params.outdir}/mapping", mode: 'copy',
+  label 'lowMem'
+  publishDir path: "${params.outDir}/mapping", mode: 'copy',
     saveAs: {filename ->
              if (!filename.endsWith(".bam") && (!filename.endsWith(".bam.bai"))) "stats/$filename"
              else if (filename.endsWith("_filtered.bam") || (filename.endsWith("_filtered.bam.bai"))) filename
@@ -926,7 +944,6 @@ process bamFiltering {
 
   input:
   set val(prefix), file(markedBam) from chMarkedBamsFilt
-  file bed from chGeneBed.collect()
 
   output:
   set val(prefix), file("*filtered.{bam,bam.bai}") into chFilteredBams
@@ -935,16 +952,15 @@ process bamFiltering {
   file("v_samtools.txt") into chSamtoolsVersionBamFiltering
 
   script:
-  filterParams = params.singleEnd ? "-F 0x004" : "-F 0x004 -F 0x0008 -f 0x001"
+  filterParams = params.singleEnd ? "-F 0x004" : params.keepSingleton ? "-F 0x004" : "-F 0x004 -F 0x0008 -f 0x001"
   dupParams = params.keepDups ? "" : "-F 0x0400"
-  mapqParams = params.mapq ? "-q ${params.mapq}" : ""
+  mapqParams = params.mapq > 0 ? "-q ${params.mapq}" : ""
   nameSortBam = params.singleEnd ? "" : "samtools sort -n -@ $task.cpus -o ${prefix}.bam -T $prefix ${prefix}_filtered.bam"
   """
   samtools --version &> v_samtools.txt
   samtools view \\
     $filterParams \\
     $dupParams \\
-    -F 0x08 \\
     $mapqParams \\
     -b ${markedBam[0]} > ${prefix}_filtered.bam
   samtools index ${prefix}_filtered.bam
@@ -959,9 +975,6 @@ chFilteredBams
   .into{ chBams; chGroupBamNameFeatCounts }
 chFilteredFlagstat
   .set{ chFlagstat }
-chFilteredStats
-  .set{ chStatsMqc }
-
 
 /*
  * Separate sample BAMs and spike BAMs
@@ -993,10 +1006,10 @@ chFlagstatChip
 
 process PPQT{
   tag "${prefix}"
-  label 'r'
-  label 'medCpu'
-  label 'medMem'
-  publishDir "${params.outdir}/ppqt", mode: "copy"
+  label 'ppqt'
+  label 'highCpu'
+  label 'highMem'
+  publishDir "${params.outDir}/ppqt", mode: "copy"
 
   when:
   !params.skipPPQT
@@ -1033,8 +1046,11 @@ process bigWig {
   tag "${prefix}"
   label 'deeptools'
   label 'medCpu'
-  label 'medMem'
-  publishDir "${params.outdir}/bigWig", mode: "copy"
+  label 'lowMem'
+  publishDir "${params.outDir}/bigWig", mode: "copy",
+    saveAs: {filename ->
+    	     if ( filename.endsWith(".bigwig") ) "$filename"
+             else null}
 
   input:
   set val(prefix), file(filteredBams) from chBamsBigWig
@@ -1046,21 +1062,24 @@ process bigWig {
 
   script:
   if (params.singleEnd){
-    extend = params.fragmentSize > 0 ? "--extendReads ${params.fragmentSize}" : ""
+    extend = params.fragmentSize > 0 && !params.noReadExtension ? "--extendReads ${params.fragmentSize}" : ""
   }else{
-    extend = "--extendReads"
+    extend = params.noReadExtension ? "" : "--extendReads"
   }
   blacklistParams = params.blacklist ? "--blackListFileName ${BLbed}" : ""
   effGsize = params.effGenomeSize ? "--effectiveGenomeSize ${params.effGenomeSize}" : ""
   """
   bamCoverage --version &> v_deeptools.txt
+  nbreads=\$(samtools view -@ $task.cpus -F 0x100 -F 0x4 -F 0x800 -c ${filteredBams[0]})
+  sf=\$(echo "10000000 \$nbreads" | awk '{printf "%.2f", \$1/\$2}')
+
   bamCoverage -b ${filteredBams[0]} \\
-              -o ${prefix}_rpgc.bigwig \\
+              -o ${prefix}_norm.bigwig \\
               -p ${task.cpus} \\
               ${blacklistParams} \\
               ${effGsize} \\
               ${extend} \\
-              --normalizeUsing RPGC
+              --scaleFactor \$sf
   """
 }
 
@@ -1076,7 +1095,7 @@ if (useSpike){
     label 'deeptools'
     label 'medCpu'
     label 'medMem'
-    publishDir "${params.outdir}/bigWigSpike", mode: "copy"
+    publishDir "${params.outDir}/bigWigSpike", mode: "copy"
 
     input:
     file(allBams) from chBamsSpikesBam.map{it[1][0]}.collect()
@@ -1097,9 +1116,9 @@ if (useSpike){
 
  process getSpikeScalingFactor {
     label 'r'
-    label 'lowCpu'
+    label 'minCpu'
     label 'medMem'
-    publishDir "${params.outdir}/bigWigSpike", mode: "copy"
+    publishDir "${params.outDir}/bigWigSpike", mode: "copy"
 
     input:
     file(tab) from chTabCounts
@@ -1129,8 +1148,11 @@ if (useSpike){
     label 'deeptools'
     label 'medCpu'
     label 'medMem'
-    publishDir "${params.outdir}/bigWigSpike", mode: "copy"
-
+    publishDir "${params.outDir}/bigWigSpike", mode: "copy",
+      saveAs: {filename ->
+        if ( filename.endsWith(".bigwig") ) "$filename"
+        else null}
+ 
     input:
     set val(prefix), file(filteredBams), val(normFactor) from chBigWigScaleFactor
     file(BLbed) from chBlacklistBigWigSpike.collect()
@@ -1140,9 +1162,9 @@ if (useSpike){
 
     script:
     if (params.singleEnd){
-      extend = params.fragmentSize > 0 ? "--extendReads ${params.fragmentSize}" : ""
+      extend = params.fragmentSize > 0 && !params.noReadExtension ? "--extendReads ${params.fragmentSize}" : ""
     }else{
-      extend = "--extendReads"
+      extend = params.noReadExtension ? "" : "--extendReads"
     }
     blacklistParams = params.blacklist ? "--blackListFileName ${BLbed}" : ""
     effGsize = params.effGenomeSize ? "--effectiveGenomeSize ${params.effGenomeSize}" : ""
@@ -1166,8 +1188,8 @@ process deepToolsComputeMatrix{
   tag "${prefix}"
   label 'deeptools'
   label 'medCpu'
-  label 'medMem'
-  publishDir "${params.outdir}/deepTools/computeMatrix", mode: "copy"
+  label 'lowMem'
+  publishDir "${params.outDir}/deepTools/computeMatrix", mode: "copy"
 
   when:
   !params.skipDeepTools
@@ -1177,32 +1199,32 @@ process deepToolsComputeMatrix{
   file geneBed from chGeneBedDeeptools.collect()
 
   output:
-  file("*.{gz,pdf}") into chDeeptoolsSingle
-  file("*_corrected.tab") into chDeeptoolsSingleMqc
+  file("*.{mat,gz,pdf}") into chDeeptoolsSingle
+  file("*mqc.tab") into chDeeptoolsSingleMqc
 
   script:
   """
   computeMatrix scale-regions \\
-                -R $geneBed \\
+                -R ${geneBed} \\
                 -S ${bigwig} \\
                 -o ${prefix}_matrix.mat.gz \\
-                --outFileNameMatrix ${prefix}.computeMatrix.vals.mat.gz \\
-                --downstream 1000 --upstream 1000 --skipZeros --binSize 100\\
+                --outFileNameMatrix ${prefix}.computeMatrix.vals.mat \\
+                --downstream 2000 --upstream 2000 --skipZeros --binSize 100\\
                 -p ${task.cpus}
 
   plotProfile -m ${prefix}_matrix.mat.gz \\
               -o ${prefix}_bams_profile.pdf \\
               --outFileNameData ${prefix}.plotProfile.tab
   
-  sed -e 's/.0\t/\t/g' ${prefix}.plotProfile.tab | sed -e 's@.0\$@@g' > ${prefix}_plotProfile_corrected.tab
+  sed -e 's/.0\t/\t/g' ${prefix}.plotProfile.tab | sed -e 's@.0\$@@g' > ${prefix}_plotProfile_mqc.tab
   """
 }
 
 process deepToolsCorrelationQC{
   label 'deeptools'
-  label 'medCpu'
-  label 'medMem'
-  publishDir "${params.outdir}/deepTools/correlationQC", mode: "copy"
+  label 'highCpu'
+  label 'lowMem'
+  publishDir "${params.outDir}/deepTools/correlationQC", mode: "copy"
 
   when:
   allPrefix.size() >= 2 && !params.skipDeepTools
@@ -1224,6 +1246,7 @@ process deepToolsCorrelationQC{
   allPrefix = allPrefix.replace("]","")
   """
   multiBamSummary bins -b $allBams \\
+                       --binSize=50000 \\
                         -o bams_summary.npz \\
                         -p ${task.cpus} \\
                         ${blacklistParams}
@@ -1237,9 +1260,9 @@ process deepToolsCorrelationQC{
 
 process deepToolsFingerprint{
   label 'deeptools'
-  label 'medCpu'
-  label 'medMem'
-  publishDir "${params.outdir}/deepTools/fingerprintQC", mode: "copy"
+  label 'highCpu'
+  label 'lowMem'
+  publishDir "${params.outDir}/deepTools/fingerprintQC", mode: "copy"
 
   when:
   !params.skipDeepTools
@@ -1257,7 +1280,7 @@ process deepToolsFingerprint{
   if (params.singleEnd){
     extend = params.fragmentSize > 0 ? "--extendReads ${params.fragmentSize}" : ""
   }else{
-    extend = "--extendReads"
+    extend = params.noReadExtension ? "" : "--extendReads"
   }
   allPrefix = allPrefix.toString().replace("[","")
   allPrefix = allPrefix.replace(","," ") 
@@ -1327,7 +1350,7 @@ process sharpMACS2{
   label 'macs2'
   label 'medCpu'
   label 'medMem'
-  publishDir path: "${params.outdir}/peakCalling/sharp", mode: 'copy',
+  publishDir path: "${params.outDir}/peakCalling/sharp", mode: 'copy',
     saveAs: { filename ->
             if (filename.endsWith(".tsv")) "stats/$filename"
             else filename
@@ -1375,7 +1398,7 @@ process broadMACS2{
   label 'macs2'
   label 'medCpu'
   label 'medMem'
-  publishDir path: "${params.outdir}/peakCalling/broad", mode: 'copy',
+  publishDir path: "${params.outDir}/peakCalling/broad", mode: 'copy',
     saveAs: { filename ->
             if (filename.endsWith(".tsv")) "stats/$filename"
             else filename
@@ -1425,7 +1448,7 @@ process veryBroadEpic2{
   label 'epic2'
   label 'medCpu'
   label 'medMem'
-  publishDir path: "${params.outdir}/peakCalling/very-broad", mode: 'copy',
+  publishDir path: "${params.outDir}/peakCalling/very-broad", mode: 'copy',
     saveAs: { filename ->
             if (filename.endsWith(".tsv")) "stats/$filename"
             else filename
@@ -1462,7 +1485,7 @@ process veryBroadEpic2{
     -o ${sampleID}_epic.out
 
   echo "track type=broadPeak name=\"${sampleID}\" description=\"${sampleID}\" nextItemButton=on" > ${sampleID}_peaks.broadPeak
-  awk -v id="${sampleID}" 'NR>1{OFS="\t"; print \$1,\$2,\$3,id"_peak_"NR,\$5,".",\$10,\$4,\$9}' ${sampleID}_epic.out >> ${sampleID}_peaks.broadPeak
+  awk -v id="${sampleID}" 'NF<10{fc=0;pval=-1;qval=-1}NF==10{fc=\$10;pval=\$4;qval=\$9}NR>1{OFS="\t"; print \$1,\$2,\$3,id"_peak_"NR,\$5,".",fc,pval,qval}' ${sampleID}_epic.out >> ${sampleID}_peaks.broadPeak
   cat ${sampleID}_peaks.broadPeak | tail -n +2 | wc -l | awk -v OFS='\t' '{ print "${sampleID}", \$1 }' | cat $peakCountHeader - > ${sampleID}_peaks.count_mqc.tsv
   READS_IN_PEAKS=\$(intersectBed -a ${sampleBam[0]} -b ${sampleID}_peaks.broadPeak -bed -c -f 0.20 | awk -F '\t' '{sum += \$NF} END {print sum}')
   grep 'mapped (' $sampleFlagstat | awk -v a="\$READS_IN_PEAKS" -v OFS='\t' '{print "${sampleID}", a/\$1}' | cat $fripScoreHeader - > ${sampleID}_peaks.FRiP_mqc.tsv
@@ -1483,7 +1506,7 @@ process peakAnnoHomer{
   label 'homer'
   label 'medCpu'
   label 'medMem'
-  publishDir path: "${params.outdir}/peakCalling/annotation/", mode: 'copy'
+  publishDir path: "${params.outDir}/peakCalling/annotation/", mode: 'copy'
 
   when:
   !params.skipPeakAnno
@@ -1515,7 +1538,7 @@ process peakQC{
   label 'r'
   label 'medCpu'
   label 'medMem'
-  publishDir "${params.outdir}/peakCalling/QC/", mode: 'copy'
+  publishDir "${params.outDir}/peakCalling/QC/", mode: 'copy'
 
   when:
   !params.skipPeakQC && params.design
@@ -1565,7 +1588,7 @@ process IDR{
   label 'idr'
   label 'medCpu'
   label 'medMem'
-  publishDir path: "${params.outdir}/IDR", mode: 'copy'
+  publishDir path: "${params.outDir}/IDR", mode: 'copy'
 
   when:
   allPeaks.toList().size > 1 && !params.skipIDR
@@ -1598,9 +1621,9 @@ process IDR{
 
 process prepareAnnotation{
   label 'unix'
-  label 'lowCpu'
-  label 'lowMem'
-  publishDir "${params.outdir}/featCounts/", mode: "copy"
+  label 'minCpu'
+  label 'minMem'
+  publishDir "${params.outDir}/featCounts/", mode: "copy"
 
   when:
   !params.skipFeatCounts
@@ -1622,8 +1645,8 @@ process featureCounts{
   tag "${bed}"
   label 'featureCounts'
   label 'medCpu'
-  label 'medMem'
-  publishDir "${params.outdir}/featCounts/", mode: "copy"
+  label 'lowMem'
+  publishDir "${params.outDir}/featCounts/", mode: "copy"
 
   when:
   !params.skipFeatCounts
@@ -1657,9 +1680,9 @@ process featureCounts{
  */
 process getSoftwareVersions{
   label 'python'
-  label 'lowCpu'
-  label 'lowMem'
-  publishDir path: "${params.outdir}/software_versions", mode: "copy"
+  label 'minCpu'
+  label 'minMem'
+  publishDir path: "${params.outDir}/softwareVersions", mode: "copy"
 
   when:
   !params.skipSoftVersions
@@ -1704,7 +1727,7 @@ process workflowSummaryMqc {
   id: 'summary'
   description: " - this information is collected when the pipeline is started."
   section_name: 'Workflow Summary'
-  section_href: 'https://gitlab.curie.fr/chip-seq'
+  section_href: 'https://gitlab.curie.fr/data-analysis/chip-seq'
   plot_type: 'html'
   data: |
         <dl class=\"dl-horizontal\">
@@ -1716,44 +1739,37 @@ process workflowSummaryMqc {
 
 process multiqc {
   label 'multiqc'
-  label 'lowCpu'
-  label 'lowMem'
-  publishDir "${params.outdir}/MultiQC", mode: 'copy'
+  label 'minCpu'
+  label 'minMem'
+  publishDir "${params.outDir}/MultiQC", mode: 'copy'
 
   when:
   !params.skipMultiQC
 
   input:
   file splan from chSplan.collect()
-  file metadata from chMetadata.ifEmpty([])
   file multiqcConfig from chMultiqcConfig
   file design from chDesignMqc.collect().ifEmpty([])
-
+  file metadata from chMetadata.ifEmpty([])
   file ('software_versions/*') from softwareVersionsYaml.collect().ifEmpty([])
   file ('workflow_summary/*') from workflowSummaryYaml.collect()
-
   file ('fastqc/*') from chFastqcMqc.collect().ifEmpty([])
-
   file ('mapping/*') from chMappingMqc.collect().ifEmpty([])
   file ('mapping/*') from chMappingSpikeMqc.collect().ifEmpty([])
-
   file ('mapping/*') from chMarkedPicstats.collect().ifEmpty([])
+  file ('mapping/*') from chStatsMqc.collect().ifEmpty([])
   file ('preseq/*') from chPreseqStats.collect().ifEmpty([])
-
   file ('ppqt/*') from chPpqtOutMqc.collect().ifEmpty([])
   file ('ppqt/*') from chPpqtCsvMqc.collect().ifEmpty([])
-
   file ('deepTools/*') from chDeeptoolsSingleMqc.collect().ifEmpty([])
   file ("deepTools/*") from chDeeptoolsCorrelMqc.collect().ifEmpty([])
   file ("deepTools/*") from chDeeptoolsFingerprintMqc.collect().ifEmpty([])
-
   file ('peakCalling/sharp/*') from chMacsOutputSharp.collect().ifEmpty([])
   file ('peakCalling/broad/*') from chMacsOutputBroad.collect().ifEmpty([])
   file ('peakCalling/sharp/*') from chMacsCountsSharp.collect().ifEmpty([])
   file ('peakCalling/broad/*') from chMacsCountsBroad.collect().ifEmpty([])
   file ('peakCalling/very-broad/*') from chMacsCountsVbroad.collect().ifEmpty([])
-  
-  file('peakQC/*') from chPeakMqc.collect().ifEmpty([])
+  file ('peakQC/*') from chPeakMqc.collect().ifEmpty([])
   
   output:
   file splan
@@ -1769,7 +1785,8 @@ process multiqc {
   modules_list = "-m custom_content -m fastqc -m bowtie2 -m star -m preseq -m picard -m phantompeakqualtools -m deeptools -m macs2 -m homer"
   """
   stats2multiqc.sh -s ${splan} ${designOpts} -a ${params.aligner} ${isPE}
-  mqc_header.py --splan ${splan} --name "ChIP-seq" --version ${workflow.manifest.version} ${metadataOpts} > multiqc-config-header.yaml
+  medianReadNb="\$(sort -t, -k3,3n mqc.stats | awk -F, '{a[i++]=\$3;} END{x=int((i+1)/2); if (x<(i+1)/2) printf "%.0f", (a[x-1]+a[x])/2; else printf "%.0f",a[x-1];}')" 
+  mqc_header.py --splan ${splan} --name "ChIP-seq" --version ${workflow.manifest.version} ${metadataOpts} --nbreads \${medianReadNb} > multiqc-config-header.yaml
   multiqc . -f $rtitle $rfilename -c multiqc-config-header.yaml -c $multiqcConfig $modules_list
   """
 }
@@ -1779,12 +1796,13 @@ process multiqc {
  */
 process outputDocumentation {
     label 'python'
-    label 'lowCpu'
-    label 'lowMem'
-    publishDir "${params.outdir}/pipeline_info", mode: 'copy'
+    label 'minCpu'
+    label 'minMem'
+    publishDir "${params.summaryDir}/", mode: 'copy'
 
     input:
     file output_docs from chOutputDocs
+    file images from chOutputDocsImages
 
     output:
     file "results_description.html"
@@ -1802,6 +1820,7 @@ workflow.onComplete {
   /*pipeline_report.html*/
 
   def report_fields = [:]
+  report_fields['pipeline'] = workflow.manifest.name
   report_fields['version'] = workflow.manifest.version
   report_fields['runName'] = customRunName ?: workflow.runName
   report_fields['success'] = workflow.success
@@ -1825,27 +1844,27 @@ workflow.onComplete {
 
   // Render the TXT template
   def engine = new groovy.text.GStringTemplateEngine()
-  def tf = new File("$baseDir/assets/oncomplete_template.txt")
+  def tf = new File("$baseDir/assets/onCompleteTemplate.txt")
   def txt_template = engine.createTemplate(tf).make(report_fields)
   def report_txt = txt_template.toString()
 
   // Render the HTML template
-  def hf = new File("$baseDir/assets/oncomplete_template.html")
+  def hf = new File("$baseDir/assets/onCompleteTemplate.html")
   def html_template = engine.createTemplate(hf).make(report_fields)
   def report_html = html_template.toString()
 
   // Write summary e-mail HTML to a file
-  def output_d = new File( "${params.outdir}/pipeline_info/" )
+  def output_d = new File( "${params.summaryDir}/" )
   if( !output_d.exists() ) {
-  output_d.mkdirs()
+    output_d.mkdirs()
   }
-  def output_hf = new File( output_d, "pipeline_report.html" )
+  def output_hf = new File( output_d, "pipelineReport.html" )
   output_hf.withWriter { w -> w << report_html }
-  def output_tf = new File( output_d, "pipeline_report.txt" )
+  def output_tf = new File( output_d, "pipelineReport.txt" )
   output_tf.withWriter { w -> w << report_txt }
 
   /*oncomplete file*/
-  File woc = new File("${params.outdir}/workflow.oncomplete.txt")
+  File woc = new File("${params.outDir}/workflowOnComplete.txt")
   Map endSummary = [:]
   endSummary['Completed on'] = workflow.complete
   endSummary['Duration']     = workflow.duration
@@ -1853,15 +1872,15 @@ workflow.onComplete {
   endSummary['exit status']  = workflow.exitStatus
   endSummary['Error report'] = workflow.errorReport ?: '-'
 
-  String endWfSummary = endSummary.collect { k,v -> "${k.padRight(30, '.')}: $v" }.join("\n")    println endWfSummary
-  String execInfo = "Execution summary\n${logSep}\n${endWfSummary}\n${logSep}\n"
+  String endWfSummary = endSummary.collect { k,v -> "${k.padRight(30, '.')}: $v" }.join("\n")
+  println endWfSummary
+  String execInfo = "Execution summary\n${endWfSummary}\n"
   woc.write(execInfo)
 
-  /*]      = workflow.success     endSummary['exit status']  = workflow.exitStatus     endSummary['Error report'] = workflow.errorReport ?: '-' final logs*/
   if(spikes_poor_alignment.size() > 0){
     log.info "[chIP-seq] WARNING - ${spikes_poor_alignment.size()} samples skipped due to poor alignment scores!"
-  }                                                                                                                                                                                                        
- 
+  }
+                                                                                                                                                                                         
   if(workflow.success){
     log.info "[ChIP-seq] Pipeline Complete"
   }else{

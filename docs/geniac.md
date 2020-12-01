@@ -1,6 +1,6 @@
 # Pipeline deployment with `geniac`
 
-The `geniac` module allows to generate different Netflow configuration require to manage software environment.
+The `geniac` module allows the automatic generation of the [Nextflow](https://www.nextflow.io) configuration files (including profiles) and the container recipes and their creation.
 
 ## Prerequisite
 
@@ -10,8 +10,7 @@ The `geniac` module allows to generate different Netflow configuration require t
 * Singularity (>= 3.2) [optional]
 * Docker (>= 18.0) [optional]
 
-The folowing deployment processing uses environment variables defined by the user.
-The following variables are defined as example.
+First, the user can defined the following environment variables:
 
 ```shell
 #!/usr/bin/env bash
@@ -44,7 +43,7 @@ The `cmake` command can be used with the following options ;
 
 ## Example 
 
-In the following example, the `singularity` images are available in the `SING_DIR` folder, and will thus be used to deploy the pipeline 
+In the following example, the `singularity` images are available in the `SING_DIR` folder, and will thus be used during the  deployment of the pipeline 
 using the options `ap_singularity_image_path` et `ap_use_singularity_image_link`.
 
 ```shell
