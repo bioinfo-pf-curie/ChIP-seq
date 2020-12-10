@@ -12,7 +12,10 @@
 
 The pipeline is built using [Nextflow](https://www.nextflow.io), a workflow tool to run tasks across multiple compute infrastructures in a very portable manner. 
 It comes with containers making installation trivial and results highly reproducible.
-The current workflow was initiated from the [nf-core ChIP-seq pipeline](https://github.com/nf-core/chipseq). See the nf-core project from details on [guidelines](https://nf-co.re/).
+The current workflow was originally initiated from the [nf-core ChIP-seq pipeline](https://github.com/nf-core/chipseq), and was then updated and adapted with addition steps and options.
+
+Despites, this pipeline is able to analyse ChIP-seq data for transcription factor binding sites detection and histone modifications (active or repressive marks).
+It can run with or without input controls, and with or without spike-in data.
 
 ### Pipeline Summary
 
@@ -43,7 +46,7 @@ The current workflow was initiated from the [nf-core ChIP-seq pipeline](https://
 
 N E X T F L O W  ~  version 20.01.0
 ======================================================================
-Chip-seq v1.0.1
+Chip-seq v1.0.3
 ======================================================================
 
 Usage:
@@ -59,16 +62,19 @@ Mandatory arguments:
 
 Inputs:
 --design [file]                    Path to design file for downstream analysis
---singleEnd [bool]                 Specifies that the input is single end reads
+--singleEnd [bool]                 Specifies that the input is single end reads. Default: false
 --fragmentSize [int]               Estimated fragment length used to extend single-end reads. Default: 200
---spike [str]                      Name of the genome used for spike-in analysis
-
-References           If not specified in the configuration file or you wish to overwrite any of the references given by the --genome field
+--spike [str]                      Name of the genome used for spike-in analysis. Default: false
 --genomeAnnotationPath [dir]       Path to genome annotation folder
+
+Annotation: If not specified in the configuration file or you wish to overwrite any of the references given by the --genome field
 --fasta [file]                     Path to Fasta reference
 --spikeFasta [file]                Path to Fasta reference for spike-in
-
-Alignment:
+--geneBed [file]                   BED annotation file with gene coordinate.
+--gtf [file]                       GTF annotation file. Used in HOMER peak annotation
+--effGenomeSize [int]              Effective Genome size
+	  
+Alignment: If you want to modify default options or wish to overwrite any of the indexes given by the --genome field 
 --aligner [str]                    Alignment tool to use ['bwa-mem', 'star', 'bowtie2']. Default: 'bwa-mem'
 --saveAlignedIntermediates [bool]  Save all intermediates mapping files. Default: false
 --starIndex [dir]                  Index for STAR aligner
@@ -81,16 +87,11 @@ Alignment:
 Filtering:
 --mapq [int]                       Minimum mapping quality to consider. Default: 10
 --keepDups [bool]                  Do not remove duplicates afer marking. Default: false
---blacklist [file]                 Path to black list regions (.bed).
+--blacklist [file]                 Path to black list regions (.bed). See the genome.config for details.
 --spikePercentFilter [float]       Minimum percent of reads aligned to spike-in genome. Default: 0.2
 
 Analysis:
 --noReadExtension [bool]           Do not extend reads to fragment length. Default: false
-
-Annotation:          If not specified in the configuration file or you wish to overwrite any of the references given by the --genome field
---geneBed [file]                   BED annotation file with gene coordinate.
---gtf [file]                       GTF annotation file. Used in HOMER peak annotation
---effGenomeSize [int]              Effective Genome size
 --tssSize [int]                    Distance (upstream/downstream) to transcription start point to consider. Default: 2000
 
 Skip options:        All are false by default

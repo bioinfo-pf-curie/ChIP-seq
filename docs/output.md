@@ -160,11 +160,11 @@ The NSC and RSC values are reported in the `General Metrics` table. We then appl
 
 The [bigWig](https://genome.ucsc.edu/goldenpath/help/bigWig.html) format is in an indexed binary format useful for displaying dense, continuous data in Genome Browsers such as the [UCSC](https://genome.ucsc.edu/cgi-bin/hgTracks) and [IGV](http://software.broadinstitute.org/software/igv/). This mitigates the need to load the much larger BAM files for data visualisation purposes which will be slower and result in memory issues. The coverage values represented in the bigWig file can also be normalised in order to be able to compare the coverage across multiple samples - this is not possible with BAM files. The bigWig format is also supported by various bioinformatics software for downstream processing such as meta-profile plotting.
 
-Note that the bigwig files are normalized using the total number of reads per bin (RPGC = number of reads per bin / scaling factor for 1x average coverage)
+Note that the bigwig files are normalized from sequencing depth (scaling factor = reads number / 10 000 000)
 
 **Output directory: `bigWig`**
 
-* `sample_rpgc.bigwig` : bigwig files
+* `sample_norm.bigwig` : bigwig files
 
 If the `--spike` option is specified, reads aligned on the spike genome are used to calculate a scaling factor.  
 The factor is then used to normalize and generate new `bigwig` files.
