@@ -46,16 +46,19 @@ def helpMessage() {
 
   Inputs:
   --design [file]                    Path to design file for downstream analysis
-  --singleEnd [bool]                 Specifies that the input is single end reads
+  --singleEnd [bool]                 Specifies that the input is single end reads. Default: false
   --fragmentSize [int]               Estimated fragment length used to extend single-end reads. Default: 200
   --spike [str]                      Name of the genome used for spike-in analysis. Default: false
+  --genomeAnnotationPath [file]      Path to genome annotation folder
 
-  References: If not specified in the configuration file or you wish to overwrite any of the references given by the --genome field
-  --genomeAnnotationPath [file]      Path  to genome annotation folder
+  Annotation: If not specified in the configuration file or you wish to overwrite any of the references given by the --genome field
   --fasta [file]                     Path to Fasta reference
   --spikeFasta [file]                Path to Fasta reference for spike-in
+  --geneBed [file]                   BED annotation file with gene coordinate.
+  --gtf [file]                       GTF annotation file. Used in HOMER peak annotation
+  --effGenomeSize [int]              Effective Genome size
 
-  Alignment:
+  Alignment: If you want to modify default options or wish to overwrite any of the indexes given by the --genome field
   --aligner [str]                    Alignment tool to use ['bwa-mem', 'star', 'bowtie2']. Default: 'bwa-mem'
   --saveAlignedIntermediates [bool]  Save all intermediates mapping files. Default: false  
   --starIndex [dir]                  Index for STAR aligner
@@ -69,17 +72,11 @@ def helpMessage() {
   --mapq [int]                       Minimum mapping quality to consider. Default: 10
   --keepDups [bool]                  Do not remove duplicates afer marking. Default: false
   --keepSingleton [bool]             Keep unpaired reads. Default: false
-  --blacklist [file]                 Path to black list regions (.bed).
+  --blacklist [file]                 Path to black list regions (.bed). See the genome.config for details.
   --spikePercentFilter [float]       Minimum percent of reads aligned to spike-in genome. Default: 0.2
 
   Analysis:
   --noReadExtension [bool]           Do not extend reads to fragment length. Default: false
-
-  Annotation:          If not specified in the configuration file or you wish to overwrite any of the references given by the --genome field
-  --genomeAnnotationPath [dir]       Path to genome annotations.
-  --geneBed [file]                   BED annotation file with gene coordinate.
-  --gtf [file]                       GTF annotation file. Used in HOMER peak annotation
-  --effGenomeSize [int]              Effective Genome size
   --tssSize [int]                    Distance (upstream/downstream) to transcription start point to consider. Default: 2000
 
   Skip options:        All are false by default
