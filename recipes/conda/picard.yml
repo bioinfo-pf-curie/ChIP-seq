@@ -2,5 +2,5 @@ name: picard
 channels:
   - bioconda
 dependencies:
-  - bioconda::picard=2.19.0
-  - bioconda::samtools=1.9
+  - bioconda::picard=2.19.0=0
+  - bioconda::samtools=1.9=h10a08f8_12

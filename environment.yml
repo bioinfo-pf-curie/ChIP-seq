@@ -5,30 +5,30 @@ channels:
   - defaults
 dependencies:
   # Add required software dependencies here
-  - python=3.7
-  - conda-forge::pymdown-extensions=7.1
-  - bioconda::fastqc=0.11.8
-  - bioconda::multiqc=1.8
-  - bioconda::bwa=0.7.17
-  - bioconda::samtools=1.9
-  - bioconda::bowtie2=2.3.5
-  - bioconda::star=2.6.1b
-  - bioconda::picard=2.19.0
-  - bioconda::preseq=2.0.3
-  - bioconda::pysam=0.15.2
-  - bioconda::phantompeakqualtools=1.2
-  - bioconda::bedtools=2.27.1
-  - bioconda::deeptools=3.2.1
-  - bioconda::macs2=2.2.6
-  - bioconda::epic2=0.0.40
-  - bioconda::subread=2.0.0
-  - bioconda::homer=4.10
-  - bioconda::idr=2.0.4.2
+  - python=3.7.1=hd21baee_1001
+  - conda-frge::pymdown-extensions=7.1=pyh9f0ad1d_0
+  - bioconda::fastqc=0.11.8=2
+  - bioconda::multiqc=1.8=py_2
+  - bioconda::bwa=0.7.17=hed695b0_7
+  - bioconda::samtools=1.9=h10a08f8_12
+  - bioconda::bowtie2=2.3.5.1=py37he513fc3_0
+  - bioconda::star=2.6.1b=0
+  - bioconda::picard=2.19.0=0
+  - bioconda::preseq=2.0.3=h26b358d_2
+  - bioconda::pysam=0.15.2=py37h1671916_1
+  - bioconda::phantompeakqualtools=1.2.2=0
+  - bioconda::bedtools=2.27.1==he860b03_3
+  - bioconda::deeptools=3.2.1=py_0
+  - bioconda::macs2=2.2.6=py37h516909a_0
+  - bioconda::epic2=0.0.40=py37h9276139_0
+  - bioconda::subread=2.0.0=hed695b0_0
+  - bioconda::homer=4.10=pl526hc9558a2_0
+  - bioconda::idr=2.0.4.2=py37hc1659b7_2
 
   # R-packages
-  - r-base=3.4.1
-  - r-optparse=1.6.0
-  - r-ggplot2=3.1.0
-  - r-reshape2=1.4.3
-  - r-scales=1.0.0
-  - bioconductor-deseq2=1.20.0
+  - r-base=3.4.1=h4fe35fd_8
+  - r-optparse=1.6.0=r341_1
+  - r-ggplot2=3.1.0=r341h6115d3f_0
+  - r-reshape2=1.4.3=r341h9d2a408_2
+  - r-scales=1.0.0=r341h9d2a408_1
+  - bioconductor-deseq2=1.20.0=r341hfc679d8_0

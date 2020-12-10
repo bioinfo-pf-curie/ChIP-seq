@@ -2,4 +2,4 @@ name: homer
 channels:
   - bioconda
 dependencies:
-  - bioconda::homer=4.10
+  - bioconda::homer=4.10=pl526hc9558a2_0
