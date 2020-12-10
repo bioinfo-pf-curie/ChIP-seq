@@ -12,7 +12,10 @@
 
 The pipeline is built using [Nextflow](https://www.nextflow.io), a workflow tool to run tasks across multiple compute infrastructures in a very portable manner. 
 It comes with containers making installation trivial and results highly reproducible.
-The current workflow was initiated from the [nf-core ChIP-seq pipeline](https://github.com/nf-core/chipseq). See the nf-core project from details on [guidelines](https://nf-co.re/).
+The current workflow was originally initiated from the [nf-core ChIP-seq pipeline](https://github.com/nf-core/chipseq), and was then updated and adapted with addition steps and options.
+
+Despites, this pipeline is able to analyse ChIP-seq data for transcription factor binding sites detection and histone modifications (active or repressive marks).
+It can run with or without input controls, and with or without spike-in data.
 
 ### Pipeline Summary
 
