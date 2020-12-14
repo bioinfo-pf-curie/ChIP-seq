@@ -12,7 +12,7 @@ dependencies:
   - bioconda::bwa=0.7.17=hed695b0_7
   - bioconda::samtools=1.9=h10a08f8_12
   - bioconda::bowtie2=2.3.5.1=py37he513fc3_0
-  - bioconda::star=2.6.1b=0
+  - bioconda::star=2.7.6a=0
   - bioconda::picard=2.19.0=0
   - bioconda::preseq=2.0.3=h26b358d_2
   - bioconda::pysam=0.15.2=py37h1671916_1

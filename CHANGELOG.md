@@ -1,5 +1,11 @@
+version-1.0.4
+
+NEW FEATURES
+
+   - update STAR to 2.7.6a
+
 ***********************************
-CHANGES IN VERSION 1.0.3
+version-1.0.3
 
 NEW FEATURES
 
@@ -18,7 +24,7 @@ BUG FIXES
    - Dups % is calculated over the number of mapped reads (not total reads)
 
 ***********************************
-CHANGES IN VERSION 1.0.2
+version-1.0.2
 
 SIGNIFICANT USER-VISIBLE CHANGES
 
@@ -33,7 +39,7 @@ BUG FIXES
   - Fix bug in mapping stat for bowtie2 with paired-end data
 
 ***********************************
-CHANGES IN VERSION 1.0.1
+version-1.0.1
 
 SIGNIFICANT USER-VISIBLE CHANGES
 
@@ -49,7 +55,7 @@ BUG FIXES
   
 
 ***********************************
-CHANGES IN VERSION 1.0.0
+version-1.0.0
 
 NEW FEATURES
 
