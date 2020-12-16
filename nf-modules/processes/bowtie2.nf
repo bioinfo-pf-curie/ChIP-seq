@@ -15,15 +15,15 @@ process bowtie2{
   params.aligner == "bowtie2" && !params.inputBam
 
   input:
-  set val(sample), file(reads), file(index), val(genomeBase)
+  tuple val(sample), file(reads), file(index), val(genomeBase)
 
   output:
-  set val(sample), file("*.bam") 
-  file("*.log") 
-  file("v_bowtie2.txt")
+  tuple val(sample), path("*.bam"), emit: bam 
+  path "*.log"                    , emit: mqc 
+  path "v_bowtie2.txt"            , emit: version
 
   script:
-  prefix = genomeBase == genomeRef ? sample : sample + '_spike'
+  prefix = genomeBase == params.genome ? sample : sample + '_spike'
   readCommand = params.singleEnd ? "-U ${reads[0]}" : "-1 ${reads[0]} -2 ${reads[1]}"
   opts = params.bowtie2Opts
   """
@@ -34,4 +34,5 @@ process bowtie2{
           $readCommand > ${prefix}.bam 2> ${prefix}_bowtie2.log
   """
 }
+
 

@@ -17,15 +17,16 @@ process bwaMem{
   params.aligner == "bwa-mem" && !params.inputBam
 
   input:
-  set val(sample), file(reads), file(index), val(genomeBase)
+  tuple val(sample), file(reads), file(index), val(genomeBase)
 
   output:
-  set val(sample), file("*.bam") 
-  file("*.log") 
-  file("v_bwa.txt")
+  tuple val(sample), path("*.bam"), emit: bam 
+  path "*.log"                    , emit: mqc 
+  path "v_bwa.txt"                , emit: version
 
   script:
-  prefix = genomeBase == genomeRef ? sample : sample + '_spike'
+  prefix = genomeBase == params.genome ? sample : sample + '_spike'
+  //prefix = genomeBase == genomeRef ? sample : sample + '_spike'
   opts = params.bwaOpts
   """
   echo \$(bwa 2>&1) &> v_bwa.txt

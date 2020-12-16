@@ -127,7 +127,7 @@ if (params.aligner != 'bwa-mem' && params.aligner != 'star' && params.aligner !=
  */
 
 // Configurable reference genomes
-genomeRef = params.genome
+def genomeRef = params.genome
 
 // Genome Fasta file
 params.fasta = genomeRef ? params.genomes[ genomeRef ].fasta ?: false : false
@@ -542,9 +542,13 @@ if (params.design){
   chDesign = Channel.empty()
 }
 
+// QC : check design dans factqc
 include { qcFlow } from './nf-modules/subworkflow/qc'
+// Alignment on reference genome
+include { mappingFlow } from './nf-modules/subworkflow/mapping' 
 
 workflow {
     qcFlow(chDesign, chSplan, rawReads )
+    mappingFlow(rawReads, chBwaIndex, chBt2Index, chStarIndex)
 }
 
