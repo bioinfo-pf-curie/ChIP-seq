@@ -19,8 +19,8 @@ workflow mappingFlow {
       chStarIndex
     // workflow implementation
     main:
-      bam = Channel.empty()
-      mqc = Channel.empty()
+      chAlignReads = Channel.empty()
+      chMappingMqc = Channel.empty()
       bwaMem(rawReads.combine(chBwaIndex))
       bowtie2(rawReads.combine(chBt2Index))
       star(rawReads.combine(chStarIndex))

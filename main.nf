@@ -549,6 +549,11 @@ include { mappingFlow } from './nf-modules/subworkflow/mapping'
 
 workflow {
     qcFlow(chDesign, chSplan, rawReads )
+    chFastqcVersion = qcFlow.out.version
     mappingFlow(rawReads, chBwaIndex, chBt2Index, chStarIndex)
+    chMappingReads = mappingFlow.out.bam
+    chMappingMqc = mappingFlow.out.mqc
+    chMappingMqc.view()
+    chFastqcVersion.view()    
 }
 

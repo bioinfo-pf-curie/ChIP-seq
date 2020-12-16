@@ -17,5 +17,8 @@ workflow qcFlow {
     main:
       checkDesign(design, samplePlan)
       fastQC(reads)
+    emit:
+      mqc = fastQC.out.mqc
+      version = fastQC.out.version
 }
 
