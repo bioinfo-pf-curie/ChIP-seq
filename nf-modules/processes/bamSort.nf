@@ -15,13 +15,13 @@ process bamSort{
             }
 
   input:
-  set val(prefix), file(unsortedBam)
+  tuple val(prefix), path(unsortedBam)
 
   output:
-  set val(prefix), file('*sorted.{bam,bam.bai}')
-  file("*stats") 
-  file("*mqc") 
-  file("v_samtools.txt")
+  tuple val(prefix), path("*sorted.{bam,bam.bai}"), emit: sortBams
+  path("*stats")                                  , emit: stats 
+  path("*mqc")                                   , emit: statMqc 
+  path("v_samtools.txt")                         , emit: version
 
   script:
   """

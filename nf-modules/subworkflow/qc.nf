@@ -1,12 +1,13 @@
 /* 
+ * define the data analysis workflow 
+ */
+
+/* 
  * include requires tasks 
  */
 include { checkDesign } from '../processes/checkDesign'
 include { fastQC } from '../processes/fastQC'
 
-/* 
- * define the data analysis workflow 
- */
 workflow qcFlow {
     // required inputs
     take:
@@ -18,7 +19,7 @@ workflow qcFlow {
       checkDesign(design, samplePlan)
       fastQC(reads)
     emit:
-      mqc = fastQC.out.mqc
-      version = fastQC.out.version
+      mqc = fastQC.out.mqc           // channel: [ path *_fastqc.{zip,html} ]
+      version = fastQC.out.version   // channel: [ path v_fastqc.txt ]
 }
 

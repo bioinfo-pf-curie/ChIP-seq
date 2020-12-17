@@ -12,8 +12,8 @@ process checkDesign{
   params.design
 
   input:
-  file design
-  file samplePlan
+  path design
+  path samplePlan
 
   script:
   optSE = params.singleEnd ? "--singleEnd" : ""

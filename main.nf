@@ -542,18 +542,26 @@ if (params.design){
   chDesign = Channel.empty()
 }
 
-// QC : check design dans factqc
+// QC : check design and factqc
 include { qcFlow } from './nf-modules/subworkflow/qc'
 // Alignment on reference genome
 include { mappingFlow } from './nf-modules/subworkflow/mapping' 
+// Spike-in and Sorting BAM files
+include { sortingFlow } from './nf-modules/subworkflow/sorting' 
 
 workflow {
+    // QC : check design and factqc
     qcFlow(chDesign, chSplan, rawReads )
     chFastqcVersion = qcFlow.out.version
+    chFastqcVersion.view()    
+
+    // Alignment on reference genome
     mappingFlow(rawReads, chBwaIndex, chBt2Index, chStarIndex)
-    chMappingReads = mappingFlow.out.bam
+    chAlignReads = mappingFlow.out.bam
     chMappingMqc = mappingFlow.out.mqc
     chMappingMqc.view()
-    chFastqcVersion.view()    
+
+    // Spike-in and Sorting BAM files
+    sortingFlow(chAlignReads, useSpike)
 }
 

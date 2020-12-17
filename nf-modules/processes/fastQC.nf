@@ -12,7 +12,7 @@ process fastQC{
   !params.skipFastqc && !params.inputBam
 
   input:
-  tuple val(prefix), file(reads) 
+  tuple val(prefix), path(reads) 
 
   output:
   path "*_fastqc.{zip,html}", emit: mqc 

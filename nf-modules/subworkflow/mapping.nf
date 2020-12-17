@@ -1,15 +1,14 @@
-// genomeRef = params.genome
+/* 
+ * Alignment on reference genome 
+ */
+
 /* 
  * include requires tasks 
  */
 include { bwaMem } from '../processes/bwaMem' 
-//include { bwaMem } from '../processes/bwaMem' addParams( genomeRef: genomeRef)
 include { bowtie2 } from '../processes/bowtie2'
 include { star } from '../processes/star'
 
-/* 
- * Alignment on reference genome 
- */
 workflow mappingFlow {
     // required inputs
     take:
@@ -19,19 +18,17 @@ workflow mappingFlow {
       chStarIndex
     // workflow implementation
     main:
-      chAlignReads = Channel.empty()
-      chMappingMqc = Channel.empty()
-      bwaMem(rawReads.combine(chBwaIndex))
-      bowtie2(rawReads.combine(chBt2Index))
-      star(rawReads.combine(chStarIndex))
 
       if (params.aligner == "bowtie2"){
+        bowtie2(rawReads.combine(chBt2Index))
         bam = bowtie2.out.bam
         mqc = bowtie2.out.mqc
       } else if (params.aligner == "bwa-mem"){
+        bwaMem(rawReads.combine(chBwaIndex))
         bam = bwaMem.out.bam
         mqc = bwaMem.out.mqc
       } else if (params.aligner == "star"){
+        star(rawReads.combine(chStarIndex))
         bam = star.out.bam
         mqc = star.out.mqc
       }

@@ -15,7 +15,7 @@ process star{
   params.aligner == "star" && !params.inputBam
 
   input:
-  tuple val(sample), file(reads), file(index), val(genomeBase)
+  tuple val(sample), path(reads), path(index), val(genomeBase)
 
   output:
   tuple val(sample), path("*.bam"), emit: bam 
