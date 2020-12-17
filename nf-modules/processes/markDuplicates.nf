@@ -15,14 +15,14 @@ process markDuplicates{
             }
 
   input:
-  set val(prefix), file(sortedBams) 
+  tuple val(prefix), path(sortedBams) 
 
   output:
-  set val(prefix), file("*marked.{bam,bam.bai}")
-  set val(prefix), file("*marked.flagstat") 
-  file "*marked.{idxstats,stats}" 
-  file "*metrics.txt" 
-  file("v_picard.txt")
+  tuple val(prefix), path("*marked.{bam,bam.bai}"), emit: bams
+  tuple val(prefix), path("*marked.flagstat")     , emit: flagstat 
+  path "*marked.{idxstats,stats}"                 , emit: stats 
+  path "*metrics.txt"                             , emit: picstats 
+  path("v_picard.txt")                            , emit: version
 
   script:
   """

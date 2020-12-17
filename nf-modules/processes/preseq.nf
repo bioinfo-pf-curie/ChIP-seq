@@ -13,11 +13,11 @@ process preseq {
   !params.skipPreseq
 
   input:
-  set val(prefix), file(bam)
+  tuple val(prefix), path(bam)
 
   output:
-  file "*.ccurve.txt" 
-  file("v_preseq.txt")
+  path "*.ccurve.txt" 
+  path("v_preseq.txt")
 
   script:
   defectMode = params.preseqDefect ? '-D' : ''

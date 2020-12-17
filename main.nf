@@ -548,20 +548,32 @@ include { qcFlow } from './nf-modules/subworkflow/qc'
 include { mappingFlow } from './nf-modules/subworkflow/mapping' 
 // Spike-in and Sorting BAM files
 include { sortingFlow } from './nf-modules/subworkflow/sorting' 
+include { markdupFlow } from './nf-modules/subworkflow/markdup' 
 
 workflow {
-    // QC : check design and factqc
-    qcFlow(chDesign, chSplan, rawReads )
-    chFastqcVersion = qcFlow.out.version
-    chFastqcVersion.view()    
+    main:
+      // QC : check design and factqc
+      qcFlow(chDesign, chSplan, rawReads )
+      chFastqcVersion = qcFlow.out.version
+      chFastqcVersion.view()    
+      chFastqcMqc = qcFlow.out.mqc
 
-    // Alignment on reference genome
-    mappingFlow(rawReads, chBwaIndex, chBt2Index, chStarIndex)
-    chAlignReads = mappingFlow.out.bam
-    chMappingMqc = mappingFlow.out.mqc
-    chMappingMqc.view()
+      // Alignment on reference genome
+      mappingFlow(rawReads, chBwaIndex, chBt2Index, chStarIndex)
+      chAlignReads = mappingFlow.out.bam
+      chMappingMqc = mappingFlow.out.mqc
+      chMappingMqc.view()
 
-    // Spike-in and Sorting BAM files
-    sortingFlow(chAlignReads, useSpike)
+      if (params.inputBam){
+        chFastqcMqc = Channel.empty()
+        chMappingMqc = Channel.empty()
+      }
+
+      // Spike-in and Sorting BAM files
+      sortingFlow(chAlignReads, useSpike)
+      chStatsMqc = sortingFlow.out.statsMqc
+      chSamtoolsVersionBamSort = sortingFlow.out.version
+
+      markdupFlow(sortingFlow.out.sortBams)
 }
 
