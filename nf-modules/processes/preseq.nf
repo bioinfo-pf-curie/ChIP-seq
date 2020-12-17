@@ -16,8 +16,8 @@ process preseq {
   tuple val(prefix), path(bam)
 
   output:
-  path "*.ccurve.txt" 
-  path("v_preseq.txt")
+  path "*.ccurve.txt" , emit: stats 
+  path("v_preseq.txt"), emit: version
 
   script:
   defectMode = params.preseqDefect ? '-D' : ''
