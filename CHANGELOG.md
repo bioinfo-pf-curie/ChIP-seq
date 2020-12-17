@@ -3,6 +3,11 @@ version-1.0.4
 NEW FEATURES
 
    - update STAR to 2.7.6a
+   - add S. mikatae annotation for spikes
+
+BUG FIXES
+
+   - Fix bug when there are no blacklist regions
 
 ***********************************
 version-1.0.3

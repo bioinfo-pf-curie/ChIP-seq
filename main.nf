@@ -1051,7 +1051,7 @@ process bigWig {
 
   input:
   set val(prefix), file(filteredBams) from chBamsBigWig
-  file(BLbed) from chBlacklistBigWig.collect()
+  file(BLbed) from chBlacklistBigWig.collect().ifEmpty([])
 
   output:
   set val(prefix), file('*.bigwig') into chBigWig
@@ -1152,7 +1152,7 @@ if (useSpike){
  
     input:
     set val(prefix), file(filteredBams), val(normFactor) from chBigWigScaleFactor
-    file(BLbed) from chBlacklistBigWigSpike.collect()
+    file(BLbed) from chBlacklistBigWigSpike.collect().ifEmpty([])
 
     output:
     set val(prefix), file('*.bigwig') into chBigWigSF
@@ -1634,7 +1634,7 @@ process prepareAnnotation{
   script:
   prefix = bed.toString() - ~/(.bed)?$/
   """
-  awk -F"\t" -v win=${params.tssSize} 'BEGIN{OFS="\t"} \$6=="+"{s=\$2-win;e=\$2+win;if(s<0){s=0}; print \$1,s,e,\$4,\$5,\$6} \$6=="-"{print \$1,\$3-win,\$3+win,\$4,\$5,\$6}' ${bed} > ${prefix}_tss.bed
+  awk -F"\t" -v win=${params.tssSize} 'BEGIN{OFS="\t"} \$6=="+"{ref=\$2} \$6=="-"{ref=\$3} {s=ref-win;e=ref+win;if(s<0){s=0}; print \$1,s,e,\$4,\$5,\$6}' ${bed} > ${prefix}_tss.bed
   """
 }
     
