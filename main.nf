@@ -284,9 +284,7 @@ if (params.geneBed) {
     .ifEmpty {exit 1, "BED file ${geneBed} not found"}
     .set{chGeneBed}
 }else{
-  chGeneBedDeeptools = Channel.empty()
-  chGenePrepareAnnot = Channel.empty()
-  chGeneFeatCounts = Channel.empty()
+  chGeneBed = Channel.empty()
 }
 
 params.blacklist = genomeRef ? params.genomes[ genomeRef ].blacklist ?: false : false
@@ -295,9 +293,7 @@ if (params.blacklist) {
     .fromPath(params.blacklist, checkIfExists: true)
     .set {chBlacklist} 
 }else{
-  chBlacklistBigWig = Channel.empty()
-  chBlacklistBigWigSpike = Channel.empty()
-  chBlacklistCorrelation = Channel.empty()
+  chBlacklist = Channel.empty()
 }
 
 
@@ -582,23 +578,27 @@ workflow {
       /*
        * Separate sample BAMs and spike BAMs
       */
-      //chFlagstatMacs = Channel.empty()
-      //chFlagstatSpikes = Channel.empty()
-      //chFlagstat.choice( chFlagstatSpikes, chFlagstatMacs ) { it -> it[0] =~ 'spike' ? 0 : 1 }
+      chFlagstatMacs = Channel.empty()
+      chFlagstatSpikes = Channel.empty()
+      chFlagstatMacs = chFlagstat
+      chFlagstat 
+        .branch { prefix: it[0] =~ 'spike'}
+        .set { chFlagstatSpikes }
 
       chBamsChip = Channel.empty()
       chBamsSpikes = Channel.empty() 
       chBamsChip = chBams
-       chBams
-        .branch { prefix: it[0] =~ 'spike'}
-        .set { chBamsSpikes } 
-  
-     // chBams.branch( chBamsSpikes, chBamsChip ) { it -> it[0] =~ 'spike' ? 0 : 1 }
+      chBams
+       .branch { prefix: it[0] =~ 'spike'}
+       .set { chBamsSpikes} 
+
+      chBamsSpikes.view()
+      chBamsChip.view()
 
       // Preparing all ChIP data for further analysis
       chBamsChip = chBamsChip.dump(tag:'cbams')
 
       // all ChIP analysis
-     bamsChipFlow(chBamsChip)
+     bamsChipFlow(chBamsChip, chBlacklist, chGeneBed)
 }
 

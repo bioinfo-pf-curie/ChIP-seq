@@ -5,9 +5,9 @@
 /* 
  * include requires tasks 
  */
-include { PPQT } from '../processes/ppqt' 
-// include { bigWig } from '../processes/bigWig'
-// include { deepToolsComputeMatrix } from '../processes/deepToolsComputeMatrix'
+include { PPQT } from '../processes/PPQT' 
+include { bigWig } from '../processes/bigWig'
+include { deepToolsComputeMatrix } from '../processes/deepToolsComputeMatrix'
 // include { deepToolsCorrelationQC } from '../processes/deepToolsCorrelationQC'
 // include { deepToolsFingerprint } from '../processes/deepToolsFingerprint'
 
@@ -24,10 +24,14 @@ workflow bamsChipFlow {
     // required inputs
     take:
      chBamsChip 
+     chBlacklist
+     chGeneBed
     // workflow implementation
     main:
 
       PPQT(chBamsChip, chPpqtCorHeader, chPpqtNSCHeader, chPpqtRSCHeader)
+      bigWig(chBamsChip, chBlacklist.collect())
+      deepToolsComputeMatrix(bigWig.out.bigWig, chGeneBed.collect()) 
 
     // emit:
       chPpqtOutMqc = PPQT.out.ppqtOutMqc
