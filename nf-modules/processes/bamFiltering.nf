@@ -19,7 +19,7 @@ process bamFiltering {
   output:
   tuple val(prefix), path("*filtered.{bam,bam.bai}"), emit: filteredBams
   tuple val(prefix), path("*filtered.flagstat")     , emit: filteredFlagstat
-  path "*filtered.{idxstats,stats}"
+  path "*filtered.{idxstats,stats}"                 , emit: stats
   path("v_samtools.txt")                            , emit: version
 
   script:

@@ -306,9 +306,9 @@ if (params.blacklist) {
  */
 
 //PPQT headers
-chPpqtCorHeader = file("$baseDir/assets/ppqt_cor_header.txt", checkIfExists: true)
-chPpqtNSCHeader = file("$baseDir/assets/ppqt_nsc_header.txt", checkIfExists: true)
-chPpqtRSCHeader = file("$baseDir/assets/ppqt_rsc_header.txt", checkIfExists: true)
+//chPpqtCorHeader = file("$baseDir/assets/ppqt_cor_header.txt", checkIfExists: true)
+//chPpqtNSCHeader = file("$baseDir/assets/ppqt_nsc_header.txt", checkIfExists: true)
+//chPpqtRSCHeader = file("$baseDir/assets/ppqt_rsc_header.txt", checkIfExists: true)
 
 //Peak Calling
 params.effGenomeSize = genomeRef ? params.genomes[ genomeRef ].effGenomeSize ?: false : false
@@ -549,6 +549,7 @@ include { mappingFlow } from './nf-modules/subworkflow/mapping'
 // Spike-in and Sorting BAM files
 include { sortingFlow } from './nf-modules/subworkflow/sorting' 
 include { markdupFlow } from './nf-modules/subworkflow/markdup' 
+include { bamsChipFlow } from './nf-modules/subworkflow/bamschip' 
 
 workflow {
     main:
@@ -575,5 +576,29 @@ workflow {
       chSamtoolsVersionBamSort = sortingFlow.out.version
 
       markdupFlow(sortingFlow.out.sortBams)
+      chBams = markdupFlow.out.chFilteredBams
+      chFlagstat = markdupFlow.out.chFilteredFlagstat
+      //chBams.view()
+      /*
+       * Separate sample BAMs and spike BAMs
+      */
+      //chFlagstatMacs = Channel.empty()
+      //chFlagstatSpikes = Channel.empty()
+      //chFlagstat.choice( chFlagstatSpikes, chFlagstatMacs ) { it -> it[0] =~ 'spike' ? 0 : 1 }
+
+      chBamsChip = Channel.empty()
+      chBamsSpikes = Channel.empty() 
+      chBamsChip = chBams
+       chBams
+        .branch { prefix: it[0] =~ 'spike'}
+        .set { chBamsSpikes } 
+  
+     // chBams.branch( chBamsSpikes, chBamsChip ) { it -> it[0] =~ 'spike' ? 0 : 1 }
+
+      // Preparing all ChIP data for further analysis
+      chBamsChip = chBamsChip.dump(tag:'cbams')
+
+      // all ChIP analysis
+     bamsChipFlow(chBamsChip)
 }
 
