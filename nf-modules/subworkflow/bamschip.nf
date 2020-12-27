@@ -8,8 +8,8 @@
 include { PPQT } from '../processes/PPQT' 
 include { bigWig } from '../processes/bigWig'
 include { deepToolsComputeMatrix } from '../processes/deepToolsComputeMatrix'
-// include { deepToolsCorrelationQC } from '../processes/deepToolsCorrelationQC'
-// include { deepToolsFingerprint } from '../processes/deepToolsFingerprint'
+include { deepToolsCorrelationQC } from '../processes/deepToolsCorrelationQC'
+include { deepToolsFingerprint } from '../processes/deepToolsFingerprint'
 
 /***********************
  * Header and conf
@@ -32,6 +32,8 @@ workflow bamsChipFlow {
       PPQT(chBamsChip, chPpqtCorHeader, chPpqtNSCHeader, chPpqtRSCHeader)
       bigWig(chBamsChip, chBlacklist.collect())
       deepToolsComputeMatrix(bigWig.out.bigWig, chGeneBed.collect()) 
+      deepToolsCorrelationQC(chBamsChip.map{it[1][0]}.collect(), chBamsChip.map{it[1][1]}.collect(), chBamsChip.map{it[0]}.collect(), chBlacklist.ifEmpty([]))
+      deepToolsFingerprint(chBamsChip.map{it[1][0]}.collect(), chBamsChip.map{it[1][1]}.collect(), chBamsChip.map{it[0]}.collect())
 
     // emit:
       chPpqtOutMqc = PPQT.out.ppqtOutMqc
