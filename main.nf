@@ -546,6 +546,8 @@ include { mappingFlow } from './nf-modules/subworkflow/mapping'
 include { sortingFlow } from './nf-modules/subworkflow/sorting' 
 include { markdupFlow } from './nf-modules/subworkflow/markdup' 
 include { bamsChipFlow } from './nf-modules/subworkflow/bamschip' 
+// Peak calling
+include { peakCallingFlow } from './nf-modules/subworkflow/peakcalling' 
 
 workflow {
     main:
@@ -600,5 +602,16 @@ workflow {
 
       // all ChIP analysis
      bamsChipFlow(chBamsChip, chBlacklist, chGeneBed)
+     /*#########################################################################
+     /!\ From this point, 'design' is mandatory /!\
+###########################################################################*/
+
+    if (params.design){
+      /***********************
+       * Peak calling
+       */
+      peakCallingFlow(chBamsChip, chDesignControl, chNoInput, chFlagstatMacs, chPeakCountHeader, chFripScoreHeader, chPeakAnnotationHeader)
+    }
+
 }
 
