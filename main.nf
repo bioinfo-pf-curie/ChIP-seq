@@ -538,6 +538,7 @@ if (params.design){
   chDesign = Channel.empty()
 }
 
+// Workflows
 // QC : check design and factqc
 include { qcFlow } from './nf-modules/subworkflow/qc'
 // Alignment on reference genome
@@ -549,8 +550,19 @@ include { bamsChipFlow } from './nf-modules/subworkflow/bamschip'
 // Peak calling
 include { peakCallingFlow } from './nf-modules/subworkflow/peakcalling' 
 
+// Processes
+include { prepareAnnotation } from './nf-modules/processes/prepareAnnotation'
+include { featureCounts } from './nf-modules/processes/featureCounts'
+include { getSoftwareVersions } from './nf-modules/processes/getSoftwareVersions'
+include { workflowSummaryMqc } from './nf-modules/processes/workflowSummaryMqc'
+include { multiqc } from './nf-modules/processes/multiqc'
+include { outputDocumentation } from './nf-modules/processes/outputDocumentation'
+
 workflow {
     main:
+
+      chTSSFeatCounts = prepareAnnotation(chGeneBed.collect())
+
       // QC : check design and factqc
       qcFlow(chDesign, chSplan, rawReads )
       chFastqcVersion = qcFlow.out.version
@@ -577,9 +589,7 @@ workflow {
       chBams = markdupFlow.out.chFilteredBams
       chFlagstat = markdupFlow.out.chFilteredFlagstat
       //chBams.view()
-      /*
-       * Separate sample BAMs and spike BAMs
-      */
+      // Separate sample BAMs and spike BAMs
       chFlagstatMacs = Channel.empty()
       chFlagstatSpikes = Channel.empty()
       chFlagstatMacs = chFlagstat
@@ -601,17 +611,97 @@ workflow {
       chBamsChip = chBamsChip.dump(tag:'cbams')
 
       // all ChIP analysis
-     bamsChipFlow(chBamsChip, chBlacklist, chGeneBed)
-     /*#########################################################################
-     /!\ From this point, 'design' is mandatory /!\
-###########################################################################*/
+      bamsChipFlow(chBamsChip, chBlacklist, chGeneBed)
+      // /!\ From this point, 'design' is mandatory /!\
+      if (params.design){
+        // Peak calling
+        peakCallingFlow(chBamsChip, chDesignControl, chNoInput, chFlagstatMacs, chPeakCountHeader, chFripScoreHeader, chPeakAnnotationHeader)
+      }
+ 
+      // Feature counts
+      featureCounts( chBamsChip.map{items->items[1][0]}.collect(), chGeneBed.concat(chTSSFeatCounts) ) 
+      chFeaturecountsVersion = featureCounts.out.version
+      
+      // MultiQC
+      //getSoftwareVersions( ) 
+      //workflowSummaryMqc( )
+      //multiqc( )
 
-    if (params.design){
-      /***********************
-       * Peak calling
-       */
-      peakCallingFlow(chBamsChip, chDesignControl, chNoInput, chFlagstatMacs, chPeakCountHeader, chFripScoreHeader, chPeakAnnotationHeader)
+      // subroutines
+      //outputDocumentation( )
+}
+
+/* Creates a file at the end of workflow execution */
+workflow.onComplete {
+
+    /*pipeline_report.html*/
+
+    def report_fields = [:]
+    report_fields['pipeline'] = workflow.manifest.name
+    report_fields['version'] = workflow.manifest.version
+    report_fields['runName'] = customRunName ?: workflow.runName
+    report_fields['success'] = workflow.success
+    report_fields['dateComplete'] = workflow.complete
+    report_fields['duration'] = workflow.duration
+    report_fields['exitStatus'] = workflow.exitStatus
+    report_fields['errorMessage'] = (workflow.errorMessage ?: 'None')
+    report_fields['errorReport'] = (workflow.errorReport ?: 'None')
+    report_fields['commandLine'] = workflow.commandLine
+    report_fields['projectDir'] = workflow.projectDir
+    report_fields['summary'] = summary
+    report_fields['summary']['Date Started'] = workflow.start
+    report_fields['summary']['Date Completed'] = workflow.complete
+    report_fields['summary']['Pipeline script file path'] = workflow.scriptFile
+    report_fields['summary']['Pipeline script hash ID'] = workflow.scriptId
+    if(workflow.repository) report_fields['summary']['Pipeline repository Git URL'] = workflow.repository
+    if(workflow.commitId) report_fields['summary']['Pipeline repository Git Commit'] = workflow.commitId
+    if(workflow.revision) report_fields['summary']['Pipeline Git branch/tag'] = workflow.revision
+
+    report_fields['spikes_poor_alignment'] = spikes_poor_alignment
+
+    // Render the TXT template
+    def engine = new groovy.text.GStringTemplateEngine()
+    def tf = new File("$baseDir/assets/onCompleteTemplate.txt")
+    def txt_template = engine.createTemplate(tf).make(report_fields)
+    def report_txt = txt_template.toString()
+
+    // Render the HTML template
+    def hf = new File("$baseDir/assets/onCompleteTemplate.html")
+    def html_template = engine.createTemplate(hf).make(report_fields)
+    def report_html = html_template.toString()
+
+    // Write summary e-mail HTML to a file
+    def output_d = new File( "${params.summaryDir}/" )
+    if( !output_d.exists() ) {
+      output_d.mkdirs()
+    }
+    def output_hf = new File( output_d, "pipelineReport.html" )
+    output_hf.withWriter { w -> w << report_html }
+    def output_tf = new File( output_d, "pipelineReport.txt" )
+    output_tf.withWriter { w -> w << report_txt }
+    /*oncomplete file*/
+    File woc = new File("${params.outDir}/workflowOnComplete.txt")
+    Map endSummary = [:]
+    endSummary['Completed on'] = workflow.complete
+    endSummary['Duration']     = workflow.duration
+    endSummary['Success']      = workflow.success
+    endSummary['exit status']  = workflow.exitStatus
+    endSummary['Error report'] = workflow.errorReport ?: '-'
+
+    String endWfSummary = endSummary.collect { k,v -> "${k.padRight(30, '.')}: $v" }.join("\n")
+    println endWfSummary
+    String execInfo = "Execution summary\n${endWfSummary}\n"
+    woc.write(execInfo)
+
+    if(spikes_poor_alignment.size() > 0){
+      log.info "[chIP-seq] WARNING - ${spikes_poor_alignment.size()} samples skipped due to poor alignment scores!"
     }
 
-}
+
+    if(workflow.success){
+      log.info "[ChIP-seq] Pipeline Complete"
+    }else{
+      log.info "[ChIP-seq] FAILED: $workflow.runName"
+    }
+ }
 
