@@ -316,18 +316,6 @@ if (!params.effGenomeSize) {
             "================================================================"
 }
 
-Channel
-  .fromPath("$baseDir/assets/peak_count_header.txt")
-  .set { chPeakCountHeader }
-
-Channel
-  .fromPath("$baseDir/assets/frip_score_header.txt")
-  .set { chFripScoreHeader }
-
-Channel
-  .fromPath("$baseDir/assets/peak_annotation_header.txt")
-  .set{ chPeakAnnotationHeader }
-
 //Stage config files
 Channel
   .fromPath(params.multiqcConfig, checkIfExists: true)
@@ -514,13 +502,14 @@ if (!params.design) {
 }
 
 if (params.design){
-  chDesignControl = Channel.empty()
   Channel
     .fromPath(params.design)
     .ifEmpty { exit 1, "Design file not found: ${params.design}" }
-    .set { chDesign }
+    .set { chDesignCheck }
 
-  chDesignControl
+  chDesignControl = chDesignCheck
+
+  chDesignControl 
     .splitCsv(header:true)
     .map { row ->
       if(row.CONTROLID==""){row.CONTROLID='NO_INPUT'}
@@ -535,7 +524,7 @@ if (params.design){
     .set{ chNoInput }
 }else{
   chDesignControl = Channel.empty()
-  chDesign = Channel.empty()
+  chDesignCheck = Channel.empty()
 }
 
 // Workflows
@@ -564,13 +553,22 @@ workflow {
       chTSSFeatCounts = prepareAnnotation(chGeneBed.collect())
 
       // QC : check design and factqc
-      qcFlow(chDesign, chSplan, rawReads )
+      qcFlow(
+        chDesignCheck,
+        chSplan,
+        rawReads
+      )
       chFastqcVersion = qcFlow.out.version
       chFastqcVersion.view()    
       chFastqcMqc = qcFlow.out.mqc
 
       // Alignment on reference genome
-      mappingFlow(rawReads, chBwaIndex, chBt2Index, chStarIndex)
+      mappingFlow(
+	rawReads,
+	chBwaIndex,
+	chBt2Index,
+	chStarIndex
+      )
       chAlignReads = mappingFlow.out.bam
       chMappingMqc = mappingFlow.out.mqc
       chMappingMqc.view()
@@ -585,7 +583,9 @@ workflow {
       chStatsMqc = sortingFlow.out.statsMqc
       chSamtoolsVersionBamSort = sortingFlow.out.version
 
-      markdupFlow(sortingFlow.out.sortBams)
+      markdupFlow(
+	sortingFlow.out.sortBams
+      )
       chBams = markdupFlow.out.chFilteredBams
       chFlagstat = markdupFlow.out.chFilteredFlagstat
       //chBams.view()
@@ -611,11 +611,20 @@ workflow {
       chBamsChip = chBamsChip.dump(tag:'cbams')
 
       // all ChIP analysis
-      bamsChipFlow(chBamsChip, chBlacklist, chGeneBed)
+      bamsChipFlow(
+	chBamsChip,
+	chBlacklist,
+	chGeneBed
+      )
       // /!\ From this point, 'design' is mandatory /!\
       if (params.design){
         // Peak calling
-        peakCallingFlow(chBamsChip, chDesignControl, chNoInput, chFlagstatMacs, chPeakCountHeader, chFripScoreHeader, chPeakAnnotationHeader)
+        peakCallingFlow(
+	  chBamsChip,
+	  chDesignControl,
+	  chNoInput,
+	  chFlagstatMacs
+        )
       }
  
       // Feature counts
@@ -689,7 +698,8 @@ workflow.onComplete {
     endSummary['Error report'] = workflow.errorReport ?: '-'
 
     String endWfSummary = endSummary.collect { k,v -> "${k.padRight(30, '.')}: $v" }.join("\n")
-    println endWfSummary
+    //println endWfSummary
+    view(endWfSummary)
     String execInfo = "Execution summary\n${endWfSummary}\n"
     woc.write(execInfo)
 
