@@ -142,14 +142,6 @@ else{
 
 // Chromosome size file
 params.chrsize = genomeRef ? params.genomes[ genomeRef ].chrsize ?: false : false
-if ( params.chrsize ){
-  Channel
-    .fromPath(params.chrsize, checkIfExists: true)
-    .set{chChromSize}
-}
-else{
-  exit 1, "Chromosome size file not found: ${params.chrsize}"
-}
 
 // spike
 if (params.spike || (params.spikeFasta && (params.spikeBwaIndex || params.spikeBt2Index || params.spikeStarIndex))){
@@ -268,14 +260,6 @@ if (params.spikeStarIndex){
  */
 
 params.gtf = genomeRef ? params.genomes[ genomeRef ].gtf ?: false : false
-if (params.gtf) {
-  Channel
-    .fromPath(params.gtf, checkIfExists: true)
-    .set{chGtf}
-}
-else {
-  exit 1, "GTF annotation file not specified!"
-}
 
 params.geneBed = genomeRef ? params.genomes[ genomeRef ].geneBed ?: false : false
 if (params.geneBed) {
@@ -617,15 +601,14 @@ workflow {
 	chGeneBed
       )
       // /!\ From this point, 'design' is mandatory /!\
-      if (params.design){
-        // Peak calling
-        peakCallingFlow(
-	  chBamsChip,
-	  chDesignControl,
-	  chNoInput,
-	  chFlagstatMacs
-        )
-      }
+
+      // Peak calling
+      peakCallingFlow(
+        chBamsChip,
+        chDesignControl,
+        chNoInput,
+        chFlagstatMacs
+      )
  
       // Feature counts
       featureCounts( chBamsChip.map{items->items[1][0]}.collect(), chGeneBed.concat(chTSSFeatCounts) ) 

@@ -7,9 +7,9 @@
  */
 include { sharpMACS2 } from '../processes/sharpMACS2' 
 include { broadMACS2 } from '../processes/broadMACS2'
-// include { veryBroadEpic2 } from '../processes/veryBroadEpic2'
-// include { peakAnnoHomer } from '../processes/peakAnnoHomer'
-// include { peakQC } from '../processes/peakQC'
+include { veryBroadEpic2 } from '../processes/veryBroadEpic2'
+include { peakAnnoHomer } from '../processes/peakAnnoHomer'
+include { peakQC } from '../processes/peakQC'
 // include { IDR } from '../processes/IDR'
 
 Channel
@@ -23,6 +23,36 @@ Channel
 Channel
   .fromPath("$baseDir/assets/peak_annotation_header.txt")
   .set{ chPeakAnnotationHeader }
+
+// Chromosome size file
+if ( params.chrsize ){
+  Channel
+    .fromPath(params.chrsize, checkIfExists: true)
+    .set{chChromSize}
+}
+else{
+  exit 1, "Chromosome size file not found: ${params.chrsize}"
+}
+
+// Annotations
+if (params.gtf) {
+  Channel
+    .fromPath(params.gtf, checkIfExists: true)
+    .set{chGtfHomer}
+}
+else {
+  exit 1, "GTF annotation file not specified!"
+}
+
+// Fasta file
+if ( params.fasta ){
+  Channel
+    .fromPath(params.fasta, checkIfExists: true)
+    .set{chFastaHomer}
+}
+else{
+  exit 1, "Fasta file not found: ${params.fasta}"
+}
 
 workflow peakCallingFlow {
     // required inputs
@@ -39,28 +69,22 @@ workflow peakCallingFlow {
        * Prepare channels
        */
       if (params.design){
-      chBamsChip 
-       .join(chFlagstatMacs)
-       .combine(chNoInput.concat(chBamsChip))
-       .set { chBamsChip }  
+        chBamsChip 
+         .join(chFlagstatMacs)
+         .combine(chNoInput.concat(chBamsChip))
+         .set { chBamsChip }  
 
-      chDesignControl
-       .combine(chBamsChip)
-       .filter { it[0] == it[5] && it[1] == it[8] }
-       .map { it ->  it[2..-1] }
-       .dump(tag:'peakCall')
-       .set { chGroupBamMacs }  
-      
-     //  chGroupBamMacs
-      //  .filter { it[2] == 'very-broad' }
-      //  .dump(tag:'peakCall')
-      //  .set { chGroupBamMacsVeryBroad }
-    }
-   // else{
-    //  chGroupBamMacsSharp=Channel.empty()
-    //  chGroupBamMacsBroad=Channel.empty()
-    //  chGroupBamMacsVeryBroad=Channel.empty()
-    //}
+        chDesignControl
+         .combine(chBamsChip)
+         .filter { it[0] == it[5] && it[1] == it[8] }
+         .map { it ->  it[2..-1] }
+         .dump(tag:'peakCall')
+         .set { chGroupBamMacs }  
+       }else{
+         chGroupBamMacs=Channel.empty()
+       }
+
+       
  
       /*
        * MACS2 - sharp mode
@@ -81,6 +105,41 @@ workflow peakCallingFlow {
         chPeakCountHeader.collect(),
         chFripScoreHeader.collect()
       )
+      
+      /*
+       * EPIC2 - very broad
+       */
+
+      veryBroadEpic2(
+        chGroupBamMacs.filter { it[2] == 'very-broad' },
+        chPeakCountHeader.collect(),
+        chFripScoreHeader.collect(),
+	chChromSize.collect()
+      ) 
+
+      // Join the results of all peaks callers
+      sharpMACS2.out.peaksMacsSharp  
+        .mix(broadMACS2.out.peaksMacsBroad, veryBroadEpic2.out.peaksEpic)
+        .set{ chPeaks }
+
+      /*
+       * Peaks Annotation
+       */
+
+      peakAnnoHomer(
+         chPeaks,
+         chGtfHomer.collect(),
+         chFastaHomer.collect()
+       )
+
+      /*
+       * Peak calling & annotation QC
+       */
+       peakQC(
+         chPeaks.collect{ it[-1] },
+         peakAnnoHomer.out.homerMqc.collect(),
+         chPeakAnnotationHeader
+       )
 
 
     emit:
