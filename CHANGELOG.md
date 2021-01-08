@@ -1,3 +1,10 @@
+version-1.0.5
+
+SIGNIFICANT USER-VISIBLE CHANGES
+
+   - Calculate SF over 1M reads instead of 10M for bigwig
+
+************************************
 version-1.0.4
 
 NEW FEATURES
@@ -33,9 +40,9 @@ version-1.0.2
 
 SIGNIFICANT USER-VISIBLE CHANGES
 
-  o Report high/low quality reads instead of unique/multi reads
-  o Update doc
-  o Use paired and single reads in duplicates level calculation
+  - Report high/low quality reads instead of unique/multi reads
+  - Update doc
+  - Use paired and single reads in duplicates level calculation
 
 BUG FIXES
 
