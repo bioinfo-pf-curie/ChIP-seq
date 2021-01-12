@@ -520,6 +520,7 @@ include { mappingFlow } from './nf-modules/subworkflow/mapping'
 include { sortingFlow } from './nf-modules/subworkflow/sorting' 
 include { markdupFlow } from './nf-modules/subworkflow/markdup' 
 include { bamsChipFlow } from './nf-modules/subworkflow/bamschip' 
+include { bamsSpikesFlow } from './nf-modules/subworkflow/bamsspikes' 
 // Peak calling
 include { peakCallingFlow } from './nf-modules/subworkflow/peakcalling' 
 
@@ -600,6 +601,16 @@ workflow {
 	chBlacklist,
 	chGeneBed
       )
+
+      if (useSpike){
+        // all Spikes analysis
+        bamsSpikesFlow(
+          chBamsSpikes
+          chBamsChip,
+          chBlacklist
+        )
+      }
+
       // /!\ From this point, 'design' is mandatory /!\
 
       // Peak calling

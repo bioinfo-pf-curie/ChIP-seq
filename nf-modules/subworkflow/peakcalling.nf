@@ -10,7 +10,7 @@ include { broadMACS2 } from '../processes/broadMACS2'
 include { veryBroadEpic2 } from '../processes/veryBroadEpic2'
 include { peakAnnoHomer } from '../processes/peakAnnoHomer'
 include { peakQC } from '../processes/peakQC'
-// include { IDR } from '../processes/IDR'
+include { IDR } from '../processes/IDR'
 
 Channel
   .fromPath("$baseDir/assets/peak_count_header.txt")
@@ -140,10 +140,28 @@ workflow peakCallingFlow {
          peakAnnoHomer.out.homerMqc.collect(),
          chPeakAnnotationHeader
        )
+      
+      /**********************************
+       * Per Group Analysis
+       */
+
+      /*
+       * Irreproducible Discovery Rate
+       */
+       chPeaks 
+         .map { it -> [it[0],it[4]] }
+         .groupTuple()
+         .dump (tag:'rep')
+         .set{ chPeaksPerGroup }
+ 
+       IDR(
+         chPeaksPerGroup 
+       )
 
 
     emit:
 
-      version = broadMACS2.out.version // channel: [ path("v_macs2.txt") ]
+      macs2VersionMacs2Broad = broadMACS2.out.version // channel: [ path("v_macs2.txt") ]
+      idrVersion = IDR.out.version // channel: [ path("v_idr.txt") ]
 }
 
