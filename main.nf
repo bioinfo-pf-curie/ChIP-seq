@@ -285,11 +285,6 @@ if (params.blacklist) {
  * Header and conf
  */
 
-//PPQT headers
-//chPpqtCorHeader = file("$baseDir/assets/ppqt_cor_header.txt", checkIfExists: true)
-//chPpqtNSCHeader = file("$baseDir/assets/ppqt_nsc_header.txt", checkIfExists: true)
-//chPpqtRSCHeader = file("$baseDir/assets/ppqt_rsc_header.txt", checkIfExists: true)
-
 //Peak Calling
 params.effGenomeSize = genomeRef ? params.genomes[ genomeRef ].effGenomeSize ?: false : false
 if (!params.effGenomeSize) {
@@ -537,6 +532,12 @@ workflow {
 
       chTSSFeatCounts = prepareAnnotation(chGeneBed.collect())
 
+      // subroutines
+      outputDocumentation(
+        chOutputDocs,
+        chOutputDocsImages
+      )
+
       // QC : check design and factqc
       qcFlow(
         chDesignCheck,
@@ -622,7 +623,10 @@ workflow {
       )
  
       // Feature counts
-      featureCounts( chBamsChip.map{items->items[1][0]}.collect(), chGeneBed.concat(chTSSFeatCounts) ) 
+      featureCounts(
+        chBamsChip.map{items->items[1][0]}.collect(),
+        chGeneBed.concat(chTSSFeatCounts)
+      ) 
       chFeaturecountsVersion = featureCounts.out.version
       
       // MultiQC
@@ -630,8 +634,6 @@ workflow {
       //workflowSummaryMqc( )
       //multiqc( )
 
-      // subroutines
-      //outputDocumentation( )
 }
 
 /* Creates a file at the end of workflow execution */
