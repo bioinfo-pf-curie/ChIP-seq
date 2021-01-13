@@ -35,9 +35,10 @@ workflow bamsChipFlow {
       deepToolsCorrelationQC(chBamsChip.map{it[1][0]}.collect(), chBamsChip.map{it[1][1]}.collect(), chBamsChip.map{it[0]}.collect(), chBlacklist.ifEmpty([]))
       deepToolsFingerprint(chBamsChip.map{it[1][0]}.collect(), chBamsChip.map{it[1][1]}.collect(), chBamsChip.map{it[0]}.collect())
 
-    // emit:
+     emit:
       chPpqtOutMqc = PPQT.out.ppqtOutMqc
       chPpqtCsvMqc = PPQT.out.ppqtCsvMqc
       chPPQTVersion = PPQT.out.version
+      chDeeptoolsVersion = bigWig.out.version
 }
 

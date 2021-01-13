@@ -161,7 +161,9 @@ workflow peakCallingFlow {
 
     emit:
 
-      macs2VersionMacs2Broad = broadMACS2.out.version // channel: [ path("v_macs2.txt") ]
-      idrVersion = IDR.out.version // channel: [ path("v_idr.txt") ]
+      chMacs2VersionMacs2Broad = broadMACS2.out.version // channel: [ path("v_macs2.txt") ]
+      chMacs2VersionMacs2Sharp = sharpMACS2.out.version // channel: [ path("v_macs2.txt") ]
+      chEpic2Version = veryBroadEpic2.out.version // channel: [ path("v_epic2.txt") ]
+      chIdrVersion = IDR.out.version // channel: [ path("v_idr.txt") ]
 }
 

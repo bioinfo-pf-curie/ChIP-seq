@@ -567,7 +567,6 @@ workflow {
       // Spike-in and Sorting BAM files
       sortingFlow(chAlignReads, useSpike)
       chStatsMqc = sortingFlow.out.statsMqc
-      chSamtoolsVersionBamSort = sortingFlow.out.version
 
       markdupFlow(
 	sortingFlow.out.sortBams
@@ -627,10 +626,23 @@ workflow {
         chBamsChip.map{items->items[1][0]}.collect(),
         chGeneBed.concat(chTSSFeatCounts)
       ) 
-      chFeaturecountsVersion = featureCounts.out.version
       
       // MultiQC
-      //getSoftwareVersions( ) 
+      getSoftwareVersions(
+        qcFlow.out.version.first().ifEmpty([]),
+        mappingFlow.out.chBwaVersion.first().ifEmpty([]),
+        mappingFlow.out.chBowtie2Version.first().ifEmpty([]),
+        mappingFlow.out.chStarVersion.first().ifEmpty([]),
+        sortingFlow.out.chSamtoolsVersionBamSort.concat(markdupFlow.out.chSamtoolsVersionBamFiltering).first().ifEmpty([]),
+        markdupFlow.out.chPicardVersion.first().ifEmpty([]),
+        peakCallingFlow.out.chMacs2VersionMacs2Sharp.concat(peakCallingFlow.out.chMacs2VersionMacs2Broad).first().ifEmpty([]),
+        peakCallingFlow.out.chEpic2Version.first().ifEmpty([]),
+        markdupFlow.out.chPreseqVersion.first().ifEmpty([]),
+        peakCallingFlow.out.chIdrVersion.first().ifEmpty([]),
+        bamsChipFlow.out.chPPQTVersion.first().ifEmpty([]),
+        bamsChipFlow.out.chDeeptoolsVersion.first().ifEmpty([]),
+        featureCounts.out.version.first().ifEmpty([])
+      ) 
       //workflowSummaryMqc( )
       //multiqc( )
 

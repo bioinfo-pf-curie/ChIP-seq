@@ -57,6 +57,6 @@ workflow sortingFlow {
       chMappingSpikeMqc                 // channel: [ path("*.log") ]
       sortBams = bamSort.out.sortBams // channel: [ val(prefix), path("*sorted.{bam,bam.bai}") ]
       statsMqc = bamSort.out.statMqc  // channel: [ tuple("*mqc") ]
-      version = bamSort.out.version // channel: [ tuple("v_samtools.txt") ]
+      chSamtoolsVersionBamSort = bamSort.out.version // channel: [ tuple("v_samtools.txt") ]
 }
 
