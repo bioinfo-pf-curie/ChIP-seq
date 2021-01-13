@@ -161,9 +161,15 @@ workflow peakCallingFlow {
 
     emit:
 
-      chMacs2VersionMacs2Broad = broadMACS2.out.version // channel: [ path("v_macs2.txt") ]
-      chMacs2VersionMacs2Sharp = sharpMACS2.out.version // channel: [ path("v_macs2.txt") ]
-      chEpic2Version = veryBroadEpic2.out.version // channel: [ path("v_epic2.txt") ]
-      chIdrVersion = IDR.out.version // channel: [ path("v_idr.txt") ]
+      chMacs2VersionMacs2Broad = broadMACS2.out.version  // channel: [ path("v_macs2.txt") ]
+      chMacs2VersionMacs2Sharp = sharpMACS2.out.version  // channel: [ path("v_macs2.txt") ]
+      chEpic2Version = veryBroadEpic2.out.version        // channel: [ path("v_epic2.txt") ]
+      chIdrVersion = IDR.out.version                     // channel: [ path("v_idr.txt") ]
+      chMacsOutputSharp = sharpMACS2.out.macsOutputSharp // channel: [ path("*.xls") ]
+      chMacsCountsSharp = sharpMACS2.out.macsCountsSharp // channel: [ path("*_mqc.tsv") ]
+      chMacsOutputBroad = broadMACS2.out.macsOutputBroad // channel: [ path("*.xls") ]
+      chMacsCountsBroad = broadMACS2.out.macsCountsBroad // channel: [ path("*_mqc.tsv") ]
+      chMacsCountsVbroad = veryBroadEpic2.out.macsCountsVbroad  // channel: [ path("v_idr.txt") ]
+      chPeakMqc = peakQC.out.peakMqc //  channel: [ path "*.tsv" ] 
 }
 

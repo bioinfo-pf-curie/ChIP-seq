@@ -29,16 +29,43 @@ workflow bamsChipFlow {
     // workflow implementation
     main:
 
-      PPQT(chBamsChip, chPpqtCorHeader, chPpqtNSCHeader, chPpqtRSCHeader)
-      bigWig(chBamsChip, chBlacklist.collect())
-      deepToolsComputeMatrix(bigWig.out.bigWig, chGeneBed.collect()) 
-      deepToolsCorrelationQC(chBamsChip.map{it[1][0]}.collect(), chBamsChip.map{it[1][1]}.collect(), chBamsChip.map{it[0]}.collect(), chBlacklist.ifEmpty([]))
-      deepToolsFingerprint(chBamsChip.map{it[1][0]}.collect(), chBamsChip.map{it[1][1]}.collect(), chBamsChip.map{it[0]}.collect())
+      PPQT(
+        chBamsChip,
+        chPpqtCorHeader,
+        chPpqtNSCHeader,
+        chPpqtRSCHeader
+      )
+
+      bigWig(
+        chBamsChip,
+        chBlacklist.collect()
+      )
+
+      deepToolsComputeMatrix(
+        bigWig.out.bigWig,
+        chGeneBed.collect()
+      ) 
+
+      deepToolsCorrelationQC(
+        chBamsChip.map{it[1][0]}.collect(),
+        chBamsChip.map{it[1][1]}.collect(), 
+        chBamsChip.map{it[0]}.collect(),
+        chBlacklist.ifEmpty([])
+      )
+
+      deepToolsFingerprint(
+        chBamsChip.map{it[1][0]}.collect(),
+        chBamsChip.map{it[1][1]}.collect(),
+        chBamsChip.map{it[0]}.collect()
+      )
 
      emit:
       chPpqtOutMqc = PPQT.out.ppqtOutMqc
       chPpqtCsvMqc = PPQT.out.ppqtCsvMqc
       chPPQTVersion = PPQT.out.version
       chDeeptoolsVersion = bigWig.out.version
+      chDeeptoolsSingleMqc = deepToolsComputeMatrix.out.deeptoolsSingleMqc
+      chDeeptoolsCorrelMqc = deepToolsCorrelationQC.out.correlMqc
+      chDeeptoolsFingerprintMqc = deepToolsFingerprint.out.fingerprintMqc
 }
 

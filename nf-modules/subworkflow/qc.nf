@@ -19,7 +19,7 @@ workflow qcFlow {
       checkDesign(design, samplePlan)
       fastQC(reads)
     emit:
-      mqc = fastQC.out.mqc           // channel: [ path *_fastqc.{zip,html} ]
+      chFastqcMqc = fastQC.out.mqc   // channel: [ path *_fastqc.{zip,html} ]
       version = fastQC.out.version   // channel: [ path v_fastqc.txt ]
 }
 

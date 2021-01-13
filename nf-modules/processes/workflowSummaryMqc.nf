@@ -1,6 +1,11 @@
+
 process workflowSummaryMqc {
+  executor = 'local'
   when:
   !params.skipMultiQC
+
+  input:
+  val(summary)
 
   output:
   path 'workflow_summary_mqc.yaml' 

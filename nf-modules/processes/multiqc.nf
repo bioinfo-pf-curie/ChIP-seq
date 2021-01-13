@@ -8,6 +8,7 @@ process multiqc {
   !params.skipMultiQC
 
   input:
+  val customRunName 
   path splan 
   path multiqcConfig 
   path design 
@@ -39,7 +40,7 @@ process multiqc {
 
   script:
   rtitle = customRunName ? "--title \"$customRunName\"" : ''
-  rpathname = customRunName ? "--pathname " + customRunName + "_chipseq_report" : "--pathname chipseq_report"
+  rfilename = customRunName ? "--filename " + customRunName + "_chipseq_report" : "--filename chipseq_report"
   metadataOpts = params.metadata ? "--metadata ${metadata}" : ""
   isPE = params.singleEnd ? "" : "-p"
   designOpts= params.design ? "-d ${params.design}" : ""

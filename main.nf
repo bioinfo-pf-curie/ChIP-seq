@@ -545,8 +545,6 @@ workflow {
         rawReads
       )
       chFastqcVersion = qcFlow.out.version
-      chFastqcVersion.view()    
-      chFastqcMqc = qcFlow.out.mqc
 
       // Alignment on reference genome
       mappingFlow(
@@ -555,25 +553,23 @@ workflow {
 	chBt2Index,
 	chStarIndex
       )
-      chAlignReads = mappingFlow.out.bam
-      chMappingMqc = mappingFlow.out.mqc
-      chMappingMqc.view()
 
       if (params.inputBam){
-        chFastqcMqc = Channel.empty()
-        chMappingMqc = Channel.empty()
+        qcFlow.out.chFastqcMqc = Channel.empty()
+        mappingFlow.out.chMappingMqc = Channel.empty()
       }
 
       // Spike-in and Sorting BAM files
-      sortingFlow(chAlignReads, useSpike)
-      chStatsMqc = sortingFlow.out.statsMqc
+      sortingFlow(
+        mappingFlow.out.chAlignReads,
+        useSpike
+      )
 
       markdupFlow(
 	sortingFlow.out.sortBams
       )
       chBams = markdupFlow.out.chFilteredBams
       chFlagstat = markdupFlow.out.chFilteredFlagstat
-      //chBams.view()
       // Separate sample BAMs and spike BAMs
       chFlagstatMacs = Channel.empty()
       chFlagstatSpikes = Channel.empty()
@@ -589,8 +585,6 @@ workflow {
        .branch { prefix: it[0] =~ 'spike'}
        .set { chBamsSpikes} 
 
-      chBamsSpikes.view()
-      chBamsChip.view()
 
       // Preparing all ChIP data for further analysis
       chBamsChip = chBamsChip.dump(tag:'cbams')
@@ -643,9 +637,35 @@ workflow {
         bamsChipFlow.out.chDeeptoolsVersion.first().ifEmpty([]),
         featureCounts.out.version.first().ifEmpty([])
       ) 
-      //workflowSummaryMqc( )
-      //multiqc( )
+   
+      workflowSummaryMqc(summary) 
 
+      multiqc(
+        customRunName, 
+        chSplan.collect(),
+        chMultiqcConfig, 
+        chDesignCheck.collect().ifEmpty([]), 
+        chMetadata.ifEmpty([]),
+        getSoftwareVersions.out.collect().ifEmpty([]),
+        workflowSummaryMqc.out.collect(),   
+        qcFlow.out.chFastqcMqc.collect().ifEmpty([]),
+        mappingFlow.out.chMappingMqc.collect().ifEmpty([]),
+        sortingFlow.out.chMappingSpikeMqc.collect().ifEmpty([]),
+        markdupFlow.out.chMarkedPicstats.collect().ifEmpty([]), 
+        sortingFlow.out.chStatsMqc.collect().ifEmpty([]),
+        markdupFlow.out.chPreseqStats.collect().ifEmpty([]),
+        bamsChipFlow.out.chPpqtOutMqc.collect().ifEmpty([]), 
+        bamsChipFlow.out.chPpqtCsvMqc.collect().ifEmpty([]),
+        bamsChipFlow.out.chDeeptoolsSingleMqc.collect().ifEmpty([]),
+        bamsChipFlow.out.chDeeptoolsCorrelMqc.collect().ifEmpty([]),
+        bamsChipFlow.out.chDeeptoolsFingerprintMqc.collect().ifEmpty([]),
+        peakCallingFlow.out.chMacsOutputSharp.collect().ifEmpty([]), 
+        peakCallingFlow.out.chMacsOutputBroad.collect().ifEmpty([]),
+        peakCallingFlow.out.chMacsCountsSharp.collect().ifEmpty([]),
+        peakCallingFlow.out.chMacsCountsBroad.collect().ifEmpty([]),
+        peakCallingFlow.out.chMacsCountsVbroad.collect().ifEmpty([]),
+        peakCallingFlow.out.chPeakMqc.collect().ifEmpty([])
+      )
 }
 
 /* Creates a file at the end of workflow execution */
