@@ -530,60 +530,61 @@ include { outputDocumentation } from './nf-modules/processes/outputDocumentation
 workflow {
     main:
 
-      chTSSFeatCounts = prepareAnnotation(chGeneBed.collect())
+     chTSSFeatCounts = prepareAnnotation(chGeneBed.collect())
 
-      // subroutines
-      outputDocumentation(
-        chOutputDocs,
-        chOutputDocsImages
-      )
+     // subroutines
+     outputDocumentation(
+       chOutputDocs,
+       chOutputDocsImages
+     )
 
-      // QC : check design and factqc
-      qcFlow(
-        chDesignCheck,
-        chSplan,
-        rawReads
-      )
-      chFastqcVersion = qcFlow.out.version
+     // QC : check design and factqc
+     qcFlow(
+       chDesignCheck,
+       chSplan,
+       rawReads
+     )
+     chFastqcVersion = qcFlow.out.version
 
-      // Alignment on reference genome
-      mappingFlow(
-	rawReads,
-	chBwaIndex,
-	chBt2Index,
-	chStarIndex
-      )
+     // Alignment on reference genome
+     mappingFlow(
+       rawReads,
+       chBwaIndex,
+       chBt2Index,
+       chStarIndex
+     )
 
-      if (params.inputBam){
-        qcFlow.out.chFastqcMqc = Channel.empty()
-        mappingFlow.out.chMappingMqc = Channel.empty()
-      }
+     if (params.inputBam){
+       qcFlow.out.chFastqcMqc = Channel.empty()
+       mappingFlow.out.chMappingMqc = Channel.empty()
+     }
 
-      // Spike-in and Sorting BAM files
-      sortingFlow(
-        mappingFlow.out.chAlignReads,
-        useSpike
-      )
+     // Spike-in and Sorting BAM files
+     spikes_poor_alignment = []
+     sortingFlow(
+       mappingFlow.out.chAlignReads,
+       useSpike
+     )
 
-      markdupFlow(
-	sortingFlow.out.sortBams
-      )
-      chBams = markdupFlow.out.chFilteredBams
-      chFlagstat = markdupFlow.out.chFilteredFlagstat
-      // Separate sample BAMs and spike BAMs
-      chFlagstatMacs = Channel.empty()
-      chFlagstatSpikes = Channel.empty()
-      chFlagstatMacs = chFlagstat
-      chFlagstat 
-        .branch { prefix: it[0] =~ 'spike'}
-        .set { chFlagstatSpikes }
-
-      chBamsChip = Channel.empty()
-      chBamsSpikes = Channel.empty() 
-      chBamsChip = chBams
-      chBams
+     markdupFlow(
+       sortingFlow.out.sortBams
+     )
+     chBams = markdupFlow.out.chFilteredBams
+     chFlagstat = markdupFlow.out.chFilteredFlagstat
+     // Separate sample BAMs and spike BAMs
+     chFlagstatMacs = Channel.empty()
+     chFlagstatSpikes = Channel.empty()
+     chFlagstatMacs = chFlagstat
+     chFlagstat 
        .branch { prefix: it[0] =~ 'spike'}
-       .set { chBamsSpikes} 
+       .set { chFlagstatSpikes }
+
+     chBamsChip = Channel.empty()
+     chBamsSpikes = Channel.empty() 
+     chBamsChip = chBams
+     chBams
+      .branch { prefix: it[0] =~ 'spike'}
+      .set { chBamsSpikes} 
 
 
       // Preparing all ChIP data for further analysis
@@ -731,7 +732,8 @@ workflow.onComplete {
     String execInfo = "Execution summary\n${endWfSummary}\n"
     woc.write(execInfo)
 
-    if(spikes_poor_alignment.size() > 0){
+    //if(spikes_poor_alignment.size() > 0){
+    if(spikes_poor_alignment){
       log.info "[chIP-seq] WARNING - ${spikes_poor_alignment.size()} samples skipped due to poor alignment scores!"
     }
 

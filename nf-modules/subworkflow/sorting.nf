@@ -20,9 +20,12 @@ workflow sortingFlow {
       if (useSpike){
 
       /* Split and rebuild Channel to be sure of order between bams */
-      chAlignRef = Channel.create()
-      chAlignSpike = Channel.create()
-      chAlignReads.choice( chAlignSpike, chAlignRef ){ it -> it[1] =~ 'spike' ? 1 : 0 }
+      chAlignRef = Channel.empty() 
+      chAlignSpike = Channel.empty() 
+      chAlignRef = chAlignReads 
+      chAlignReads 
+       .branch { prefix: it[1] =~ 'spike' }
+       .set { chAlignSpike } 
 
       chCompAln = chAlignRef
        .join(chAlignSpike)
