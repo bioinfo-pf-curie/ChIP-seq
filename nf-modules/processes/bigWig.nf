@@ -31,7 +31,7 @@ process bigWig {
   """
   bamCoverage --version &> v_deeptools.txt
   nbreads=\$(samtools view -@ $task.cpus -F 0x100 -F 0x4 -F 0x800 -c ${filteredBams[0]})
-  sf=\$(echo "10000000 \$nbreads" | awk '{printf "%.2f", \$1/\$2}')
+  sf=\$(echo "1000000 \$nbreads" | awk '{print \$1/\$2}')
 
   bamCoverage -b ${filteredBams[0]} \\
               -o ${prefix}_norm.bigwig \\

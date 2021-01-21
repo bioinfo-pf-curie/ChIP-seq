@@ -37,7 +37,7 @@ workflow bamsSpikesFlow {
 
       bigWigSpikeNorm(
          chBigWigScaleFactor,
-         chBlacklist.collect()
+         chBlacklist.collect().ifEmpty([])
       ) 
 
      emit:

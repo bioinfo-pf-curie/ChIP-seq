@@ -38,7 +38,7 @@ workflow bamsChipFlow {
 
       bigWig(
         chBamsChip,
-        chBlacklist.collect()
+        chBlacklist.collect().ifEmpty([])
       )
 
       deepToolsComputeMatrix(
