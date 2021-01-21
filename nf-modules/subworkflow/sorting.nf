@@ -42,12 +42,14 @@ workflow sortingFlow {
        .map { row -> [row[0], row[2]]}
        .set { chSpikeCheckBams }
 
+      chMappingSpikeMqc = compareRefSpike.out.mappingSpikeMqc
       // concat spike and ref bams
       chRefBams = compareRefSpike.out.refBams
-      chMappingSpikeMqc = compareRefSpike.out.mappingSpikeMqc
+      chRefBams
        .concat(chSpikeCheckBams)
        .set {chAllBams}
       }else{
+        chAlignReads.view()
         chAllBams = chAlignReads
         chMappingSpikeMqc = Channel.empty()
       }
