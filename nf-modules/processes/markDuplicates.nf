@@ -19,8 +19,8 @@ process markDuplicates{
 
   output:
   tuple val(prefix), path("*marked.{bam,bam.bai}"), emit: bams
-  tuple val(prefix), path("*marked.flagstat") 
-  path "*marked.{idxstats,stats}" 
+  tuple val(prefix), path("*marked.flagstat")     , emit: markedFlagstat 
+  path "*marked.{idxstats,stats}"                 , emit: markedStats 
   path "*metrics.txt"                             , emit: picstats 
   path("v_picard.txt")                            , emit: version
 
