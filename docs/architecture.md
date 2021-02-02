@@ -1,3 +1,4 @@
+```shell
 main.nf
 └── workflow:main
     ├── bamsChipFlow
@@ -38,5 +39,4 @@ main.nf
     │   └── compareRefSpike
     ├── workflow.onComplete
     └── workflowSummaryMqc
-
-
+```
