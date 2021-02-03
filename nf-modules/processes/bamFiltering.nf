@@ -30,6 +30,8 @@ process bamFiltering {
   """
   samtools --version &> v_samtools.txt
   samtools view \\
+    $filterParams \\
+    $dupParams \\
     $mapqParams \\
     -b ${markedBam[0]} > ${prefix}_filtered.bam
   samtools index ${prefix}_filtered.bam
