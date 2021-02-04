@@ -90,7 +90,6 @@ workflow peakCallingFlow {
        * MACS2 - sharp mode
        */
       
-      // chGroupBamMacs.filter { it[2] == 'sharp' }.view()
       sharpMACS2(
 	chGroupBamMacs.filter { it[2] == 'sharp' },
 	chPeakCountHeader.collect(),

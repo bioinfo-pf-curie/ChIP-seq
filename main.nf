@@ -586,7 +586,6 @@ workflow {
       .branch { prefix: it[0] =~ 'spike'}
       .set { chBamsSpikes} 
 
-
       // Preparing all ChIP data for further analysis
       chBamsChip = chBamsChip.dump(tag:'cbams')
 
@@ -727,7 +726,6 @@ workflow.onComplete {
     endSummary['Error report'] = workflow.errorReport ?: '-'
 
     String endWfSummary = endSummary.collect { k,v -> "${k.padRight(30, '.')}: $v" }.join("\n")
-    //println endWfSummary
     view(endWfSummary)
     String execInfo = "Execution summary\n${endWfSummary}\n"
     woc.write(execInfo)
