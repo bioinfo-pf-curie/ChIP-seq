@@ -508,24 +508,24 @@ if (params.design){
 
 // Workflows
 // QC : check design and factqc
-include { qcFlow } from './nf-modules/subworkflow/qc'
+include { qcFlow } from './nf-modules/local/subworkflow/qc'
 // Alignment on reference genome
-include { mappingFlow } from './nf-modules/subworkflow/mapping' 
+include { mappingFlow } from './nf-modules/local/subworkflow/mapping' 
 // Spike-in and Sorting BAM files
-include { sortingFlow } from './nf-modules/subworkflow/sorting' 
-include { markdupFlow } from './nf-modules/subworkflow/markdup' 
-include { bamsChipFlow } from './nf-modules/subworkflow/bamschip' 
-include { bamsSpikesFlow } from './nf-modules/subworkflow/bamsspikes' 
+include { sortingFlow } from './nf-modules/local/subworkflow/sorting' 
+include { markdupFlow } from './nf-modules/local/subworkflow/markdup' 
+include { bamsChipFlow } from './nf-modules/local/subworkflow/bamschip' 
+include { bamsSpikesFlow } from './nf-modules/local/subworkflow/bamsspikes' 
 // Peak calling
-include { peakCallingFlow } from './nf-modules/subworkflow/peakcalling' 
+include { peakCallingFlow } from './nf-modules/local/subworkflow/peakcalling' 
 
 // Processes
-include { prepareAnnotation } from './nf-modules/processes/prepareAnnotation'
-include { featureCounts } from './nf-modules/processes/featureCounts'
-include { getSoftwareVersions } from './nf-modules/processes/getSoftwareVersions'
-include { workflowSummaryMqc } from './nf-modules/processes/workflowSummaryMqc'
-include { multiqc } from './nf-modules/processes/multiqc'
-include { outputDocumentation } from './nf-modules/processes/outputDocumentation'
+include { prepareAnnotation } from './nf-modules/local/process/prepareAnnotation'
+include { featureCounts } from './nf-modules/local/process/featureCounts'
+include { getSoftwareVersions } from './nf-modules/local/process/getSoftwareVersions'
+include { workflowSummaryMqc } from './nf-modules/local/process/workflowSummaryMqc'
+include { multiqc } from './nf-modules/local/process/multiqc'
+include { outputDocumentation } from './nf-modules/local/process/outputDocumentation'
 
 workflow {
     main:
