@@ -38,7 +38,7 @@ chip-seq
 ├── nextflow.config
 ├── nf-modules
 │   ├── common
-│   │   ├── software
+│   │   ├── process 
 │   │   │   └── README.md
 │   │   └── subworkflow
 │   │       └── README.md

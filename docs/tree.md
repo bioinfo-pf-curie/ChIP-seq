@@ -3,7 +3,7 @@ main.nf/
 └── workflow:main
     └── nf-modules
         ├── common
-        │   ├── software
+        │   ├── process
         │   └── subworkflow
         ├── local
         │   ├── process
