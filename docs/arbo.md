@@ -1,7 +1,6 @@
 ```shell
 chip-seq
 ├── assets
-│   └── -
 ├── bin
 │   ├── checkDesign.py
 │   ├── compareAlignments.py
@@ -32,56 +31,59 @@ chip-seq
 │   ├── singularity.config
 │   └── test.config
 ├── docs
-│   └── -
 ├── environment.yml
 ├── geniac
 ├── LICENSE
 ├── main.nf
 ├── nextflow.config
 ├── nf-modules
-│   ├── functions.nf
-│   ├── processes
-│   │   ├── bamFiltering.nf
-│   │   ├── bamSort.nf
-│   │   ├── bigWig.nf
-│   │   ├── bigWigSpikeNorm.nf
-│   │   ├── bowtie2.nf
-│   │   ├── broadMACS2.nf
-│   │   ├── bwaMem.nf
-│   │   ├── checkDesign.nf
-│   │   ├── compareRefSpike.nf
-│   │   ├── deepToolsComputeMatrix.nf
-│   │   ├── deepToolsCorrelationQC.nf
-│   │   ├── deepToolsFingerprint.nf
-│   │   ├── fastQC.nf
-│   │   ├── featureCounts.nf
-│   │   ├── getSoftwareVersions.nf
-│   │   ├── getSpikeCountPerBin.nf
-│   │   ├── getSpikeScalingFactor.nf
-│   │   ├── IDR.nf
-│   │   ├── markDuplicates.nf
-│   │   ├── multiqc.nf
-│   │   ├── outputDocumentation.nf
-│   │   ├── peakAnnoHomer.nf
-│   │   ├── peakQC.nf
-│   │   ├── PPQT.nf
-│   │   ├── prepareAnnotation.nf
-│   │   ├── preseq.nf
-│   │   ├── sharpMACS2.nf
-│   │   ├── star.nf
-│   │   ├── veryBroadEpic2.nf
-│   │   └── workflowSummaryMqc.nf
-│   └── subworkflow
-│       ├── bamschip.nf
-│       ├── bamsspikes.nf
-│       ├── mapping.nf
-│       ├── markdup.nf
-│       ├── peakcalling.nf
-│       ├── qc.nf
-│       └── sorting.nf
+│   ├── common
+│   │   ├── software
+│   │   │   └── README.md
+│   │   └── subworkflow
+│   │       └── README.md
+│   └── local
+│       ├── functions.nf
+│       ├── process
+│       │   ├── bamFiltering.nf
+│       │   ├── bamSort.nf
+│       │   ├── bigWig.nf
+│       │   ├── bigWigSpikeNorm.nf
+│       │   ├── bowtie2.nf
+│       │   ├── broadMACS2.nf
+│       │   ├── bwaMem.nf
+│       │   ├── checkDesign.nf
+│       │   ├── compareRefSpike.nf
+│       │   ├── deepToolsComputeMatrix.nf
+│       │   ├── deepToolsCorrelationQC.nf
+│       │   ├── deepToolsFingerprint.nf
+│       │   ├── fastQC.nf
+│       │   ├── featureCounts.nf
+│       │   ├── getSoftwareVersions.nf
+│       │   ├── getSpikeCountPerBin.nf
+│       │   ├── getSpikeScalingFactor.nf
+│       │   ├── IDR.nf
+│       │   ├── markDuplicates.nf
+│       │   ├── multiqc.nf
+│       │   ├── outputDocumentation.nf
+│       │   ├── peakAnnoHomer.nf
+│       │   ├── peakQC.nf
+│       │   ├── PPQT.nf
+│       │   ├── prepareAnnotation.nf
+│       │   ├── preseq.nf
+│       │   ├── sharpMACS2.nf
+│       │   ├── star.nf
+│       │   ├── veryBroadEpic2.nf
+│       │   └── workflowSummaryMqc.nf
+│       └── subworkflow
+│           ├── bamschip.nf
+│           ├── bamsspikes.nf
+│           ├── mapping.nf
+│           ├── markdup.nf
+│           ├── peakcalling.nf
+│           ├── qc.nf
+│           └── sorting.nf
 ├── README.md
 ├── recipes
-│   └── -
 └── test
-    └── -
 ```
