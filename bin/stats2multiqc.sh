@@ -103,9 +103,18 @@ do
 	perc_dups='NA'
     fi
 
+    #Fragment size
+    if [[ -e fragSize/${sample}_insert_size_metrics.txt ]]; then
+	frag_length=$(grep -A2 "## METRIC" fragSize/${sample}_insert_size_metrics.txt | tail -n 1 | awk '{print $1}')
+    else
+	frag_length='NA'
+    fi
+
     #PPQT
     if [[ -e ppqt/${sample}.spp.out && -e ppqt/${sample}_spp_nsc_mqc.tsv ]]; then
-	frag_length=$(awk '{print $3}' ppqt/${sample}.spp.out | sed 's/,.*//')
+	if [[ ${frag_length} == 'NA' ]]; then
+	    frag_length=$(awk '{print $3}' ppqt/${sample}.spp.out | sed 's/,.*//')
+	fi
 	nsc=$(grep "$sample" ppqt/${sample}_spp_nsc_mqc.tsv | awk '{print $2}')  
 	rsc=$(grep "$sample" ppqt/${sample}_spp_rsc_mqc.tsv | awk '{print $2}')
     else

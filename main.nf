@@ -988,7 +988,8 @@ chBams.choice( chBamsSpikes, chBamsChip ) { it -> it[0] =~ 'spike' ? 0 : 1 }
 // Preparing all ChIP data for further analysis
 chBamsChip
   .dump (tag:'cbams')
-  .into { chBamsMacs1; chBamsMacs2; chBamsPPQT;
+  .into { chBamsFragSize; chBamsPPQT;
+          chBamsMacs1; chBamsMacs2; 
           chBamsBigWig; chBamsBigWigSF; 
           chBamDTCor ; chBaiDTCor ; chSampleDTCor ;
           chBamDTFingerprint ; chBaiDTFingerprint ; chSampleDTFingerprint ;
@@ -996,6 +997,39 @@ chBamsChip
 
 chFlagstatChip
   .into { chFlagstatMacs; chFlagstatMqc }
+
+/*
+ * Get fragment sizes
+ */
+
+process getFragmentSize {
+  tag "${prefix}"
+  label 'picard'
+  label 'lowCpu'
+  label 'medMem'
+
+  publishDir path: "${params.outDir}/fragSize/", mode: "copy"
+ 
+  when:
+  !params.singleEnd
+
+  input:
+  set val(prefix), file(filteredBam) from chBamsFragSize
+
+  output:
+  file("*.{pdf,txt}") into chFragmentsSize
+
+  script:
+  """
+  picard CollectInsertSizeMetrics \
+      I=${filteredBam[0]} \
+      O=${prefix}_insert_size_metrics.txt \
+      H=${prefix}_insert_size_histogram.pdf \
+      VALIDATION_STRINGENCY=LENIENT \
+      M=0.5
+  """
+}
+
 
 /*
  * PhantomPeakQualTools QC
@@ -1756,6 +1790,7 @@ process multiqc {
   file ('mapping/*') from chMarkedPicstats.collect().ifEmpty([])
   file ('mapping/*') from chStatsMqc.collect().ifEmpty([])
   file ('preseq/*') from chPreseqStats.collect().ifEmpty([])
+  file ('fragSize/*') from chFragmentsSize.collect().ifEmpty([])
   file ('ppqt/*') from chPpqtOutMqc.collect().ifEmpty([])
   file ('ppqt/*') from chPpqtCsvMqc.collect().ifEmpty([])
   file ('deepTools/*') from chDeeptoolsSingleMqc.collect().ifEmpty([])

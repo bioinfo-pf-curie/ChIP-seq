@@ -35,7 +35,8 @@ custom_data:
               format: '{:,.0f}'
               placement: 2000
             Fragment_length:
-              title: 'Estimated Fragment Length'
+              title: 'Fragment Length'
+              description: 'Estimated fragment length'
               scale: 'YlGnGn'
               format: '{:,.0f}'
               placement: 3000
