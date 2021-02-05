@@ -2,9 +2,6 @@
 main.nf/
 └── workflow:main
     └── nf-modules
-        ├── common
-        │   ├── process
-        │   └── subworkflow
         ├── local
         │   ├── process
         │   │   ├── featureCounts
