@@ -510,7 +510,7 @@ if (params.design){
 // QC : check design and factqc
 include { qcFlow } from './nf-modules/local/subworkflow/qc'
 // Alignment on reference genome
-include { mappingFlow } from './nf-modules/local/subworkflow/mapping' 
+include { mappingFlow } from './nf-modules/common/subworkflow/mapping' 
 // Spike-in and Sorting BAM files
 include { sortingFlow } from './nf-modules/local/subworkflow/sorting' 
 include { markdupFlow } from './nf-modules/local/subworkflow/markdup' 
