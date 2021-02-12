@@ -177,7 +177,7 @@ if (params.bwaIndex){
   Channel
     .fromPath(bwaDir, checkIfExists: true)
     .ifEmpty {exit 1, "BWA index file not found: ${params.bwaIndex}"}
-    .combine( [ bwaBase ] )
+    .map{ it -> [it, bwaBase, genomeRef] }
     .set { chBwaIndex }
 } else {
   exit 1, "BWA index file not found: ${params.bwaIndex}"
@@ -191,7 +191,7 @@ if (params.spikeBwaIndex){
   Channel
     .fromPath(bwaDirSpike, checkIfExists: true)
     .ifEmpty {exit 1, "Spike BWA index file not found: ${params.spikeBwaIndex}"}
-    .combine( [ spikeBwaBase ] ) 
+    .map{ it -> [it, spikeBwaBase, params.spike] }
     .set { chSpikeBwaIndex }
   
   chBwaIndex = chBwaIndex.concat(chSpikeBwaIndex)
@@ -209,7 +209,7 @@ if (params.bt2Index){
   Channel
     .fromPath(bt2Dir, checkIfExists: true)
     .ifEmpty {exit 1, "Bowtie2 index file not found: ${params.bt2Index}"}
-    .combine( [ bt2Base ] ) 
+    .map{ it -> [it, bt2Base, genomeRef] }
     .set { chBt2Index }
 } else {
   exit 1, "Bowtie2 index file not found: ${params.bt2Index}"
@@ -223,7 +223,7 @@ if (params.spikeBt2Index){
   Channel
     .fromPath(bt2DirSpike, checkIfExists: true)
     .ifEmpty {exit 1, "Spike Bowtie2 index file not found: ${params.spikeBt2Index}"}
-    .combine( [ spikeBt2Base ] ) 
+    .map{ it -> [it, spikeBt2Base, params.spike] }
     .set { chSpikeBt2Index }
 
   chBt2Index = chBt2Index.concat(chSpikeBt2Index)
@@ -598,7 +598,7 @@ process fastQC{
 
 /* BWA-MEM */
 process bwaMem{
-  tag "${sample} on ${genomeBase}"
+  tag "${sample} on ${genomeName}"
   label 'bwa'
   label 'highCpu'
   label 'highMem'
@@ -611,7 +611,7 @@ process bwaMem{
   params.aligner == "bwa-mem" && !params.inputBam
 
   input:
-  set val(sample), file(reads), file(index), val(genomeBase) from rawReadsBWA.combine(chBwaIndex)
+  set val(sample), file(reads), file(index), val(genomeBase), val(genomeName) from rawReadsBWA.combine(chBwaIndex)
 
   output:
   set val(sample), file("*.bam") into chAlignReadsBwa
@@ -619,7 +619,7 @@ process bwaMem{
   file("v_bwa.txt") into chBwaVersion
 
   script:
-  prefix = genomeBase == genomeRef ? sample : sample + '_spike'
+  prefix = genomeName == genomeRef ? sample : sample + '_spike'
   opts = params.bwaOpts
   """
   echo \$(bwa 2>&1) &> v_bwa.txt
@@ -633,7 +633,7 @@ process bwaMem{
 
 /* BOWTIE2 */
 process bowtie2{
-  tag "${sample} on ${genomeBase}"
+  tag "${sample} on ${genomeName}"
   label 'bowtie2'
   label 'highCpu' 
   label 'highMem'
@@ -645,7 +645,7 @@ process bowtie2{
   params.aligner == "bowtie2" && !params.inputBam
 
   input:
-  set val(sample), file(reads), file(index), val(genomeBase) from rawReadsBt2.combine(chBt2Index)
+  set val(sample), file(reads), file(index), val(genomeBase), val(genomeName) from rawReadsBt2.combine(chBt2Index)
 
   output:
   set val(sample), file("*.bam") into chAlignReadsBowtie2
@@ -653,7 +653,7 @@ process bowtie2{
   file("v_bowtie2.txt") into chBowtie2Version
 
   script:
-  prefix = genomeBase == genomeRef ? sample : sample + '_spike'
+  prefix = genomeName == genomeRef ? sample : sample + '_spike'
   readCommand = params.singleEnd ? "-U ${reads[0]}" : "-1 ${reads[0]} -2 ${reads[1]}"
   opts = params.bowtie2Opts
   """
@@ -667,7 +667,7 @@ process bowtie2{
 
 /* STAR */
 process star{
-  tag "${sample} on ${genomeBase}"
+  tag "${sample} on ${genomeName}"
   label 'star'
   label 'highCpu'
   label 'extraMem'
@@ -679,7 +679,7 @@ process star{
   params.aligner == "star" && !params.inputBam
 
   input:
-  set val(sample), file(reads), file(index), val(genomeBase) from rawReadsSTAR.combine(chStarIndex)
+  set val(sample), file(reads), file(index), val(genomeName) from rawReadsSTAR.combine(chStarIndex)
 
   output:
   set val(sample), file('*.bam') into chAlignReadsStar
@@ -687,7 +687,7 @@ process star{
   file("v_star.txt") into chStarVersion
 
   script:
-  prefix = genomeBase == genomeRef ? sample : sample + '_spike'
+  prefix = genomeName == genomeRef ? sample : sample + '_spike'
   opts = params.starOpts
   """
   STAR --version &> v_star.txt

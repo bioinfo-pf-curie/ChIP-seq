@@ -1,9 +1,17 @@
 version-1.0.5
 
+NEW FEATURES
+   - Add Bombyx_v4 genome annotation
+
 SIGNIFICANT USER-VISIBLE CHANGES
 
    - Use picard for insert size distribution for paired-end data (#49)
    - Calculate SF over 1M reads instead of 10M for bigwig
+
+BUG FIXES
+
+   - Bug in mapping Channel for Bombyx (#53)
+   - Effective size of Bombyx updated (#53)
 
 ************************************
 version-1.0.4
