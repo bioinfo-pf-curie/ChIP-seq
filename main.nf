@@ -506,11 +506,19 @@ if (params.design){
   chDesignCheck = Channel.empty()
 }
 
+// Don't overwrite global params.modules, create a copy instead and use that within the main script.
+def modules = params.modules.clone()
+
+def bwa_options     = modules['bwa']
+def bowtie2_options = modules['bowtie2']
+def star_options    = modules['star']
+
 // Workflows
 // QC : check design and factqc
 include { qcFlow } from './nf-modules/local/subworkflow/qc'
 // Alignment on reference genome
-include { mappingFlow } from './nf-modules/common/subworkflow/mapping' 
+include { mappingFlow } from './nf-modules/common/subworkflow/mapping' addParams( alignerr: params.aligner, bwa_options: bwa_options, bowtie2_options: bowtie2_options, star_options: star_options ) 
+
 // Spike-in and Sorting BAM files
 include { sortingFlow } from './nf-modules/local/subworkflow/sorting' 
 include { markdupFlow } from './nf-modules/local/subworkflow/markdup' 
