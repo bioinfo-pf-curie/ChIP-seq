@@ -270,9 +270,13 @@ if (params.gtf) {
   Channel
     .fromPath(params.gtf, checkIfExists: true)
     .into{chGtfHomer; chGtfFeatCounts}
-}
-else {
-  exit 1, "GTF annotation file not specified!"
+}else {
+  log.info "=================================================================\n" +
+            "  INFO: No GTF file detected.\n" +
+            "  Annotation and feature counts will be skipped.\n" +
+            "================================================================"       
+  chGtfHomer = Channel.empty()
+  chGtfFeatCounts = Channel.empty()
 }
 
 params.geneBed = genomeRef ? params.genomes[ genomeRef ].geneBed ?: false : false
