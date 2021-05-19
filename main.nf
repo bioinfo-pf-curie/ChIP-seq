@@ -605,7 +605,7 @@ process bwaMem{
   tag "${sample} on ${genomeName}"
   label 'bwa'
   label 'highCpu'
-  label 'highMem'
+  label 'extraMem'
   publishDir "${params.outDir}/mapping", mode: 'copy',
              saveAs: {filename -> 
 	     if (filename.indexOf(".log") > 0) "logs/$filename" 
