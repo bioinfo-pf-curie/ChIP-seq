@@ -1682,7 +1682,7 @@ process featureCounts{
 process getSoftwareVersions{
   label 'python'
   label 'minCpu'
-  label 'minMem'
+  label 'lowMem'
   publishDir path: "${params.outDir}/softwareVersions", mode: "copy"
 
   when:
@@ -1741,7 +1741,7 @@ process workflowSummaryMqc {
 process multiqc {
   label 'multiqc'
   label 'minCpu'
-  label 'minMem'
+  label 'medMem'
   publishDir "${params.outDir}/MultiQC", mode: 'copy'
 
   when:
