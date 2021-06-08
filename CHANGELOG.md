@@ -2,6 +2,7 @@ version-1.0.5
 
 NEW FEATURES
    - Add Bombyx_v4 genome annotation
+   - Add dmel6.28 genome annotation
 
 SIGNIFICANT USER-VISIBLE CHANGES
 

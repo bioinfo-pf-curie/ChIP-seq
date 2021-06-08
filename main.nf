@@ -1750,6 +1750,10 @@ process getSoftwareVersions{
 
 
 process workflowSummaryMqc {
+  label 'unix'
+  label 'minCpu'
+  label 'minMem'
+
   when:
   !params.skipMultiQC
 
