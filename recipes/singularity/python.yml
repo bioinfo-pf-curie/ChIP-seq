@@ -1,0 +1,9 @@
+name: python
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  # Add required software dependencies here
+  - python=3.7.1=hd21baee_1001
+  - pymdown-extensions=7.1=pyh9f0ad1d_0

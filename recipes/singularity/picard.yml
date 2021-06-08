@@ -1,0 +1,10 @@
+name: picard-2.19.0
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - bioconda::picard=2.19.0=0
+  - bioconda::samtools=1.10=h2e538c0_3
+  - conda-forge::r-base=3.6.3=hd23ff56_6
+

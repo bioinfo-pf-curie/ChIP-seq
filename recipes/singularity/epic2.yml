@@ -1,0 +1,6 @@
+name: epic2
+channels:
+  - bioconda
+dependencies:
+  - bioconda::epic2=0.0.40=py37h9276139_0
+  - bioconda::bedtools=2.27.1=he860b03_3

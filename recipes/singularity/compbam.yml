@@ -1,0 +1,10 @@
+name: compbam
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  # Add required software dependencies here
+  - python=3.7.1=hd21baee_1001
+  - bioconda::samtools=1.9=h10a08f8_12
+  - bioconda::pysam=0.15.2=py37h1671916_1
