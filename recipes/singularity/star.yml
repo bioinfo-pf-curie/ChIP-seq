@@ -1,5 +1,0 @@
-name: star_2.7.6a
-channels:
-  - bioconda
-dependencies:
-  - bioconda::star=2.7.6a=0

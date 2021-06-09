@@ -1,5 +1,0 @@
-name: idr
-channels:
-  - bioconda
-dependencies:
-  - bioconda::idr=2.0.4.2=py37hc1659b7_2
