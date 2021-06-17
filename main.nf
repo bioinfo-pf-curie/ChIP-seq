@@ -1223,7 +1223,7 @@ process deepToolsComputeMatrix{
   tag "${prefix}"
   label 'deeptools'
   label 'medCpu'
-  label 'lowMem'
+  label 'medMem'
   publishDir "${params.outDir}/deepTools/computeMatrix", mode: "copy"
 
   when:
@@ -1258,7 +1258,7 @@ process deepToolsComputeMatrix{
 process deepToolsCorrelationQC{
   label 'deeptools'
   label 'highCpu'
-  label 'lowMem'
+  label 'medMem'
   publishDir "${params.outDir}/deepTools/correlationQC", mode: "copy"
 
   when:
@@ -1296,7 +1296,7 @@ process deepToolsCorrelationQC{
 process deepToolsFingerprint{
   label 'deeptools'
   label 'highCpu'
-  label 'lowMem'
+  label 'highMem'
   publishDir "${params.outDir}/deepTools/fingerprintQC", mode: "copy"
 
   when:
