@@ -1,3 +1,9 @@
+version-1.0.6
+
+NEW FEATURES
+   - Add Human hg19/hg38 base annotation
+
+*************************************
 version-1.0.5
 
 NEW FEATURES
