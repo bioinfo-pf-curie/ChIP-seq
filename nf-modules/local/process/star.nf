@@ -3,7 +3,7 @@
  */
 /* STAR */
 process star{
-  tag "${sample} on ${genomeBase}"
+  tag "${sample} on ${genomeName}"
   label 'star'
   label 'highCpu'
   label 'extraMem'
@@ -15,7 +15,7 @@ process star{
   params.aligner == "star" && !params.inputBam
 
   input:
-  tuple val(sample), path(reads), path(index), val(genomeBase)
+  tuple val(sample), path(reads), path(index), val(genomeBase), val(genomeName)
 
   output:
   tuple val(sample), path("*.bam"), emit: bam 
@@ -23,7 +23,7 @@ process star{
   path "v_star.txt"               , emit: version
 
   script:
-  prefix = genomeBase == params.genome ? sample : sample + '_spike'
+  prefix = genomeName == params.genome ? sample : sample + '_spike'
   //prefix = genomeBase == genomeRef ? sample : sample + '_spike'
   opts = params.starOpts
   """

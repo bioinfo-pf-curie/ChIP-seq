@@ -5,6 +5,7 @@
 /* 
  * include requires tasks 
  */
+include { getFragmentSize } from '../process/getFragmentSize' 
 include { PPQT } from '../process/PPQT' 
 include { bigWig } from '../process/bigWig'
 include { deepToolsComputeMatrix } from '../process/deepToolsComputeMatrix'
@@ -28,6 +29,10 @@ workflow bamsChipFlow {
      chGeneBed
     // workflow implementation
     main:
+
+      getFragmentSize(
+        chBamsChip
+      )
 
       PPQT(
         chBamsChip,
@@ -60,6 +65,7 @@ workflow bamsChipFlow {
       )
 
      emit:
+      chFragmentsSize = getFragmentSize.out.fragmentsSize
       chPpqtOutMqc = PPQT.out.ppqtOutMqc
       chPpqtCsvMqc = PPQT.out.ppqtCsvMqc
       chPPQTVersion = PPQT.out.version

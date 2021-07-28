@@ -4,7 +4,7 @@
 
 /* BWA-MEM */
 process bwaMem{
-  tag "${sample} on ${genomeBase}"
+  tag "${sample} on ${genomeName}"
   label 'bwa'
   label 'highCpu'
   label 'highMem'
@@ -17,7 +17,7 @@ process bwaMem{
   params.aligner == "bwa-mem" && !params.inputBam
 
   input:
-  tuple val(sample), path(reads), path(index), val(genomeBase)
+  tuple val(sample), path(reads), path(index), val(genomeBase), val(genomeName)
 
   output:
   tuple val(sample), path("*.bam"), emit: bam 
@@ -25,7 +25,7 @@ process bwaMem{
   path "v_bwa.txt"                , emit: version
 
   script:
-  prefix = genomeBase == params.genome ? sample : sample + '_spike'
+  prefix = genomeName == params.genome ? sample : sample + '_spike'
   //prefix = genomeBase == genomeRef ? sample : sample + '_spike'
   opts = params.bwaOpts
   """

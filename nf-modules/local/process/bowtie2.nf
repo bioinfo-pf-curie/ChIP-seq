@@ -3,7 +3,7 @@
  *
 /* BOWTIE2 */
 process bowtie2{
-  tag "${sample} on ${genomeBase}"
+  tag "${sample} on ${genomeName}"
   label 'bowtie2'
   label 'highCpu'
   label 'highMem'
@@ -15,7 +15,7 @@ process bowtie2{
   params.aligner == "bowtie2" && !params.inputBam
 
   input:
-  tuple val(sample), path(reads), path(index), val(genomeBase)
+  tuple val(sample), path(reads), path(index), val(genomeBase), val(genomeName)
 
   output:
   tuple val(sample), path("*.bam"), emit: bam 
@@ -23,7 +23,7 @@ process bowtie2{
   path "v_bowtie2.txt"            , emit: version
 
   script:
-  prefix = genomeBase == params.genome ? sample : sample + '_spike'
+  prefix = genomeName == params.genome ? sample : sample + '_spike'
   readCommand = params.singleEnd ? "-U ${reads[0]}" : "-1 ${reads[0]} -2 ${reads[1]}"
   opts = params.bowtie2Opts
   """

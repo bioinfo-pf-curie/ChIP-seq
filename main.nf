@@ -171,7 +171,7 @@ if (params.bwaIndex){
   Channel
     .fromPath(bwaDir, checkIfExists: true)
     .ifEmpty {exit 1, "BWA index file not found: ${params.bwaIndex}"}
-    .combine( [ bwaBase ] )
+    .map{ it -> [it, bwaBase, genomeRef] }
     .set { chBwaIndex }
 } else {
   exit 1, "BWA index file not found: ${params.bwaIndex}"
@@ -185,7 +185,7 @@ if (params.spikeBwaIndex){
   Channel
     .fromPath(bwaDirSpike, checkIfExists: true)
     .ifEmpty {exit 1, "Spike BWA index file not found: ${params.spikeBwaIndex}"}
-    .combine( [ spikeBwaBase ] ) 
+    .map{ it -> [it, spikeBwaBase, params.spike] }
     .set { chSpikeBwaIndex }
   
   chBwaIndex = chBwaIndex.concat(chSpikeBwaIndex)
@@ -203,7 +203,7 @@ if (params.bt2Index){
   Channel
     .fromPath(bt2Dir, checkIfExists: true)
     .ifEmpty {exit 1, "Bowtie2 index file not found: ${params.bt2Index}"}
-    .combine( [ bt2Base ] ) 
+    .map{ it -> [it, bt2Base, genomeRef] }
     .set { chBt2Index }
 } else {
   exit 1, "Bowtie2 index file not found: ${params.bt2Index}"
@@ -217,7 +217,7 @@ if (params.spikeBt2Index){
   Channel
     .fromPath(bt2DirSpike, checkIfExists: true)
     .ifEmpty {exit 1, "Spike Bowtie2 index file not found: ${params.spikeBt2Index}"}
-    .combine( [ spikeBt2Base ] ) 
+    .map{ it -> [it, spikeBt2Base, params.spike] }
     .set { chSpikeBt2Index }
 
   chBt2Index = chBt2Index.concat(chSpikeBt2Index)
@@ -507,17 +507,18 @@ if (params.design){
 }
 
 // Don't overwrite global params.modules, create a copy instead and use that within the main script.
-def modules = params.modules.clone()
+//def modules = params.modules.clone()
 
-def bwa_options     = modules['bwa']
-def bowtie2_options = modules['bowtie2']
-def star_options    = modules['star']
+//def bwa_options     = modules['bwa']
+//def bowtie2_options = modules['bowtie2']
+//def star_options    = modules['star']
 
 // Workflows
 // QC : check design and factqc
 include { qcFlow } from './nf-modules/local/subworkflow/qc'
 // Alignment on reference genome
-include { mappingFlow } from './nf-modules/common/subworkflow/mapping' addParams( alignerr: params.aligner, bwa_options: bwa_options, bowtie2_options: bowtie2_options, star_options: star_options ) 
+// include { mappingFlow } from './nf-modules/common/subworkflow/mapping' addParams( alignerr: params.aligner, bwa_options: bwa_options, bowtie2_options: bowtie2_options, star_options: star_options ) 
+include { mappingFlow } from './nf-modules/local/subworkflow/mapping' 
 
 // Spike-in and Sorting BAM files
 include { sortingFlow } from './nf-modules/local/subworkflow/sorting' 
@@ -662,6 +663,7 @@ workflow {
         markdupFlow.out.chMarkedPicstats.collect().ifEmpty([]), 
         sortingFlow.out.chStatsMqc.collect().ifEmpty([]),
         markdupFlow.out.chPreseqStats.collect().ifEmpty([]),
+        bamsChipFlow.out.chFragmentsSize.collect().ifEmpty([]),
         bamsChipFlow.out.chPpqtOutMqc.collect().ifEmpty([]), 
         bamsChipFlow.out.chPpqtCsvMqc.collect().ifEmpty([]),
         bamsChipFlow.out.chDeeptoolsSingleMqc.collect().ifEmpty([]),

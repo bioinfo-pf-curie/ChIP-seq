@@ -21,6 +21,7 @@ process multiqc {
   path ('mapping/*') 
   path ('mapping/*')
   path ('preseq/*')
+  path ('fragSize/*') 
   path ('ppqt/*') 
   path ('ppqt/*')
   path ('deepTools/*') 
