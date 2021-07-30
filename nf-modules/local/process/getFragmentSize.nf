@@ -17,7 +17,7 @@ process getFragmentSize {
   tuple val(prefix), path(filteredBam) 
 
   output:
-  path("*.{pdf,txt}"), emit: fragmentsSize
+  path("*.{pdf,txt}"),   emit: fragmentsSize
 
   script:
   """

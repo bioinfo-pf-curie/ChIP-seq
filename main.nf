@@ -663,7 +663,7 @@ workflow {
         markdupFlow.out.chMarkedPicstats.collect().ifEmpty([]), 
         sortingFlow.out.chStatsMqc.collect().ifEmpty([]),
         markdupFlow.out.chPreseqStats.collect().ifEmpty([]),
-        bamsChipFlow.out.chFragmentsSize.collect().ifEmpty([]),
+         bamsChipFlow.out.chFragmentsSize.collect().ifEmpty([]),
         bamsChipFlow.out.chPpqtOutMqc.collect().ifEmpty([]), 
         bamsChipFlow.out.chPpqtCsvMqc.collect().ifEmpty([]),
         bamsChipFlow.out.chDeeptoolsSingleMqc.collect().ifEmpty([]),
