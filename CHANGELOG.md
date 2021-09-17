@@ -3,6 +3,8 @@ version-1.0.6
 NEW FEATURES
    - Add Mouse mm39 annotation
    - Add Human hg19/hg38 base annotation
+   - Add Macaca Mulatta (rheMac10) annotation
+   - Add Pan troglodytes (Chimp) annotation (PanTro6)
 
 *************************************
 version-1.0.5
