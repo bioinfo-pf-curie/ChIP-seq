@@ -36,7 +36,7 @@ process star{
        --readFilesCommand zcat \
        --runDirPerm All_RWX \
        --outSAMunmapped Within \
-       --outTmpDir /local/scratch/rnaseq_\$(date +%d%s%S%N) \
+       --outTmpDir ${params.tmpDir}/chipseq_\$(date +%d%s%S%N) \
        --outFileNamePrefix $prefix  \
        --outSAMattrRGline ID:$prefix SM:$prefix LB:Illumina PL:Illumina \
        ${opts}
