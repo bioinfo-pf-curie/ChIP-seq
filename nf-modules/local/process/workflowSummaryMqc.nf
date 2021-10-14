@@ -1,6 +1,9 @@
 
 process workflowSummaryMqc {
-  executor = 'local'
+  label 'unix'
+  label 'minCpu'
+  label 'minMem'
+
   when:
   !params.skipMultiQC
 
