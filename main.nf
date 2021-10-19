@@ -502,6 +502,7 @@ if (params.design){
     .toList()
     .set{ chNoInput }
 }else{
+  chNoInput = Channel.empty()
   chDesignControl = Channel.empty()
   chDesignCheck = Channel.empty()
 }
@@ -608,7 +609,7 @@ workflow {
       if (useSpike){
         // all Spikes analysis
         bamsSpikesFlow(
-          chBamsSpikes
+          chBamsSpikes,
           chBamsChip,
           chBlacklist
         )
