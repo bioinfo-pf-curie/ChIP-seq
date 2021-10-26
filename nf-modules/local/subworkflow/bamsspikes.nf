@@ -21,7 +21,9 @@ workflow bamsSpikesFlow {
       getSpikeCountPerBin(
          chBamsSpikes.map{it[1][0]}.collect(),
          chBamsSpikes.map{it[1][1]}.collect()
-      ) | getSpikeScalingFactor()
+      )
+
+      getSpikeScalingFactor(getSpikeCountPerBin.out)
 
       getSpikeScalingFactor.out.tabSF 
         .splitCsv(header:false, sep:',')
