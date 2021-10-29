@@ -15,6 +15,7 @@ process star{
   params.aligner == "star" && !params.inputBam
 
   input:
+  val genomeRef
   tuple val(sample), path(reads), path(index), val(genomeBase), val(genomeName)
 
   output:
@@ -23,8 +24,7 @@ process star{
   path "v_star.txt"               , emit: version
 
   script:
-  prefix = genomeName == params.genome ? sample : sample + '_spike'
-  //prefix = genomeBase == genomeRef ? sample : sample + '_spike'
+  prefix = genomeBase == genomeRef ? sample : sample + '_spike'
   opts = params.starOpts
   """
   STAR --version &> v_star.txt

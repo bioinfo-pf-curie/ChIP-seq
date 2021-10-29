@@ -516,25 +516,25 @@ if (params.design){
 
 // Workflows
 // QC : check design and factqc
-include { qcFlow } from './nf-modules/local/subworkflow/qc'
+include { qcFlow }              from './nf-modules/local/subworkflow/qc'
 // Alignment on reference genome
 // include { mappingFlow } from './nf-modules/common/subworkflow/mapping' addParams( alignerr: params.aligner, bwa_options: bwa_options, bowtie2_options: bowtie2_options, star_options: star_options ) 
-include { mappingFlow } from './nf-modules/local/subworkflow/mapping' 
+include { mappingFlow }         from './nf-modules/local/subworkflow/mapping' 
 
 // Spike-in and Sorting BAM files
-include { sortingFlow } from './nf-modules/local/subworkflow/sorting' 
-include { markdupFlow } from './nf-modules/local/subworkflow/markdup' 
-include { bamsChipFlow } from './nf-modules/local/subworkflow/bamschip' 
-include { bamsSpikesFlow } from './nf-modules/local/subworkflow/bamsspikes' 
+include { sortingFlow }         from './nf-modules/local/subworkflow/sorting' 
+include { markdupFlow }         from './nf-modules/local/subworkflow/markdup' 
+include { bamsChipFlow }        from './nf-modules/local/subworkflow/bamschip' 
+include { bamsSpikesFlow }      from './nf-modules/local/subworkflow/bamsspikes' 
 // Peak calling
-include { peakCallingFlow } from './nf-modules/local/subworkflow/peakcalling' 
+include { peakCallingFlow }     from './nf-modules/local/subworkflow/peakcalling' 
 
 // Processes
-include { prepareAnnotation } from './nf-modules/local/process/prepareAnnotation'
-include { featureCounts } from './nf-modules/local/process/featureCounts'
+include { prepareAnnotation }   from './nf-modules/local/process/prepareAnnotation'
+include { featureCounts }       from './nf-modules/local/process/featureCounts'
 include { getSoftwareVersions } from './nf-modules/local/process/getSoftwareVersions'
-include { workflowSummaryMqc } from './nf-modules/local/process/workflowSummaryMqc'
-include { multiqc } from './nf-modules/local/process/multiqc'
+include { workflowSummaryMqc }  from './nf-modules/local/process/workflowSummaryMqc'
+include { multiqc }             from './nf-modules/local/process/multiqc'
 include { outputDocumentation } from './nf-modules/local/process/outputDocumentation'
 
 workflow {
@@ -561,7 +561,8 @@ workflow {
        rawReads,
        chBwaIndex,
        chBt2Index,
-       chStarIndex
+       chStarIndex,
+       genomeRef
      )
 
      if (params.inputBam){

@@ -17,6 +17,7 @@ process bwaMem{
   params.aligner == "bwa-mem" && !params.inputBam
 
   input:
+  val genomeRef
   tuple val(sample), path(reads), path(index), val(genomeBase), val(genomeName)
 
   output:
@@ -25,8 +26,8 @@ process bwaMem{
   path "v_bwa.txt"                , emit: version
 
   script:
-  prefix = genomeName == params.genome ? sample : sample + '_spike'
-  //prefix = genomeBase == genomeRef ? sample : sample + '_spike'
+ // prefix = genomeName == params.genome ? sample : sample + '_spike'
+  prefix = genomeBase == genomeRef ? sample : sample + '_spike'
   opts = params.bwaOpts
   """
   echo \$(bwa 2>&1) &> v_bwa.txt

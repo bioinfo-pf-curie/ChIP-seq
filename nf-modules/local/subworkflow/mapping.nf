@@ -5,9 +5,9 @@
 /* 
  * include requires tasks 
  */
-include { bwaMem } from '../process/bwaMem' 
+include { bwaMem }  from '../process/bwaMem' 
 include { bowtie2 } from '../process/bowtie2'
-include { star } from '../process/star'
+include { star }    from '../process/star'
 
 workflow mappingFlow {
     // required inputs
@@ -16,6 +16,7 @@ workflow mappingFlow {
       chBwaIndex
       chBt2Index
       chStarIndex
+      genomeRef
     // workflow implementation
     main:
       chBwaVersion = Channel.empty()
@@ -24,17 +25,18 @@ workflow mappingFlow {
       chAlignReads = Channel.empty()
       chMappingMqc = Channel.empty()
       if (params.aligner == "bowtie2"){
-        bowtie2(rawReads.combine(chBt2Index))
+        bowtie2(genomeRef, rawReads.combine(chBt2Index))
         chAlignReads = bowtie2.out.bam
         chMappingMqc = bowtie2.out.mqc
         chBowtie2Version = bowtie2.out.version
       } else if (params.aligner == "bwa-mem"){
-        bwaMem(rawReads.combine(chBwaIndex))
+        // debug : rawReads.combine(chBwaIndex).view()
+        bwaMem(genomeRef, rawReads.combine(chBwaIndex))
         chAlignReads = bwaMem.out.bam
         chMappingMqc = bwaMem.out.mqc
         chBwaVersion = bwaMem.out.version
       } else if (params.aligner == "star"){
-        star(rawReads.combine(chStarIndex))
+        star(genomeRef, rawReads.combine(chStarIndex))
         chAlignReads = star.out.bam
         chMappingMqc = star.out.mqc
         chStarVersion = star.out.version

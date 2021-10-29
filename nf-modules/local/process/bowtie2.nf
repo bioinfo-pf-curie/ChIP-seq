@@ -15,6 +15,7 @@ process bowtie2{
   params.aligner == "bowtie2" && !params.inputBam
 
   input:
+  val genomeRef
   tuple val(sample), path(reads), path(index), val(genomeBase), val(genomeName)
 
   output:
@@ -23,7 +24,7 @@ process bowtie2{
   path "v_bowtie2.txt"            , emit: version
 
   script:
-  prefix = genomeName == params.genome ? sample : sample + '_spike'
+  prefix = genomeName == genomeRef ? sample : sample + '_spike'
   readCommand = params.singleEnd ? "-U ${reads[0]}" : "-1 ${reads[0]} -2 ${reads[1]}"
   opts = params.bowtie2Opts
   """
