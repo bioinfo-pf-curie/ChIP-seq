@@ -24,7 +24,7 @@ process star{
   path "v_star.txt"               , emit: version
 
   script:
-  prefix = genomeBase == genomeRef ? sample : sample + '_spike'
+  prefix = genomeName == genomeRef ? sample : sample + '_spike'
   opts = params.starOpts
   """
   STAR --version &> v_star.txt

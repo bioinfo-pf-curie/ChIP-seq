@@ -30,7 +30,6 @@ workflow mappingFlow {
         chMappingMqc = bowtie2.out.mqc
         chBowtie2Version = bowtie2.out.version
       } else if (params.aligner == "bwa-mem"){
-        // debug : rawReads.combine(chBwaIndex).view()
         bwaMem(genomeRef, rawReads.combine(chBwaIndex))
         chAlignReads = bwaMem.out.bam
         chMappingMqc = bwaMem.out.mqc

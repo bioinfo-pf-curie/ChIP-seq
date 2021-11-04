@@ -26,8 +26,7 @@ process bwaMem{
   path "v_bwa.txt"                , emit: version
 
   script:
- // prefix = genomeName == params.genome ? sample : sample + '_spike'
-  prefix = genomeBase == genomeRef ? sample : sample + '_spike'
+  prefix = genomeName == genomeRef ? sample : sample + '_spike'
   opts = params.bwaOpts
   """
   echo \$(bwa 2>&1) &> v_bwa.txt

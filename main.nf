@@ -602,9 +602,9 @@ workflow {
 
       // all ChIP analysis
       bamsChipFlow(
-	chBamsChip,
-	chBlacklist,
-	chGeneBed
+	    chBamsChip,
+	    chBlacklist,
+	    chGeneBed
       )
 
       if (useSpike){

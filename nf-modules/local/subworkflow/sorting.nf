@@ -17,23 +17,27 @@ workflow sortingFlow {
       useSpike
     // workflow implementation
     main:
-      if (useSpike){
-
+    if (useSpike){
+      result = Channel.empty()
       /* Split and rebuild Channel to be sure of order between bams */
-      chAlignRef = Channel.empty() 
-      chAlignSpike = Channel.empty() 
-      chAlignRef = chAlignReads 
-      chAlignReads 
-       .branch { prefix: it[1] =~ 'spike' }
-       .set { chAlignSpike } 
+      chAlignReads
+      .branch {
+        chAlignSpike: it[1] =~ 'spike'
+        chAlignRef: !(it[1] =~ 'spike')
+      }
+      .set { result }
 
-      chCompAln = chAlignRef
-       .join(chAlignSpike)
+      // result.chAlignSpike.view { "$it is spike" }
+      // result.chAlignRef.view { "$it is no spike" }
+      
+      chCompAln = result.chAlignSpike
+       .join(result.chAlignRef)
 
-       
       // Spike-in
       // Merging, if necessary reference aligned reads and spike aligned reads
       compareRefSpike(chCompAln)
+      
+      // chCompAln.view { "chCompAln value: $it" }
 
       // Filter removes all 'aligned' channels that fail the check
       chSpikeBams = compareRefSpike.out.spikeBams
