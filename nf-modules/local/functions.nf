@@ -2,8 +2,10 @@
  * Spike-in
  */
 
-spikes_poor_alignment = []
-def checkMappingLog(logs, t='1', spikes_poor_alignment) {
+//spikes_poor_alignment = []
+//def checkMappingLog(logs, t='1', spikes_poor_alignment) {
+// def checkMappingLog(logs, t='1') {
+def checkMappingLog(logs, t) {
   def nb_ref = 0;
   def nb_spike = 0;
   def percent_spike = 0;

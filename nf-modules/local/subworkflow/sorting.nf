@@ -27,22 +27,25 @@ workflow sortingFlow {
       }
       .set { result }
 
-      // result.chAlignSpike.view { "$it is spike" }
-      // result.chAlignRef.view { "$it is no spike" }
+      // debug result.chAlignSpike.view { "$it is spike" }
+      // debug result.chAlignRef.view { "$it is no spike" }
       
       chCompAln = result.chAlignSpike
        .join(result.chAlignRef)
 
       // Spike-in
       // Merging, if necessary reference aligned reads and spike aligned reads
+      // debug chCompAln.view { "chCompAln value: $it" }
       compareRefSpike(chCompAln)
       
-      // chCompAln.view { "chCompAln value: $it" }
-
+      // debug compareRefSpike.out.spikeBams.view { "chSpikeBams value: $it params.spikePercentFilter = $params.spikePercentFilter" }
+            
+      spikes_poor_alignment = []
       // Filter removes all 'aligned' channels that fail the check
       chSpikeBams = compareRefSpike.out.spikeBams
       chSpikeBams
-       .filter { sample, logs, bams -> checkMappingLog(logs, t="$params.spikePercentFilter") }
+       //.filter { sample, logs, bams -> checkMappingLog(logs, t="$params.spikePercentFilter") }
+       .filter { sample, logs, bams -> checkMappingLog(logs, t="0.2") }
        .map { row -> [row[0], row[2]]}
        .set { chSpikeCheckBams }
 

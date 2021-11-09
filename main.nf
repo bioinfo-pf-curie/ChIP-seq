@@ -580,25 +580,30 @@ workflow {
      markdupFlow(
        sortingFlow.out.sortBams
      )
-     chBams = markdupFlow.out.chFilteredBams
-     chFlagstat = markdupFlow.out.chFilteredFlagstat
+
      // Separate sample BAMs and spike BAMs
-     chFlagstatMacs = Channel.empty()
-     chFlagstatSpikes = Channel.empty()
-     chFlagstatMacs = chFlagstat
-     chFlagstat 
-       .branch { prefix: it[0] =~ 'spike'}
-       .set { chFlagstatSpikes }
+     chFlagstatChip=Channel.empty()
+     chFlagstatSpikes=Channel.empty()
+
+     markdupFlow.out.chFilteredFlagstat
+     .branch {
+        chFlagstatSpikes : it[0] =~ 'spike'
+        chFlagstatChip : !(it[0] =~ 'spike')
+      }
+      .set { chFlagstat }
 
      chBamsChip = Channel.empty()
      chBamsSpikes = Channel.empty() 
-     chBamsChip = chBams
-     chBams
-      .branch { prefix: it[0] =~ 'spike'}
-      .set { chBamsSpikes} 
+     
+     markdupFlow.out.chFilteredBams
+     .branch {
+        chBamsSpikes : it[0] =~ 'spike'
+        chBamsChip : !(it[0] =~ 'spike')
+      }
+      .set { chBams }
 
       // Preparing all ChIP data for further analysis
-      chBamsChip = chBamsChip.dump(tag:'cbams')
+      chBamsChip = chBams.chBamsChip.dump(tag:'cbams')
 
       // all ChIP analysis
       bamsChipFlow(
@@ -610,7 +615,7 @@ workflow {
       if (useSpike){
         // all Spikes analysis
         bamsSpikesFlow(
-          chBamsSpikes,
+          chBams.chBamsSpikes,
           chBamsChip,
           chBlacklist
         )
@@ -623,7 +628,7 @@ workflow {
         chBamsChip,
         chDesignControl,
         chNoInput,
-        chFlagstatMacs
+        chFlagstat.chFlagstatChip
       )
  
       // Feature counts
