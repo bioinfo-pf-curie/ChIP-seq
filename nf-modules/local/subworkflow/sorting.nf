@@ -44,8 +44,7 @@ workflow sortingFlow {
       // Filter removes all 'aligned' channels that fail the check
       chSpikeBams = compareRefSpike.out.spikeBams
       chSpikeBams
-       //.filter { sample, logs, bams -> checkMappingLog(logs, t="$params.spikePercentFilter") }
-       .filter { sample, logs, bams -> checkMappingLog(logs, t="0.2") }
+       .filter { sample, logs, bams -> checkMappingLog(logs, t="$params.spikePercentFilter") }
        .map { row -> [row[0], row[2]]}
        .set { chSpikeCheckBams }
 
