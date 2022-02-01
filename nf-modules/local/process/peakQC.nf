@@ -1,26 +1,25 @@
 /*
  * Peak calling & annotation QC
  */
+
 process peakQC{
   label 'r'
   label 'medCpu'
   label 'medMem'
-  publishDir "${params.outDir}/peakCalling/QC/", mode: 'copy'
-
-  when:
-  !params.skipPeakQC && params.design
 
   input:
-  path peaks 
-  path annotations 
-  path peakHeader
+  path(peaks)
+  path(annotations) 
+  path(peakHeader)
 
   output:
-  path "*.{txt,pdf}", emit:  macsQcOutput
-  path "*.tsv"      , emit:  peakMqc
+  path("*.{txt,pdf}"), emit:  output
+  path("*.tsv"), emit:  mqc
+  path("versions.txt"), emit: versions
 
   script:
   """
+  echo \$(R --version | awk 'NR==1{print \$1,\$3}') > versions.txt
   plot_macs_qc.r \\
     -i ${peaks.join(',')} \\
     -s ${peaks.join(',').replaceAll("_peaks.narrowPeak","").replaceAll("_peaks.broadPeak","")} \\

@@ -14,7 +14,8 @@ process bigWigSpikeNorm{
     
     output:
     tuple val(prefix), path('*.bigwig'), emit: bigWigSF
-    
+    path("versions.txt"), emit: versions    
+
     script:
     if (params.singleEnd){
       extend = params.fragmentSize > 0 && !params.noReadExtension ? "--extendReads ${params.fragmentSize}" : ""
@@ -24,6 +25,7 @@ process bigWigSpikeNorm{
     blacklistParams = params.blacklist ? "--blackListFileName ${BLbed}" : ""
     effGsize = params.effGenomeSize ? "--effectiveGenomeSize ${params.effGenomeSize}" : ""
     """
+    echo \$(bamCoverage --version ) > versions.txt
     bamCoverage -b ${filteredBams[0]} \\
                 -o ${prefix}_spikenorm.bigwig \\
                 -p ${task.cpus} \\

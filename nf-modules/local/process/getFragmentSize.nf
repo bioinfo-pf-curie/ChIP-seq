@@ -8,21 +8,18 @@ process getFragmentSize {
   label 'lowCpu'
   label 'medMem'
 
-  publishDir path: "${params.outDir}/fragSize/", mode: "copy"
-
-  when:
-  !params.singleEnd
-
   input:
-  tuple val(prefix), path(filteredBam) 
+  tuple val(prefix), path(bam), path(bai)
 
   output:
-  path("*.{pdf,txt}"),   emit: fragmentsSize
+  path("*.{pdf,txt}"), emit: fragmentsSize
+  path("versions.txt"), emit: versions
 
   script:
   """
+  echo \$(picard CollectInsertSizeMetrics --version 2>&1 | sed -e 's/Version:/picard /') > versions.txt
   picard CollectInsertSizeMetrics \
-      I=${filteredBam[0]} \
+      I=${bam} \
       O=${prefix}_insert_size_metrics.txt \
       H=${prefix}_insert_size_histogram.pdf \
       VALIDATION_STRINGENCY=LENIENT \

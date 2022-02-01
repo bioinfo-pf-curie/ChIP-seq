@@ -7,18 +7,14 @@ process bigWig {
   label 'deeptools'
   label 'medCpu'
   label 'lowMem'
-  publishDir "${params.outDir}/bigWig", mode: "copy",
-    saveAs: {filename ->
-             if ( filename.endsWith(".bigwig") ) "$filename"
-             else null}
 
   input:
-  tuple val(prefix), path(filteredBams)
+  tuple val(prefix), path(bam), path(bai)
   path(BLbed)
 
   output:
   tuple val(prefix), path('*.bigwig'), emit: bigWig
-  path("v_deeptools.txt")          , emit: version
+  path("versions.txt"), emit: versions
 
   script:
   if (params.singleEnd){
@@ -29,11 +25,12 @@ process bigWig {
   blacklistParams = params.blacklist ? "--blackListFileName ${BLbed}" : ""
   effGsize = params.effGenomeSize ? "--effectiveGenomeSize ${params.effGenomeSize}" : ""
   """
+  echo \$(bamCoverage --version ) > versions.txt
   bamCoverage --version &> v_deeptools.txt
-  nbreads=\$(samtools view -@ $task.cpus -F 0x100 -F 0x4 -F 0x800 -c ${filteredBams[0]})
+  nbreads=\$(samtools view -@ $task.cpus -F 0x100 -F 0x4 -F 0x800 -c ${bam})
   sf=\$(echo "1000000 \$nbreads" | awk '{print \$1/\$2}')
 
-  bamCoverage -b ${filteredBams[0]} \\
+  bamCoverage -b ${bam} \\
               -o ${prefix}_norm.bigwig \\
               -p ${task.cpus} \\
               ${blacklistParams} \\

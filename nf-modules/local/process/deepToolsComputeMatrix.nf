@@ -7,21 +7,19 @@ process deepToolsComputeMatrix{
   label 'deeptools'
   label 'medCpu'
   label 'lowMem'
-  publishDir "${params.outDir}/deepTools/computeMatrix", mode: "copy"
-
-  when:
-  !params.skipDeepTools
 
   input:
   tuple val(prefix), path(bigwig)
   path geneBed 
 
   output:
-  path("*.{mat,gz,pdf}"), emit: deeptoolsSingle
-  path("*mqc.tab")      , emit: deeptoolsSingleMqc
+  path("*.{mat,gz,tab,pdf}"), emit: output
+  path("*mqc.tab"), emit: mqc
+  path("versions.txt"), emit: versions
 
   script:
   """
+  echo \$(deeptools --version ) > versions.txt
   computeMatrix scale-regions \\
                 -R ${geneBed} \\
                 -S ${bigwig} \\

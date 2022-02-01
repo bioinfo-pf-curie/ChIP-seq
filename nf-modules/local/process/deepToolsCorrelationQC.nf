@@ -1,21 +1,25 @@
+/*
+ * Deeptools - correlatation
+ */
+
 process deepToolsCorrelationQC{
   label 'deeptools'
   label 'highCpu'
   label 'lowMem'
-  publishDir "${params.outDir}/deepTools/correlationQC", mode: "copy"
 
   when:
-  allPrefix.size() >= 2 && !params.skipDeepTools
+  allPrefix.size() >= 2
 
   input:
+  val(allPrefix)
   path(allBams) 
   path(allBai) 
-  val (allPrefix)
   path(BLbed)
 
   output:
-  path "bams_correlation.pdf", emit: correl
-  path "bams_correlation.tab", emit: correlMqc
+  path("bams_correlation.{pdf,tab}"), emit: output
+  path("*tab"), emit: mqc
+  path("versions.txt"), emit: versions
 
   script:
   blacklistParams = params.blacklist ? "--blackListFileName ${BLbed}" : ""
@@ -23,6 +27,7 @@ process deepToolsCorrelationQC{
   allPrefix = allPrefix.replace(","," ")
   allPrefix = allPrefix.replace("]","")
   """
+  echo \$(deeptools --version ) > versions.txt
   multiBamSummary bins -b $allBams \\
                        --binSize=50000 \\
                         -o bams_summary.npz \\

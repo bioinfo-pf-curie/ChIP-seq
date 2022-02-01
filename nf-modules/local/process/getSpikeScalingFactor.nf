@@ -1,17 +1,22 @@
+/*
+ * Calculate spike-in scaling factors
+ */
+
 process getSpikeScalingFactor {
-    label 'r'
-    label 'minCpu'
-    label 'medMem'
-    publishDir "${params.outDir}/bigWigSpike", mode: "copy"
+  label 'r'
+  label 'minCpu'
+  label 'medMem'
 
-    input:
-    path(tab)
+  input:
+  path(tab)
 
-    output:
-    path "*.sf", emit: tabSF
+  output:
+  path("*.sf"), emit: tabSF
+  path("versions.txt"), emit: versions
 
-    script:
-    """
-    getDESeqSF.r ${tab}
-    """
-  }
+  script:
+  """
+  echo \$(R --version | awk 'NR==1{print \$1,\$3}') >> versions.txt
+  getDESeqSF.r ${tab}
+  """
+}

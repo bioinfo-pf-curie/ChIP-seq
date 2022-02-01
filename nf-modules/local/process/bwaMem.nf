@@ -1,40 +1,33 @@
 /*
- * Alignment on reference genome
+ * Alignement on reference genome with Bwa-mem
  */
 
-/* BWA-MEM */
 process bwaMem{
-  tag "${sample} on ${genomeName}"
+  tag "${prefix}"
   label 'bwa'
   label 'highCpu'
   label 'highMem'
-  publishDir "${params.outDir}/mapping", mode: 'copy',
-             saveAs: {filename ->
-             if (filename.indexOf(".log") > 0) "logs/$filename"
-             else if (params.saveAlignedIntermediates) filename}
-
-  when:
-  params.aligner == "bwa-mem" && !params.inputBam
 
   input:
-  val genomeRef
-  tuple val(sample), path(reads), path(index), val(genomeBase), val(genomeName)
+  tuple val(prefix), path(reads)
+  path(index)
 
   output:
-  tuple val(sample), path("*.bam"), emit: bam 
-  path "*.log"                    , emit: mqc 
-  path "v_bwa.txt"                , emit: version
+  tuple val(prefix), path("*.bam"), emit: bam 
+  path("*.log"), emit: logs
+  path("versions.txt"), emit: versions
 
   script:
-  prefix = genomeName == genomeRef ? sample : sample + '_spike'
-  opts = params.bwaOpts
+  def args = task.ext.args ?: ''
   """
-  echo \$(bwa 2>&1) &> v_bwa.txt
+  localIndex=`find -L ./ -name "*.amb" | sed 's/.amb//'`
+  refName=`basename \${localIndex}`
+  echo "Bwa-mem "\$(bwa 2>&1 | grep Version | cut -d" " -f2) &> versions.txt
   bwa mem -t ${task.cpus} \
-           ${index}/${genomeBase} \
-          ${opts} \
-          $reads | samtools view -bS - > ${prefix}.bam
-  getBWAstats.sh -i ${prefix}.bam -p ${task.cpus} > ${prefix}_bwa.log
+           \${localIndex} \
+          ${args} \
+          $reads | samtools view -bS - > ${prefix}_\${refName}.bam
+  getBWAstats.sh -i ${prefix}_\${refName}.bam -p ${task.cpus} > ${prefix}_bwa.log
   """
 }
 

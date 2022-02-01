@@ -1,5 +1,7 @@
 /*
- * Check design and sampleplan files
+ * Check design and sample plan files
+ * External parameters :
+ * @ params.singleEnd :	is data	single-end sequencing ?
  */
 
 process checkDesign{
@@ -7,9 +9,6 @@ process checkDesign{
   label 'minCpu'
   label 'minMem'
   publishDir "${params.summaryDir}/", mode: 'copy'
-
-  when:
-  params.design
 
   input:
   path design

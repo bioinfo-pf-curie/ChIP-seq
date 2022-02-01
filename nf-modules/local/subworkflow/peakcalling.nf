@@ -2,173 +2,174 @@
  * Peak calling
  */
 
-/* 
- * include requires tasks 
- */
-include { sharpMACS2 } from '../process/sharpMACS2' 
-include { broadMACS2 } from '../process/broadMACS2'
-include { veryBroadEpic2 } from '../process/veryBroadEpic2'
-include { peakAnnoHomer } from '../process/peakAnnoHomer'
+include { samtoolsFlagstat } from '../../common/process/samtoolsFlagstat'
+include { macs2 as macs2Sharp } from '../process/macs2' 
+include { macs2 as macs2Broad } from '../process/macs2'
+include { epic2 } from '../process/epic2'
+include { frip } from '../process/frip'
+include { annotPeaksHomer } from '../process/annotPeaksHomer'
 include { peakQC } from '../process/peakQC'
 include { IDR } from '../process/IDR'
 
 Channel
   .fromPath("$baseDir/assets/peak_count_header.txt")
   .set { chPeakCountHeader }
-
 Channel
   .fromPath("$baseDir/assets/frip_score_header.txt")
   .set { chFripScoreHeader }
-
 Channel
   .fromPath("$baseDir/assets/peak_annotation_header.txt")
   .set{ chPeakAnnotationHeader }
 
-// Chromosome size file
-if ( params.chrsize ){
-  Channel
-    .fromPath(params.chrsize, checkIfExists: true)
-    .set{chChromSize}
-}
-else{
-  exit 1, "Chromosome size file not found: ${params.chrsize}"
-}
-
-// Annotations
-if (params.gtf) {
-  Channel
-    .fromPath(params.gtf, checkIfExists: true)
-    .set{chGtfHomer}
-}
-else {
-  exit 1, "GTF annotation file not specified!"
-}
-
-// Fasta file
-if ( params.fasta ){
-  Channel
-    .fromPath(params.fasta, checkIfExists: true)
-    .set{chFastaHomer}
-}
-else{
-  exit 1, "Fasta file not found: ${params.fasta}"
-}
+// Create special channel to deal with no input cases
+Channel
+  .from( ["NO_INPUT", file("NO_FILE_BAM"), file("NO_FILE_BAI")] )
+  .toList()
+  .set{ chNoInput }
 
 workflow peakCallingFlow {
-    // required inputs
-    take:
-     chBamsChip 
-     chDesignControl
-     chNoInput
-     chFlagstatMacs 
+
+  take:
+  bamsChip
+  design
+  effgsize
+  chrsize
+  gtf
+  fasta
+  
+  main:
+  chVersions = Channel.empty()
+
+  samtoolsFlagstat(
+    bamsChip.map{it -> [it[0], it[1]]}
+  )
+  chVersions = chVersions.mix(samtoolsFlagstat.out.versions)
+
+  // all pairs of samples + no Input
+  bamsChip 
+    .combine(chNoInput.concat(bamsChip))
+    .set { bamsPairChip }  
+
+  //[group, peakType, prefix1, bam1, bai1, prefix2, bam2, bai2]
+  design
+    .combine(bamsPairChip)
+    .filter { it[0] == it[4] && it[1] == it[7] }
+    .map { it ->  it[2..-1] }
+    .set { chBamCallPeaks }  
+
+
+  /*********************************
+   * Macs2 - sharp mode
+   */ 
+
+  chBamCallPeaks
+    .filter { it[1] == 'sharp' }
+    .map{ it -> it[2..7] }
+    .set { chBamMacs2Sharp }
+
+  macs2Sharp(
+    chBamMacs2Sharp,
+    effgsize.first(),
+    chPeakCountHeader.collect()
+  )
+  chVersions = chVersions.mix(macs2Sharp.out.versions)
+
+  /*******************************
+   * Macs2  - Broad
+   */
+
+  chBamCallPeaks
+    .filter { it[1] == 'broad' }
+    .map{ it -> it[2..7] }
+    .set { chBamMacs2Broad }
+
+  macs2Broad(
+   chBamMacs2Broad,
+   effgsize.first(),
+   chPeakCountHeader.collect()
+  )
+  chVersions = chVersions.mix(macs2Broad.out.versions)
      
-    // workflow implementation
-    main:
+  /********************************
+   * EPIC2 - very broad
+   */       
 
-      /*
-       * Prepare channels
-       */
-      if (params.design){
-        chBamsChip 
-         .join(chFlagstatMacs)
-         .combine(chNoInput.concat(chBamsChip))
-         .set { chBamsChip }  
+  chBamCallPeaks
+    .filter { it[1] == 'very-broad' }
+    .map{ it -> it[2..7] }
+    .set { chBamEpic }
 
-        chDesignControl
-         .combine(chBamsChip)
-         .filter { it[0] == it[5] && it[1] == it[8] }
-         .map { it ->  it[2..-1] }
-         .dump(tag:'peakCall')
-         .set { chGroupBamMacs }  
-       }else{
-         chGroupBamMacs=Channel.empty()
-       }
+  epic2(
+    chBamEpic,
+    effgsize.first(),
+    chrsize.collect(),
+    chPeakCountHeader.collect()
+  )
+  chVersions = chVersions.mix(epic2.out.versions)
 
+  // Join the results of all peaks callers
+  macs2Sharp.out.peaks
+    .mix(macs2Broad.out.peaks, epic2.out.peaks)
+    .set{ chPeaks }
+
+  /********************************
+   * FRIP
+   */
+
+  //[prefix, bam, stats, peaks]
+  chBamCallPeaks
+    .map{ it -> it[2..7] }
+    .combine(samtoolsFlagstat.out.stats, by:0)
+    .join(chPeaks)
+    .map{it -> [it[0], it[1], it[6], it[7]]}
+    .set{ chFrip }
+
+  frip(
+    chFrip,
+    chFripScoreHeader.collect()
+  )
+  chVersions = chVersions.mix(frip.out.versions)
+
+  /********************************
+   * Peaks Annotation
+   */       
+
+  annotPeaksHomer(
+    chPeaks,
+    gtf.collect(),
+    fasta.collect()
+  )
+
+  /*******************************
+   * QC
+   */
        
+  peakQC(
+    chPeaks.map{it->it[1]}.collect(),
+    annotPeaksHomer.out.output.map{it->it[1]}.collect(),
+    chPeakAnnotationHeader
+  )
+  chVersions = chVersions.mix(peakQC.out.versions)
+
+  /*
+   * Irreproducible Discovery Rate
+   */
+       
+//       chPeaks 
+//         .map { it -> [it[0],it[4]] }
+//         .groupTuple()
+//         .dump (tag:'rep')
+//         .set{ chPeaksPerGroup }
  
-      /*
-       * MACS2 - sharp mode
-       */
-      
-      sharpMACS2(
-	chGroupBamMacs.filter { it[2] == 'sharp' },
-	chPeakCountHeader.collect(),
-	chFripScoreHeader.collect()
-      )
-      
-      /*
-       * MACS2  - Broad
-       */
-      broadMACS2(
-        chGroupBamMacs.filter { it[2] == 'broad' },
-        chPeakCountHeader.collect(),
-        chFripScoreHeader.collect()
-      )
-      
-      /*
-       * EPIC2 - very broad
-       */
+//       IDR(
+//         chPeaksPerGroup 
+//       )
 
-      veryBroadEpic2(
-        chGroupBamMacs.filter { it[2] == 'very-broad' },
-        chPeakCountHeader.collect(),
-        chFripScoreHeader.collect(),
-	chChromSize.collect()
-      ) 
-
-      // Join the results of all peaks callers
-      sharpMACS2.out.peaksMacsSharp  
-        .mix(broadMACS2.out.peaksMacsBroad, veryBroadEpic2.out.peaksEpic)
-        .set{ chPeaks }
-
-      /*
-       * Peaks Annotation
-       */
-
-      peakAnnoHomer(
-         chPeaks,
-         chGtfHomer.collect(),
-         chFastaHomer.collect()
-       )
-
-      /*
-       * Peak calling & annotation QC
-       */
-       peakQC(
-         chPeaks.collect{ it[-1] },
-         peakAnnoHomer.out.homerMqc.collect(),
-         chPeakAnnotationHeader
-       )
-      
-      /**********************************
-       * Per Group Analysis
-       */
-
-      /*
-       * Irreproducible Discovery Rate
-       */
-       chPeaks 
-         .map { it -> [it[0],it[4]] }
-         .groupTuple()
-         .dump (tag:'rep')
-         .set{ chPeaksPerGroup }
- 
-       IDR(
-         chPeaksPerGroup 
-       )
-
-
-    emit:
-
-      chMacs2VersionMacs2Broad = broadMACS2.out.version  // channel: [ path("v_macs2.txt") ]
-      chMacs2VersionMacs2Sharp = sharpMACS2.out.version  // channel: [ path("v_macs2.txt") ]
-      chEpic2Version = veryBroadEpic2.out.version        // channel: [ path("v_epic2.txt") ]
-      chIdrVersion = IDR.out.version                     // channel: [ path("v_idr.txt") ]
-      chMacsOutputSharp = sharpMACS2.out.macsOutputSharp // channel: [ path("*.xls") ]
-      chMacsCountsSharp = sharpMACS2.out.macsCountsSharp // channel: [ path("*_mqc.tsv") ]
-      chMacsOutputBroad = broadMACS2.out.macsOutputBroad // channel: [ path("*.xls") ]
-      chMacsCountsBroad = broadMACS2.out.macsCountsBroad // channel: [ path("*_mqc.tsv") ]
-      chMacsCountsVbroad = veryBroadEpic2.out.macsCountsVbroad  // channel: [ path("v_idr.txt") ]
-      chPeakMqc = peakQC.out.peakMqc //  channel: [ path "*.tsv" ] 
+  emit:
+    versions = chVersions    
+    peaksCountsMqc = macs2Sharp.out.mqc.concat(macs2Broad.out.mqc, epic2.out.mqc)
+    peaksOutput = macs2Sharp.out.outputXls.concat(macs2Broad.out.outputXls, epic2.out.output)
+    peaksQCMqc = peakQC.out.mqc
+    fripResults = frip.out.output
 }
 
