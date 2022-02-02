@@ -53,38 +53,20 @@ custom_data:
               suffix: '%'
               format: '{:,.1f}'
               placement: 4000
-            Number_of_hq_mapped_reads:
-              title: 'High-Quality Alignment'
-              description: 'High-Quality Mapped Reads (mapQ > 10)'
+            Number_reads_after_filt:
+              title: 'After Filtering'
               scale: 'RdYlGn'
               format: '{:,.0f}'
               hidden: true
               placement: 5000
-            Percent_of_hq_mapped_reads:
-              title: 'High-Quality Alignment (%)'
-              description: 'High-Quality Mapped Reads (mapQ > 10)'
+            Percent_reads_after_filt:
+              title: 'After Filtering (%)'
               min: 0
               max: 100
-              scale: 'RdYlGn'
+              scale: 'RdYlVBu'
               format: '{:,.1f}'
               suffix: '%'
               placement: 6000
-            Number_of_lq_mapped_reads:
-              title: 'Low-Quality Alignment'
-              description: 'Low-Quality Mapped Reads (mapQ < 10)'
-              scale: 'RdYlGn'
-              format: '{:,.0f}'
-              hidden: true
-              placement: 7000
-            Percent_of_lq_mapped_reads:
-              title: 'Low-Quality Alignment (%)'
-              description: 'Low-Quality Mapped Reads (mapQ < 10)'
-              min: 0
-              max: 100
-              scale: 'RdYlGn'
-              format: '{:,.1f}'
-              suffix: '%'
-              placement: 8000
             Number_of_duplicates:
               title: 'Duplicates'
               scale: 'RdYlGn'

@@ -1,5 +1,5 @@
 ========================================
-${pipeline} v${version}
+${workflowName} v${version}
 ========================================
 Run Name: $runName
 

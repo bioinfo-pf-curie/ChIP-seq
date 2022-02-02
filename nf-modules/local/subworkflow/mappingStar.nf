@@ -15,9 +15,7 @@ workflow mappingStarFlow {
   take:
   reads 
   indexRef
-  genome
   indexSpike
-  spike
 
   main:
   
@@ -32,7 +30,7 @@ workflow mappingStarFlow {
   )
   chVersions = chVersions.mix(starAlignRef.out.versions)
 
-  if (spike){
+  if (params.spike){
 
     // Align on spike genome
     starAlignSpike(
@@ -43,7 +41,8 @@ workflow mappingStarFlow {
     )
 
     // Compare reference/spike mapping
-    compareBams(starAlignRef.out.bam.join(starAlignSpike.out.bam), genome, spike)
+    compareBams(starAlignRef.out.bam.join(starAlignSpike.out.bam), 
+      Channel.of(params.genome), Channel.of(params.spike))
 
     chAllBams = compareBams.out.refBam
       .concat(compareBams.out.spikeBam)

@@ -17,9 +17,7 @@ workflow mappingBwaMemFlow {
   take:
   reads
   indexRef
-  genome
   indexSpike
-  spike
 
   main:
   chVersions = Channel.empty()
@@ -32,7 +30,7 @@ workflow mappingBwaMemFlow {
   )
   chVersions = chVersions.mix(bwaMemRef.out.versions)
 
-  if (spike){
+  if (params.spike){
     // Align on spike genome
     bwaMemSpike(
       reads,
@@ -40,7 +38,7 @@ workflow mappingBwaMemFlow {
     )
 
     // Compare reference/spike mapping
-    compareBams(bwaMemRef.out.bam.join(bwaMemSpike.out.bam), genome, spike)
+    compareBams(bwaMemRef.out.bam.join(bwaMemSpike.out.bam), params.genome, params.spike)
 
     chRefBam = compareBams.out.refBam
     chSpikeBam = compareBams.out.spikeBam
@@ -70,7 +68,7 @@ workflow mappingBwaMemFlow {
   chVersions = chVersions.mix(samtoolsFlagstat.out.versions)
 
   // Process spike bams
-  if (spike){
+  if (params.spike){
     samtoolsSortSpike(
       chSpikeBam
     )

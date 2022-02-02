@@ -1,156 +1,121 @@
 #!/usr/bin/env nextflow
 
 /*
-Copyright Institut Curie 2020
+Copyright Institut Curie 2020-2021
 This software is a computer program whose purpose is to analyze high-throughput sequencing data.
 You can use, modify and/ or redistribute the software under the terms of license (see the LICENSE file for more details).
 The software is distributed in the hope that it will be useful, but "AS IS" WITHOUT ANY WARRANTY OF ANY KIND.
 Users are therefore encouraged to test the software's suitability as regards their requirements in conditions enabling the security of their systems and/or data.
 The fact that you are presently reading this means that you have had knowledge of the license and that you accept its terms.
-
-This script is based on the nf-core guidelines. See https://nf-co.re/ for more information
 */
-
 
 /*
 ========================================================================================
-            ChIP-seq
+                                ChIP-seq DSL2
 ========================================================================================
-ChIP-seq Analysis Pipeline.
-#### Homepage / Documentation
-https://gitlab.curie.fr/data-analysis/chip-seq
+ ChIP-seq Analysis Pipeline.
+ https://gitlab.curie.fr/data-analysis/chip-seq
 ----------------------------------------------------------------------------------------
 */
 
 nextflow.enable.dsl=2
 
-def helpMessage() {
-  if ("${workflow.manifest.version}" =~ /dev/ ){
-  devMess = file("$baseDir/assets/devMessage.txt")
-  log.info devMess.text
-  }
+// Initialize lintedParams and paramsWithUsage
+NFTools.welcome(workflow, params)
 
-  log.info"""
+// Use lintedParams as default params object
+paramsWithUsage = NFTools.readParamsFromJsonSettings("${projectDir}/parameters.settings.json")
+params.putAll(NFTools.lint(params, paramsWithUsage))
 
-  ChIP-seq v${workflow.manifest.version}
-  ======================================================================
+// Run name
+customRunName = NFTools.checkRunName(workflow.runName, params.name)
 
-  Usage:
+// Custom functions/variables
+mqcReport = []
 
-  nextflow run main.nf --reads '*_R{1,2}.fastq.gz' -profile conda --genomeAnnotationPath '/data/annotations/pipelines' --genome 'hg19' 
-  nextflow run main.nf --samplePlan 'sample_plan.csv' --design 'design.csv' -profile conda --genomeAnnotationPath '/data/annotations/pipelines' --genome 'hg19'
+include {checkSpikeAlignmentPercent} from './lib/functions'
+include {loadDesign} from './lib/functions'
 
-  Mandatory arguments:
-  --reads [file]                     Path to input data (must be surrounded with quotes)
-  --samplePlan [file]                Path to sample plan file if '--reads' is not specified
-  --genome [str]                     Name of genome reference. See the `--genomeAnnotationPath` to defined the annotations path.
-  -profile [str]                     Configuration profile to use. Can use multiple (comma separated)
+/*
+===================================
+  SET UP CONFIGURATION VARIABLES
+===================================
+*/
 
-  Inputs:
-  --design [file]                    Path to design file for downstream analysis
-  --singleEnd [bool]                 Specifies that the input is single end reads. Default: false
-  --fragmentSize [int]               Estimated fragment length used to extend single-end reads. Default: 200
-  --spike [str]                      Name of the genome used for spike-in analysis. Default: false
-  --genomeAnnotationPath [file]      Path to genome annotation folder
-
-  Annotation: If not specified in the configuration file or you wish to overwrite any of the references given by the --genome field
-  --fasta [file]                     Path to Fasta reference
-  --spikeFasta [file]                Path to Fasta reference for spike-in
-  --geneBed [file]                   BED annotation file with gene coordinate.
-  --gtf [file]                       GTF annotation file. Used in HOMER peak annotation
-  --effGenomeSize [int]              Effective Genome size
-
-  Alignment: If you want to modify default options or wish to overwrite any of the indexes given by the --genome field
-  --aligner [str]                    Alignment tool to use ['bwa-mem', 'star', 'bowtie2']. Default: 'bwa-mem'
-  --saveAlignedIntermediates [bool]  Save all intermediates mapping files. Default: false  
-  --starIndex [dir]                  Index for STAR aligner
-  --spikeStarIndex [dir]             Spike-in Index for STAR aligner
-  --bwaIndex [file]                  Index for Bwa-mem aligner
-  --spikeBwaIndex [file]             Spike-in Index for Bwa-mem aligner
-  --bowtie2Index [file]              Index for Bowtie2 aligner
-  --spikeBowtie2Index [file]         Spike-in Index for Bowtie2 aligner
-
-  Filtering:
-  --mapq [int]                       Minimum mapping quality to consider. Default: 10
-  --keepDups [bool]                  Do not remove duplicates afer marking. Default: false
-  --keepSingleton [bool]             Keep unpaired reads. Default: false
-  --blacklist [file]                 Path to black list regions (.bed). See the genome.config for details.
-  --spikePercentFilter [float]       Minimum percent of reads aligned to spike-in genome. Default: 0.2
-
-  Analysis:
-  --noReadExtension [bool]           Do not extend reads to fragment length. Default: false
-  --tssSize [int]                    Distance (upstream/downstream) to transcription start point to consider. Default: 2000
-
-  Skip options:        All are false by default
-  --skipFastqc [bool]                Skips fastQC
-  --skipPreseq [bool]                Skips preseq QC
-  --skipPPQT [bool]                  Skips phantompeakqualtools QC
-  --skipDeepTools [bool]             Skips deeptools QC
-  --skipPeakcalling [bool]           Skips peak calling
-  --skipPeakanno [bool]              Skips peak annotation
-  --skipIDR [bool]                   Skips IDR QC
-  --skipFeatCounts [bool]            Skips feature count
-  --skipMultiQC [bool]               Skips MultiQC step
-
-  Other options:
-  --metadata [file]                  Path to metadata file for MultiQC report
-  --outDir [dir]                     The output directory where the results will be saved
-  -w/--work-dir [dir]                The temporary directory where intermediate data will be saved
-  -name [str]                        Name for the pipeline run. If not specified, Nextflow will automatically generate a random mnemonic.
-
-  =======================================================
-  Available Profiles
-    -profile test                    Run the test dataset
-    -profile conda                   Build a new conda environment before running the pipeline. Use `--condaCacheDir` to define the conda cache path
-    -profile multiconda              Build a new conda environment per process before running the pipeline. Use `--condaCacheDir` to define the conda cache path
-    -profile path                    Use the installation path defined for all tools. Use `--globalPath` to define the insallation path
-    -profile multipath               Use the installation paths defined for each tool. Use `--globalPath` to define the insallation path 
-    -profile docker                  Use the Docker images for each process
-    -profile singularity             Use the Singularity images for each process. Use `--singularityPath` to define the insallation path
-    -profile cluster                 Run the workflow on the cluster, instead of locally
-
-  """.stripIndent()
+if (!params.genome){
+  exit 1, "No genome provided. The --genome option is mandatory"
 }
 
-// Show help messsage
-if (params.help){
-  helpMessage()
-  exit 0
+if (params.genomes && params.genome && !params.genomes.containsKey(params.genome)) {
+  exit 1, "The provided genome '${params.genome}' is not available in the genomes file. Currently the available genomes are ${params.genomes.keySet().join(", ")}"
+}
+
+params.fasta = NFTools.getGenomeAttribute(params, 'fasta')
+params.chrsize = NFTools.getGenomeAttribute(params, 'chrsize')
+params.spikeFasta = NFTools.getGenomeAttribute(params, 'fasta', genome=params.spike)
+params.bwaIndex = NFTools.getGenomeAttribute(params, 'bwaIndex')
+params.spikeBwaIndex = NFTools.getGenomeAttribute(params, 'bwaIndex', genome=params.spike)
+params.bowtie2Index = NFTools.getGenomeAttribute(params, 'bowtie2Index')
+params.spikeBowtie2Index = NFTools.getGenomeAttribute(params, 'bowtie2Index', genome=params.spike)
+params.starIndex = NFTools.getGenomeAttribute(params, 'starIndex')
+params.spikeStarIndex = NFTools.getGenomeAttribute(params, 'starIndex', genome=params.spike)
+params.gtf = NFTools.getGenomeAttribute(params, 'gtf')
+params.geneBed = NFTools.getGenomeAttribute(params, 'geneBed')
+params.blacklist = NFTools.getGenomeAttribute(params, 'blacklist')
+params.effGenomeSize = NFTools.getGenomeAttribute(params, 'effGenomeSize')
+
+// Stage config files
+chMultiqcConfig = Channel.fromPath(params.multiqcConfig)
+chOutputDocs = Channel.fromPath("$baseDir/docs/output.md")
+chOutputDocsImages = file("$baseDir/docs/images/", checkIfExists: true)
+
+/*
+==========================
+ VALIDATE INPUTS
+==========================
+*/
+
+if (params.genomes && params.spike && !params.genomes.containsKey(params.spike)) {
+  exit 1, "The provided spike-in genome '${params.spike}' is not available in the genomes file. Currently the available genomes are ${params.genomes.keySet().join(", ")}"
 }
 
 if (params.aligner != 'bwa-mem' && params.aligner != 'star' && params.aligner != 'bowtie2' ) {
     exit 1, "Invalid aligner option: ${params.aligner}. Valid options: 'star', 'bowtie2' or 'bwa-mem'"
 }
 
-/*********************
- * Fasta file
- */
+if (!params.design) {
+  log.info "=================================================================\n" +
+            "INFO: No design file detected.\n" +
+            "Peak calling and annotation will be skipped.\n" +
+            "Please set up a design file '--design' to run these steps.\n" +
+            "================================================================"
+}
 
-// Configurable reference genomes
-def genomeRef = params.genome
+if (!params.effGenomeSize) {
+  log.warn "=================================================================\n" +
+            "WARNING! Effective Genome Size is not defined.\n" +
+            "Peak calling and annotation will be skipped.\n" +
+            "Please specify value for '--effGenomeSize' to run these steps.\n" +
+            "================================================================"
+}
+
+
+/*
+==========================
+ BUILD CHANNELS
+==========================
+*/
 
 // Genome Fasta file
-params.fasta = genomeRef ? params.genomes[ genomeRef ].fasta ?: false : false
 if ( params.fasta ){
   Channel
     .fromPath(params.fasta, checkIfExists: true)
-    .set{chFastaHomer}
+    .set{chFasta}
 }
 else{
   exit 1, "Fasta file not found: ${params.fasta}"
 }
 
-// Chromosome size file
-params.chrsize = genomeRef ? params.genomes[ genomeRef ].chrsize ?: false : false
-
-// spike
-if (params.spike || (params.spikeFasta && (params.spikeBwaIndex || params.spikeBt2Index || params.spikeStarIndex))){
-  useSpike = true
-}else{
-  useSpike = false
-}
-
-params.spikeFasta = params.spike ? params.genomes[ params.spike ].fasta ?: false : false
 if ( params.spikeFasta ){
   Channel
     .fromPath(params.spikeFasta, checkIfExists: true)
@@ -159,119 +124,72 @@ if ( params.spikeFasta ){
   chFastaSpike = Channel.empty()
 }
 
-/********************
- * Bwa-mem Index
+/*
+ * Indexes
  */
 
-params.bwaIndex = genomeRef ? params.genomes[ genomeRef ].bwaIndex ?: false : false
-if (params.bwaIndex){
-  lastPath = params.bwaIndex.lastIndexOf(File.separator)
-  bwaDir =  params.bwaIndex.substring(0,lastPath+1)
-  bwaBase = params.bwaIndex.substring(lastPath+1)
+if( params.starIndex && params.aligner == 'star' ){
   Channel
-    .fromPath(bwaDir, checkIfExists: true)
-    .ifEmpty {exit 1, "BWA index file not found: ${params.bwaIndex}"}
-    .map{ it -> [it, bwaBase, genomeRef] }
-    .set { chBwaIndex }
-} else {
-  exit 1, "BWA index file not found: ${params.bwaIndex}"
+    .fromPath(params.starIndex)
+    .ifEmpty { exit 1, "STAR index not found: ${params.starIndex}" }
+    .set {chStarIndex}
+}
+else if ( params.bowtie2Index && params.aligner == 'bowtie2' ){
+  Channel
+    .fromPath("${params.bowtie2Index}")
+    .ifEmpty { exit 1, "Bowtie2 index not found: ${params.bowtie2Index}" }
+    .set{chBowtie2Index}
+}
+else if ( params.bwaIndex && params.aligner == "bwa-mem" ){
+  Channel
+    .fromPath("${params.bwaIndex}")
+    .ifEmpty { exit 1, "Bwa index not found: ${params.bwaIndex}" }
+    .set{chBwaIndex}
+}
+else {
+    exit 1, "No genome index specified!"
 }
 
-params.spikeBwaIndex = params.spike ? params.genomes[ params.spike ].bwaIndex ?: false : false
-if (params.spikeBwaIndex){
-  lastPath = params.spikeBwaIndex.lastIndexOf(File.separator)
-  bwaDirSpike =  params.spikeBwaIndex.substring(0,lastPath+1)
-  spikeBwaBase = params.spikeBwaIndex.substring(lastPath+1)
-  Channel
-    .fromPath(bwaDirSpike, checkIfExists: true)
-    .ifEmpty {exit 1, "Spike BWA index file not found: ${params.spikeBwaIndex}"}
-    .map{ it -> [it, spikeBwaBase, params.spike] }
-    .set { chSpikeBwaIndex }
-  
-  chBwaIndex = chBwaIndex.concat(chSpikeBwaIndex)
-}
-
-/*********************
- * Bowtie2 indexes
+/*
+ * Spike Indexes
  */
 
-params.bt2Index = genomeRef ? params.genomes[ genomeRef ].bowtie2Index ?: false : false
-if (params.bt2Index){
-  lastPath = params.bt2Index.lastIndexOf(File.separator)
-  bt2Dir =  params.bt2Index.substring(0,lastPath+1)
-  bt2Base = params.bt2Index.substring(lastPath+1)
+if( params.spikeStarIndex && params.aligner == 'star' ){
   Channel
-    .fromPath(bt2Dir, checkIfExists: true)
-    .ifEmpty {exit 1, "Bowtie2 index file not found: ${params.bt2Index}"}
-    .map{ it -> [it, bt2Base, genomeRef] }
-    .set { chBt2Index }
-} else {
-  exit 1, "Bowtie2 index file not found: ${params.bt2Index}"
+    .fromPath(params.spikeStarIndex)
+    .ifEmpty { exit 1, "STAR index not found: ${params.spikeStarIndex}" }
+    .set {chSpikeStarIndex}
+}
+else if ( params.spikeBowtie2Index && params.aligner == 'bowtie2' ){
+  Channel
+    .fromPath("${params.spikeBowtie2Index}")
+    .ifEmpty { exit 1, "Bowtie2 index not found: ${params.bowtie2Index}" }
+    .set{chSpikeBowtie2Index}
+}
+else if ( params.spikeBwaIndex && params.aligner == "bwa-mem" ){
+  Channel
+    .fromPath("${params.spikeBwaIndex}")
+    .ifEmpty { exit 1, "Bwa index not found: ${params.spikeBwaIndex}" }
+    .set{chSpikeBwaIndex}
+}else{
+  chSpikeStarIndex = Channel.empty()
+  chSpikeBowtie2Index = Channel.empty()
+  chSpikeBwaIndex = Channel.empty()
 }
 
-params.spikeBt2Index = params.spike ? params.genomes[ params.spike ].bowtie2Index ?: false : false
-if (params.spikeBt2Index){
-  lastPath = params.spikeBt2Index.lastIndexOf(File.separator)
-  bt2DirSpike =  params.spikeBt2Index.substring(0,lastPath+1)
-  spikeBt2Base = params.spikeBt2Index.substring(lastPath+1)
-  Channel
-    .fromPath(bt2DirSpike, checkIfExists: true)
-    .ifEmpty {exit 1, "Spike Bowtie2 index file not found: ${params.spikeBt2Index}"}
-    .map{ it -> [it, spikeBt2Base, params.spike] }
-    .set { chSpikeBt2Index }
-
-  chBt2Index = chBt2Index.concat(chSpikeBt2Index)
-}
-
-/********************
- * STAR indexes
- */
-
-params.starIndex = genomeRef ? params.genomes[ genomeRef ].starIndex ?: false : false
-if (params.starIndex){
-  Channel
-    .fromPath(params.starIndex, checkIfExists: true)
-    .ifEmpty {exit 1, "STAR index file not found: ${params.starIndex}"}
-    .combine( [ genomeRef ] ) 
-    .set { chStarIndex }
-} else {
-  exit 1, "STAR index file not found: ${params.starIndex}"
-}
-
-params.spikeStarIndex = params.spike ? params.genomes[ params.spike ].starIndex ?: false : false
-if (params.spikeStarIndex){
-  if (params.spike){
-    genomeSpike = params.spike
-  }else{
-    genomeSpike = 'spikeGenome'
-  }
-
-  Channel
-    .fromPath(params.spikeStarIndex, checkIfExists: true)
-    .ifEmpty {exit 1, "Spike STAR index file not found: ${params.spikeStarIndex}"}
-    .combine( [ genomeSpike ] )
-    .set { chSpikeStarIndex }
-
-  chStarIndex = chStarIndex.concat(chSpikeStarIndex)
-}
-
-/*********************
+/*
  * Annotations
  */
 
-params.gtf = genomeRef ? params.genomes[ genomeRef ].gtf ?: false : false
-
-params.geneBed = genomeRef ? params.genomes[ genomeRef ].geneBed ?: false : false
 if (params.geneBed) {
   Channel
     .fromPath(params.geneBed, checkIfExists: true)
-    .ifEmpty {exit 1, "BED file ${geneBed} not found"}
+    .ifEmpty {exit 1, "BED file ${params.geneBed} not found"}
     .set{chGeneBed}
 }else{
   chGeneBed = Channel.empty()
 }
 
-params.blacklist = genomeRef ? params.genomes[ genomeRef ].blacklist ?: false : false
 if (params.blacklist) { 
   Channel
     .fromPath(params.blacklist, checkIfExists: true)
@@ -280,483 +198,332 @@ if (params.blacklist) {
   chBlacklist = Channel.empty()
 }
 
-
-/***********************
- * Header and conf
- */
-
-//Peak Calling
-params.effGenomeSize = genomeRef ? params.genomes[ genomeRef ].effGenomeSize ?: false : false
-if (!params.effGenomeSize) {
-  log.warn "=================================================================\n" +
-            "  WARNING! Effective Genome Size is not defined.\n" +
-            "  Peak calling and annotation will be skipped.\n" +
-            "  Please specify value for '--effGenomeSize' to run these steps.\n" +
-            "================================================================"
+if ( params.chrsize ){
+  Channel
+    .fromPath(params.chrsize, checkIfExists: true)
+    .set{chChromSize}
+}else{
+  exit 1, "Chromosome size file not found: ${params.chrsize}"
 }
 
-//Stage config files
-Channel
-  .fromPath(params.multiqcConfig, checkIfExists: true)
-  .set{chMultiqcConfig}
-chOutputDocs = file("$baseDir/docs/output.md", checkIfExists: true)
-chOutputDocsImages = file("$baseDir/docs/images/", checkIfExists: true)
-
-//Has the run name been specified by the user?
-//This has the bonus effect of catching both -name and --name
-customRunName = params.name
-if( !(workflow.runName ==~ /[a-z]+_[a-z]+/) ){
-  customRunName = workflow.runName
+if (params.gtf) {
+  Channel
+    .fromPath(params.gtf, checkIfExists: true)
+    .set{chGtf}
+}else {
+  exit 1, "GTF annotation file not specified!"
 }
 
-//Header log info
-if ("${workflow.manifest.version}" =~ /dev/ ){
-  devMess = file("$baseDir/assets/devMessage.txt")
-  log.info devMess.text
+if (params.effGenomeSize){
+  Channel
+    .of(params.effGenomeSize)
+    .set{ chEffGenomeSize }
 }
-
-log.info """=======================================================
-
-ChIP-seq v${workflow.manifest.version}"
-======================================================="""
-def summary = [:]
-summary['Pipeline Name']  = 'ChIP-seq'
-summary['Pipeline Version'] = workflow.manifest.version
-summary['Run Name']     = customRunName ?: workflow.runName
-if (params.samplePlan) {
-  summary['SamplePlan'] = params.samplePlan
-} else{
-  summary['Reads']      = params.reads
-}
-summary['Design']       = params.design ?: "None"
-summary['Annotation']   = params.genomeAnnotationPath
-summary['Fasta Ref']    = params.fasta
-summary['Spikes'] = params.spike ? "${params.spike}" : useSpike ? "Yes" : "False"
-if (params.spikeFasta)  summary["Fasta spike"] = params.spikeFasta
-summary['GTF']          = params.gtf
-summary['Genes']        = params.geneBed
-if (params.blacklist)  summary['Blacklist '] = params.blacklist
-summary['Data Type']    = params.singleEnd ? 'Single-End' : 'Paired-End'
-if (params.singleEnd)  summary['Fragment Size '] = params.fragmentSize
-summary['Aligner'] = params.aligner
-if (params.keepDups)  summary['Keep Duplicates'] = 'Yes'
-if (params.mapq)  summary['Min MapQ'] = params.mapq
-summary['Max Memory']   = params.maxMemory
-summary['Max CPUs']     = params.maxCpus
-summary['Max Time']     = params.maxTime
-summary['Output dir']   = params.outDir
-summary['Working dir']  = workflow.workDir
-summary['Current home']   = "$HOME"
-summary['Current user']   = "$USER"
-summary['Current path']   = "$PWD"
-summary['Working dir']    = workflow.workDir
-summary['Output dir']     = params.outDir
-summary['Script dir']     = workflow.projectDir
-summary['Config Profile'] = workflow.profile
-
-log.info summary.collect { k,v -> "${k.padRight(15)}: $v" }.join("\n")
-log.info "========================================="
-
-
-/*
- * CHANNELS
- */
 
 if ( params.metadata ){
   Channel
     .fromPath( params.metadata )
     .ifEmpty { exit 1, "Metadata file not found: ${params.metadata}" }
     .set { chMetadata }
-}else{
-  chMetadata=Channel.empty()
-}                                                                                                                                                                                           
- 
+}
 
 /*
- * Create a channel for input read files
- */
+===========================
+   SUMMARY
+===========================
+*/
 
-if(params.samplePlan){
-  if(params.singleEnd && !params.inputBam){
-    Channel
-      .from(file("${params.samplePlan}"))
-      .splitCsv(header: false)
-      .map{ row -> [ row[0], [file(row[2])]] }
-      .set { rawReads }
-  }else if (!params.singleEnd && !params.inputBam){
-    Channel
-      .from(file("${params.samplePlan}"))
-      .splitCsv(header: false)
-      .map{ row -> [ row[0], [file(row[2]), file(row[3])]] }
-      .set { rawReads }
-  }else{
-    Channel
-      .from(file("${params.samplePlan}"))
-      .splitCsv(header: false)
-      .map{ row -> [ row[0], [file(row[2])]]}
-      .set { chAlignReads }
-   params.reads=false
-  }
-} else if(params.readPaths){
-  if(params.singleEnd){
-    Channel
-      .from(params.readPaths)
-      .map { row -> [ row[0], [file(row[1][0])]] }
-      .ifEmpty { exit 1, "params.readPaths was empty - no input files supplied" }
-      .set { rawReads }
-   } else {
-     Channel
-       .from(params.readPaths)
-       .map { row -> [ row[0], [file(row[1][0]), file(row[1][1])]] }
-       .ifEmpty { exit 1, "params.readPaths was empty - no input files supplied" }
-       .set { rawReads }
-   }
-} else {
-  Channel
-    .fromFilePairs( params.reads, size: params.singleEnd ? 1 : 2 )
-    .ifEmpty { exit 1, "Cannot find any reads matching: ${params.reads}\nNB: Path needs to be enclosed in quotes!\nNB: Path requires at least one * wildcard!\nIf this is single-end data, please specify --singleEnd on the command line." }
-    .set { rawReads }
-}
+summary = [
+  'Pipeline Release': workflow.revision ?: null,
+  'Run Name': customRunName,
+  'Inputs' : params.samplePlan ?: params.reads ?: null,
+  'Single-end' : params.singleEnd ?: null,
+  'Fragment Size' : params.singleEnd ? params.fragmentSize : null,
+  'Design' : params.design ?: null,
+  'Genome' : params.genome,
+  'Spike' : params.spike ?: null,
+  'GTF Annotation' : params.gtf ?: null,
+  'BED Annotation' : params.geneBed ?: null,
+  'Blacklist' : params.blacklist ?: null,
+  'Aligner' : params.aligner ?: null,
+  'Keep Dups' : params.keepDups ?: null,
+  'Min MapQ' : params.mapq ?: null,
+  'Max Resources': "${params.maxMemory} memory, ${params.maxCpus} cpus, ${params.maxTime} time per job",
+  'Container': workflow.containerEngine && workflow.container ? "${workflow.containerEngine} - ${workflow.container}" : null,
+  'Profile' : workflow.profile,
+  'OutDir' : params.outDir,
+  'WorkDir': workflow.workDir
+].findAll{ it.value != null }
+
+workflowSummaryCh = NFTools.summarize(summary, workflow, params)
 
 
-/**************************
- * Make sample plan if not available
- */
+/*
+==============================
+  LOAD INPUT DATA
+==============================
+*/
 
-if (params.samplePlan){
-  Channel
-    .fromPath(params.samplePlan)
-    .set {chSplan}
-}else if(params.readPaths){
-  if (params.singleEnd){
-    Channel
-      .from(params.readPaths)
-      .collectFile() {
-        item -> ["sample_plan.csv", item[0] + ',' + item[0] + ',' + item[1][0] + '\n']
-       }
-      .set{ chSplan}
-  }else{
-     Channel
-       .from(params.readPaths)
-       .collectFile() {
-         item -> ["sample_plan.csv", item[0] + ',' + item[0] + ',' + item[1][0] + ',' + item[1][1] + '\n']
-        }
-       .set{ chSplan }
-  }
-} else if(params.bamPaths){
-  Channel
-    .from(params.bamPaths)
-    .collectFile() {
-      item -> ["sample_plan.csv", item[0] + ',' + item[0] + ',' + item[1][0] + '\n']
-     }
-    .set{ chSplan }
-  params.aligner = false
-} else {
-  if (params.singleEnd){
-    Channel
-      .fromFilePairs( params.reads, size: 1 )
-      .collectFile() {
-         item -> ["sample_plan.csv", item[0] + ',' + item[0] + ',' + item[1][0] + '\n']
-      }     
-      .set { chSplan}
-  }else{
-    Channel
-      .fromFilePairs( params.reads, size: 2 )
-      .collectFile() {
-         item -> ["sample_plan.csv", item[0] + ',' + item[0] + ',' + item[1][0] + ',' + item[1][1] + '\n']
-      }     
-      .set { chSplan }
-   }
-}
-/******************************
- * Design file
- */
+// TODO - start from BAM files
 
-if (!params.design) {
-  log.info "=================================================================\n" +
-            "  INFO: No design file detected.\n" +
-            "  Peak calling and annotation will be skipped.\n" +
-            "  Please set up a design file '--design' to run these steps.\n" +
-            "================================================================"
-}
+// Load raw reads
+chRawReads = NFTools.getInputData(params.samplePlan, params.reads, params.readPaths, params.singleEnd, params)
 
+// Make samplePlan if not available
+chSplan = NFTools.getSamplePlan(params.samplePlan, params.reads, params.readPaths, params.singleEnd)
+
+// Design
 if (params.design){
   Channel
     .fromPath(params.design)
     .ifEmpty { exit 1, "Design file not found: ${params.design}" }
-    .set { chDesignCheck }
+    .set { chDesignFile }
 
-  chDesignControl = chDesignCheck
+  chDesignControl = loadDesign(params.design)
 
-  chDesignControl 
-    .splitCsv(header:true)
-    .map { row ->
-      if(row.CONTROLID==""){row.CONTROLID='NO_INPUT'}
-      return [ row.SAMPLEID, row.CONTROLID, row.SAMPLENAME, row.GROUP, row.PEAKTYPE ]
-     }
-    .set { chDesignControl }
-
-  // Create special channel to deal with no input cases
-  Channel
-    .from( ["NO_INPUT", ["NO_FILE","NO_FILE"]] )
-    .toList()
-    .set{ chNoInput }
 }else{
-  chNoInput = Channel.empty()
   chDesignControl = Channel.empty()
-  chDesignCheck = Channel.empty()
+  chDesignFile = Channel.empty()
 }
 
-// Don't overwrite global params.modules, create a copy instead and use that within the main script.
-//def modules = params.modules.clone()
-
-//def bwa_options     = modules['bwa']
-//def bowtie2_options = modules['bowtie2']
-//def star_options    = modules['star']
+/*
+==================================
+           INCLUDE
+==================================
+*/ 
 
 // Workflows
-// QC : check design and factqc
-include { qcFlow }              from './nf-modules/local/subworkflow/qc'
-// Alignment on reference genome
-// include { mappingFlow } from './nf-modules/common/subworkflow/mapping' addParams( alignerr: params.aligner, bwa_options: bwa_options, bowtie2_options: bowtie2_options, star_options: star_options ) 
-include { mappingFlow }         from './nf-modules/local/subworkflow/mapping' 
+include { mappingBwaMemFlow as mappingBwaMemFlow } from './nf-modules/local/subworkflow/mappingBwaMem'
+include { mappingStarFlow as mappingStarFlow } from './nf-modules/local/subworkflow/mappingStar'
+include { mappingBowtie2Flow as mappingBowtie2Flow } from './nf-modules/local/subworkflow/mappingBowtie2'
+include { bamFilteringFlow as bamFilteringFlowRef } from './nf-modules/local/subworkflow/bamFiltering'
+include { bamFilteringFlow as bamFilteringFlowSpike } from './nf-modules/local/subworkflow/bamFiltering'
 
-// Spike-in and Sorting BAM files
-include { sortingFlow }         from './nf-modules/local/subworkflow/sorting' 
-include { markdupFlow }         from './nf-modules/local/subworkflow/markdup' 
-include { bamsChipFlow }        from './nf-modules/local/subworkflow/bamschip' 
-include { bamsSpikesFlow }      from './nf-modules/local/subworkflow/bamsspikes' 
+include { bamChipFlow }        from './nf-modules/local/subworkflow/bamChip' 
+include { bamSpikesFlow }      from './nf-modules/local/subworkflow/bamSpikes' 
+
 // Peak calling
 include { peakCallingFlow }     from './nf-modules/local/subworkflow/peakcalling' 
 
 // Processes
+include { checkDesign } from './nf-modules/local/process/checkDesign'
+include { fastqc } from './nf-modules/common/process/fastqc'
 include { prepareAnnotation }   from './nf-modules/local/process/prepareAnnotation'
+include { preseq } from './nf-modules/common/process/preseq'
+
 include { featureCounts }       from './nf-modules/local/process/featureCounts'
-include { getSoftwareVersions } from './nf-modules/local/process/getSoftwareVersions'
-include { workflowSummaryMqc }  from './nf-modules/local/process/workflowSummaryMqc'
+include { getSoftwareVersions } from './nf-modules/common/process/getSoftwareVersions'
+include { outputDocumentation } from './nf-modules/common/process/outputDocumentation'
 include { multiqc }             from './nf-modules/local/process/multiqc'
-include { outputDocumentation } from './nf-modules/local/process/outputDocumentation'
+
 
 workflow {
-    main:
+  chVersions = Channel.empty()
 
-     chTSSFeatCounts = prepareAnnotation(chGeneBed.collect())
+  main:
+  // Init MultiQC Channels
+  chFastqcMqc = Channel.empty()
+  chAlignedBamMqc = Channel.empty()
+  chCompareBamsMqc = Channel.empty()
+  chPreseqMqc = Channel.empty()
+  chPeaksOutput=Channel.empty()
+  chPeaksCountsMqc=Channel.empty()
+  chFripResults=Channel.empty()
+  chPeaksQCMqc=Channel.empty()
 
-     // subroutines
-     outputDocumentation(
-       chOutputDocs,
-       chOutputDocsImages
-     )
+  // subroutines
+  outputDocumentation(
+    chOutputDocs,
+    chOutputDocsImages
+  )
 
-     // QC : check design and factqc
-     qcFlow(
-       chDesignCheck,
-       chSplan,
-       rawReads
-     )
-     chFastqcVersion = qcFlow.out.version
+  // Check design
+  if (params.design){
+    checkDesign(
+      chDesignFile, 
+      chSplan)
+  }
 
-     // Alignment on reference genome
-     mappingFlow(
-       rawReads,
-       chBwaIndex,
-       chBt2Index,
-       chStarIndex,
-       genomeRef
-     )
+  // PROCESS: fastqc
+  if (!params.skipFastqc){
+    fastqc(
+      chRawReads
+    )
+    chFastqcMqc = fastqc.out.results.collect()
+    chVersions = chVersions.mix(fastqc.out.versions)
+  }
 
-     if (params.inputBam){
-       qcFlow.out.chFastqcMqc = Channel.empty()
-       mappingFlow.out.chMappingMqc = Channel.empty()
-     }
 
-     // Spike-in and Sorting BAM files
-     spikes_poor_alignment = []
-     sortingFlow(
-       mappingFlow.out.chAlignReads,
-       useSpike
-     )
+  //*******************************************
+  // MAPPING
 
-     markdupFlow(
-       sortingFlow.out.sortBams
-     )
+  // SUBWORKFLOW: STAR mapping
+  if (params.aligner == "star"){
+    mappingStarFlow(
+      chRawReads,
+      chStarIndex,
+      chSpikeStarIndex,
+    )
+    chAlignedBam = mappingStarFlow.out.bam
+    chVersions = chVersions.mix(mappingStarFlow.out.versions)
+  }
 
-     // Separate sample BAMs and spike BAMs
-     chFlagstatChip=Channel.empty()
-     chFlagstatSpikes=Channel.empty()
+  // SUBWORKFLOW: Bowtie2 mapping
+  if (params.aligner == "bowtie2"){
+    mappingBowtie2Flow(
+      chRawReads,
+      chBowtie2Index,
+      chSpikeBowtie2Index,
+    )
+    chAlignedBam = mappingBowtie2Flow.out.bam
+    chVersions = chVersions.mix(mappingBowtie2Flow.out.versions)
+  }
 
-     markdupFlow.out.chFilteredFlagstat
-     .branch {
-        chFlagstatSpikes : it[0] =~ 'spike'
-        chFlagstatChip : !(it[0] =~ 'spike')
-      }
-      .set { chFlagstat }
+  // SUBWORKFLOW: Bwa mapping
+  if (params.aligner == "bwa-mem"){
+    mappingBwaMemFlow(
+      chRawReads,
+      chBwaIndex.collect(),
+      chSpikeBwaIndex,
+    )
+    chAlignedBam = mappingBwaMemFlow.out.bam
+    chAlignedBamMqc = mappingBwaMemFlow.out.logs
+    chAlignedFlagstat = mappingBwaMemFlow.out.flagstat
+    chAlignedSpikeBam = mappingBwaMemFlow.out.spikeBam
+    chCompareBamsMqc = mappingBwaMemFlow.out.compareBamsMqc
+    chVersions = chVersions.mix(mappingBwaMemFlow.out.versions)
+  }
 
-     chBamsChip = Channel.empty()
-     chBamsSpikes = Channel.empty() 
-     
-     markdupFlow.out.chFilteredBams
-     .branch {
-        chBamsSpikes : it[0] =~ 'spike'
-        chBamsChip : !(it[0] =~ 'spike')
-      }
-      .set { chBams }
+  // Remove low mapping rate for spikes
+  chCompareBamsMqc.join(chAlignedSpikeBam)
+    .filter { prefix, logs, bam, bai -> checkSpikeAlignmentPercent(prefix, logs, params.spikePercentFilter) }
+    .map { prefix, logs, bam, bai -> [ prefix, bam, bai ] }
+    .set { chPassedSpikeBam }
 
-      // Preparing all ChIP data for further analysis
-      chBamsChip = chBams.chBamsChip.dump(tag:'cbams')
 
-      // all ChIP analysis
-      bamsChipFlow(
-	    chBamsChip,
-	    chBlacklist,
-	    chGeneBed
-      )
+  //*******************************************
+  // CHIP WORFLOW
 
-      if (useSpike){
-        // all Spikes analysis
-        bamsSpikesFlow(
-          chBams.chBamsSpikes,
-          chBamsChip,
-          chBlacklist
-        )
-      }
+  //if (params.inputBam){
+  //  qcFlow.out.chFastqcMqc = Channel.empty()
+  //  mappingFlow.out.chMappingMqc = Channel.empty()
+  //}
 
-      // /!\ From this point, 'design' is mandatory /!\
+  if (!params.skipSaturation){ 
+    preseq(
+      chAlignedBam
+    )
+   chPreseqMqc = preseq.out.results.collect()
+  }
 
-      // Peak calling
-      peakCallingFlow(
-        chBamsChip,
-        chDesignControl,
-        chNoInput,
-        chFlagstat.chFlagstatChip
-      )
- 
-      // Feature counts
-      featureCounts(
-        chBamsChip.map{items->items[1][0]}.collect(),
-        chGeneBed.concat(chTSSFeatCounts)
-      ) 
-      
-      // MultiQC
-      getSoftwareVersions(
-        qcFlow.out.version.first().ifEmpty([]),
-        mappingFlow.out.chBwaVersion.first().ifEmpty([]),
-        mappingFlow.out.chBowtie2Version.first().ifEmpty([]),
-        mappingFlow.out.chStarVersion.first().ifEmpty([]),
-        sortingFlow.out.chSamtoolsVersionBamSort.concat(markdupFlow.out.chSamtoolsVersionBamFiltering).first().ifEmpty([]),
-        markdupFlow.out.chPicardVersion.first().ifEmpty([]),
-        peakCallingFlow.out.chMacs2VersionMacs2Sharp.concat(peakCallingFlow.out.chMacs2VersionMacs2Broad).first().ifEmpty([]),
-        peakCallingFlow.out.chEpic2Version.first().ifEmpty([]),
-        markdupFlow.out.chPreseqVersion.first().ifEmpty([]),
-        peakCallingFlow.out.chIdrVersion.first().ifEmpty([]),
-        bamsChipFlow.out.chPPQTVersion.first().ifEmpty([]),
-        bamsChipFlow.out.chDeeptoolsVersion.first().ifEmpty([]),
-        featureCounts.out.version.first().ifEmpty([])
-      ) 
+  bamFilteringFlowRef(
+    chAlignedBam
+  )
+  chVersions = chVersions.mix(bamFilteringFlowRef.out.versions)
+
+  bamChipFlow(
+    bamFilteringFlowRef.out.bam,
+    chBlacklist,
+    chGeneBed
+  )
+  chVersions = chVersions.mix(bamChipFlow.out.versions)
+
+
+  //*******************************************
+  // SPIKE WORKFLOW
+
+  if (params.spike){
+    bamFilteringFlowSpike(
+      chPassedSpikeBam
+    )
+    chVersions = chVersions.mix(bamFilteringFlowSpike.out.versions)
    
-      workflowSummaryMqc(summary) 
+    bamSpikesFlow(
+      bamFilteringFlowRef.out.bam,
+      bamFilteringFlowSpike.out.bam,
+      chBlacklist
+    )
+    chVersions = chVersions.mix(bamSpikesFlow.out.versions)
+  }
 
-      multiqc(
-        customRunName, 
-        chSplan.collect(),
-        chMultiqcConfig, 
-        chDesignCheck.collect().ifEmpty([]), 
-        chMetadata.ifEmpty([]),
-        getSoftwareVersions.out.collect().ifEmpty([]),
-        workflowSummaryMqc.out.collect(),   
-        qcFlow.out.chFastqcMqc.collect().ifEmpty([]),
-        mappingFlow.out.chMappingMqc.collect().ifEmpty([]),
-        sortingFlow.out.chMappingSpikeMqc.collect().ifEmpty([]),
-        markdupFlow.out.chMarkedPicstats.collect().ifEmpty([]), 
-        sortingFlow.out.chStatsMqc.collect().ifEmpty([]),
-        markdupFlow.out.chPreseqStats.collect().ifEmpty([]),
-         bamsChipFlow.out.chFragmentsSize.collect().ifEmpty([]),
-        bamsChipFlow.out.chPpqtOutMqc.collect().ifEmpty([]), 
-        bamsChipFlow.out.chPpqtCsvMqc.collect().ifEmpty([]),
-        bamsChipFlow.out.chDeeptoolsSingleMqc.collect().ifEmpty([]),
-        bamsChipFlow.out.chDeeptoolsCorrelMqc.collect().ifEmpty([]),
-        bamsChipFlow.out.chDeeptoolsFingerprintMqc.collect().ifEmpty([]),
-        peakCallingFlow.out.chMacsOutputSharp.collect().ifEmpty([]), 
-        peakCallingFlow.out.chMacsOutputBroad.collect().ifEmpty([]),
-        peakCallingFlow.out.chMacsCountsSharp.collect().ifEmpty([]),
-        peakCallingFlow.out.chMacsCountsBroad.collect().ifEmpty([]),
-        peakCallingFlow.out.chMacsCountsVbroad.collect().ifEmpty([]),
-        peakCallingFlow.out.chPeakMqc.collect().ifEmpty([])
-      )
+  //*********************************************
+  // DOWNSTREAM ANALYSIS (DESIGN IS MANDATORY !)
+ 
+  if (params.design){
+
+    peakCallingFlow(
+      bamFilteringFlowRef.out.bam,
+      chDesignControl,
+      chEffGenomeSize,
+      chChromSize,
+      chGtf,
+      chFasta
+    )
+    chVersions = chVersions.mix(peakCallingFlow.out.versions)
+    chPeaksOutput = peakCallingFlow.out.peaksOutput
+    chPeaksCountsMqc = peakCallingFlow.out.peaksCountsMqc
+    chFripResults = peakCallingFlow.out.fripResults
+    chPeaksQCMqc = peakCallingFlow.out.peaksQCMqc
+    chTSSFeatCounts = prepareAnnotation(chGeneBed.collect())
+ 
+    featureCounts(
+      bamFilteringFlowRef.out.bam.map{it -> it[1]}.collect(),
+      chGeneBed.concat(chTSSFeatCounts)
+    )
+    chVersions = chVersions.mix(featureCounts.out.versions)
+  }
+
+  //*******************************************
+  // MULTIQC
+
+  if (!params.skipMultiQC){
+
+    getSoftwareVersions(
+      chVersions.unique().collectFile()
+    )
+
+    // Warnings
+    chAlignedSpikeBam
+      .join(chPassedSpikeBam, remainder: true)
+      .filter{it -> it[2] == null}
+      .flatMap{ it -> it[0] + ": Poor spike alignment rate. Sample ignored !"}
+      .set{chWarnMapping}
+
+    chWarnMapping
+      .collectFile(name: 'warnings.txt', newLine: true)
+      .set{chWarn}
+  
+    multiqc(
+      customRunName, 
+      chSplan.collect(),
+      chMetadata.ifEmpty([]),
+      chMultiqcConfig, 
+      chDesignFile.collect().ifEmpty([]), 
+      chFastqcMqc.collect().ifEmpty([]),
+      chAlignedBamMqc.collect().ifEmpty([]),
+      chCompareBamsMqc.collect().ifEmpty([]),
+      chAlignedFlagstat.map{it->it[1]}.collect().ifEmpty([]),
+      bamFilteringFlowRef.out.markdupMetrics.collect().ifEmpty([]),
+      bamFilteringFlowRef.out.flagstat.map{it->it[1]}.collect().ifEmpty([]),
+      chPreseqMqc.collect().ifEmpty([]),
+       //  sortingFlow.out.chStatsMqc.collect().ifEmpty([]),
+      bamChipFlow.out.fragmentsSize.collect().ifEmpty([]),
+      bamChipFlow.out.ppqtOutMqc.collect().ifEmpty([]), 
+      bamChipFlow.out.ppqtCsvMqc.collect().ifEmpty([]),
+      bamChipFlow.out.deeptoolsProfileMqc.collect().ifEmpty([]),
+      bamChipFlow.out.deeptoolsCorrelateMqc.collect().ifEmpty([]),
+      bamChipFlow.out.deeptoolsFingerprintMqc.collect().ifEmpty([]),
+      chPeaksOutput.collect().ifEmpty([]),
+      chPeaksCountsMqc.collect().ifEmpty([]),
+      chFripResults.collect().ifEmpty([]),
+      chPeaksQCMqc.collect().ifEmpty([]),
+      getSoftwareVersions.out.versionsYaml.collect().ifEmpty([]),
+      workflowSummaryCh.collectFile(name: "workflow_summary_mqc.yaml"),
+      chWarn.collect().ifEmpty([])
+    )
+  }
 }
 
-/* Creates a file at the end of workflow execution */
 workflow.onComplete {
-
-    /*pipeline_report.html*/
-
-    def report_fields = [:]
-    report_fields['pipeline'] = workflow.manifest.name
-    report_fields['version'] = workflow.manifest.version
-    report_fields['runName'] = customRunName ?: workflow.runName
-    report_fields['success'] = workflow.success
-    report_fields['dateComplete'] = workflow.complete
-    report_fields['duration'] = workflow.duration
-    report_fields['exitStatus'] = workflow.exitStatus
-    report_fields['errorMessage'] = (workflow.errorMessage ?: 'None')
-    report_fields['errorReport'] = (workflow.errorReport ?: 'None')
-    report_fields['commandLine'] = workflow.commandLine
-    report_fields['projectDir'] = workflow.projectDir
-    report_fields['summary'] = summary
-    report_fields['summary']['Date Started'] = workflow.start
-    report_fields['summary']['Date Completed'] = workflow.complete
-    report_fields['summary']['Pipeline script file path'] = workflow.scriptFile
-    report_fields['summary']['Pipeline script hash ID'] = workflow.scriptId
-    if(workflow.repository) report_fields['summary']['Pipeline repository Git URL'] = workflow.repository
-    if(workflow.commitId) report_fields['summary']['Pipeline repository Git Commit'] = workflow.commitId
-    if(workflow.revision) report_fields['summary']['Pipeline Git branch/tag'] = workflow.revision
-
-    report_fields['spikes_poor_alignment'] = spikes_poor_alignment
-
-    // Render the TXT template
-    def engine = new groovy.text.GStringTemplateEngine()
-    def tf = new File("$baseDir/assets/onCompleteTemplate.txt")
-    def txt_template = engine.createTemplate(tf).make(report_fields)
-    def report_txt = txt_template.toString()
-
-    // Render the HTML template
-    def hf = new File("$baseDir/assets/onCompleteTemplate.html")
-    def html_template = engine.createTemplate(hf).make(report_fields)
-    def report_html = html_template.toString()
-
-    // Write summary e-mail HTML to a file
-    def output_d = new File( "${params.summaryDir}/" )
-    if( !output_d.exists() ) {
-      output_d.mkdirs()
-    }
-    def output_hf = new File( output_d, "pipelineReport.html" )
-    output_hf.withWriter { w -> w << report_html }
-    def output_tf = new File( output_d, "pipelineReport.txt" )
-    output_tf.withWriter { w -> w << report_txt }
-    /*oncomplete file*/
-    File woc = new File("${params.outDir}/workflowOnComplete.txt")
-    Map endSummary = [:]
-    endSummary['Completed on'] = workflow.complete
-    endSummary['Duration']     = workflow.duration
-    endSummary['Success']      = workflow.success
-    endSummary['exit status']  = workflow.exitStatus
-    endSummary['Error report'] = workflow.errorReport ?: '-'
-
-    String endWfSummary = endSummary.collect { k,v -> "${k.padRight(30, '.')}: $v" }.join("\n")
-    view(endWfSummary)
-    String execInfo = "Execution summary\n${endWfSummary}\n"
-    woc.write(execInfo)
-
-    //if(spikes_poor_alignment.size() > 0){
-    if(spikes_poor_alignment){
-      log.info "[chIP-seq] WARNING - ${spikes_poor_alignment.size()} samples skipped due to poor alignment scores!"
-    }
-
-
-    if(workflow.success){
-      log.info "[ChIP-seq] Pipeline Complete"
-    }else{
-      log.info "[ChIP-seq] FAILED: $workflow.runName"
-    }
- }
-
+  NFTools.makeReports(workflow, params, summary, customRunName, mqcReport)
+}
