@@ -53,12 +53,20 @@ custom_data:
               suffix: '%'
               format: '{:,.1f}'
               placement: 4000
+            Percent_of_spike:
+              title: 'Spike-in Reads (%)'
+              min: 0
+              max: 100
+              scale: 'RdYlGn'
+              suffix: '%'
+              format: '{:,.1f}'
+              placement: 5000
             Number_reads_after_filt:
               title: 'After Filtering'
               scale: 'RdYlGn'
               format: '{:,.0f}'
               hidden: true
-              placement: 5000
+              placement: 6000
             Percent_reads_after_filt:
               title: 'After Filtering (%)'
               min: 0
@@ -66,7 +74,7 @@ custom_data:
               scale: 'RdYlVBu'
               format: '{:,.1f}'
               suffix: '%'
-              placement: 6000
+              placement: 7000
             Number_of_duplicates:
               title: 'Duplicates'
               scale: 'RdYlGn'

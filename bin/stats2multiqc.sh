@@ -49,7 +49,7 @@ fi
 
 all_samples=$(awk -F, '{print $1}' $splan)
 
-echo -e "Sample_ID,Sample_name,Number_of_reads,Fragment_length,Number_of_aligned_reads,Percent_of_aligned_reads,Number_reads_after_filt,Percent_reads_after_filt,Number_of_duplicates,Percent_of_duplicates,Normalized_strand_correlation,Relative_strand_correlation,Fraction_of_reads_in_peaks"
+echo -e "Sample_ID,Sample_name,Number_of_reads,Fragment_length,Number_of_aligned_reads,Percent_of_aligned_reads,Percent_of_spike,Number_reads_after_filt,Percent_reads_after_filt,Number_of_duplicates,Percent_of_duplicates,Normalized_strand_correlation,Relative_strand_correlation,Fraction_of_reads_in_peaks"
 
 for sample in $all_samples
 do
@@ -94,6 +94,13 @@ do
     #perc_mapped_hq=$(echo "${nb_mapped_hq} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
     #perc_mapped_lq=$(echo "${nb_mapped_lq} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
 
+    #SPIKE
+    perc_spike='NA'
+    if [[ -e mapping/${sample}_ref_bamcomp.mqc ]]; then
+	nb_spike=$(grep spike mapping/${sample}_ref_bamcomp.mqc | awk -F"\t" '{print $2}')
+	perc_spike=$(echo "${nb_spike} ${nb_mapped}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
+    fi
+
     #PICARD
     if [[ -e filtering/${sample}.markDups_metrics.txt ]]; then
 	nb_dups_pair=$(grep -a2 "## METRICS" filtering/${sample}.markDups_metrics.txt | tail -1 | awk -F"\t" '{print $7}')
@@ -134,6 +141,6 @@ do
     fi
 
     #To file
-    echo -e ${sample},${sname},${nb_frag},${frag_length},${nb_mapped},${perc_mapped},${nb_filter},${perc_filter},${nb_dups},${perc_dups},${nsc},${rsc},${frip}
+    echo -e ${sample},${sname},${nb_frag},${frag_length},${nb_mapped},${perc_mapped},${perc_spike},${nb_filter},${perc_filter},${nb_dups},${perc_dups},${nsc},${rsc},${frip}
 done
 
