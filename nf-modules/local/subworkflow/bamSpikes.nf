@@ -39,8 +39,8 @@ workflow bamSpikesFlow {
     
     bamsChip
       .combine(chScaleFactor)
-      .filter{it[0] == it[2]}
-      .map { it -> it[0,1,3]}
+      .filter{it[0] == it[3]}
+      .map { it -> it[0,1,2,4]}
       .set{chBigWigScaleFactor}
 
     bigWigSpikeNorm(
@@ -50,7 +50,7 @@ workflow bamSpikesFlow {
     chVersions = chVersions.mix(bigWigSpikeNorm.out.versions)
 
    emit:
-     chBigWigSF = bigWigSpikeNorm.out.bigWigSF
+     bigwig = bigWigSpikeNorm.out.bigwig
      versions = chVersions
 }
 

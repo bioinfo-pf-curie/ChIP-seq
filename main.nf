@@ -501,7 +501,7 @@ workflow {
       chDesignFile.collect().ifEmpty([]), 
       chFastqcMqc.collect().ifEmpty([]),
       chAlignedBamMqc.collect().ifEmpty([]),
-      chCompareBamsMqc.collect().ifEmpty([]),
+      chCompareBamsMqc.map{it->it[1]}.collect().ifEmpty([]),
       chAlignedFlagstat.map{it->it[1]}.collect().ifEmpty([]),
       bamFilteringFlowRef.out.markdupMetrics.collect().ifEmpty([]),
       bamFilteringFlowRef.out.flagstat.map{it->it[1]}.collect().ifEmpty([]),

@@ -1,37 +1,33 @@
 process bigWigSpikeNorm{
-    tag "${prefix}"
-    label 'deeptools'
-    label 'medCpu'
-    label 'medMem'
-    publishDir "${params.outDir}/bigWigSpike", mode: "copy",
-      saveAs: {filename ->
-        if ( filename.endsWith(".bigwig") ) "$filename"
-        else null}
+  tag "${prefix}"
+  label 'deeptools'
+  label 'medCpu'
+  label 'medMem'
         
-    input:
-    tuple val(prefix), path(filteredBams), val(normFactor)
-    path(BLbed)
+  input:
+  tuple val(prefix), path(bam), path(bai), val(normFactor)
+  path(bed)
     
-    output:
-    tuple val(prefix), path('*.bigwig'), emit: bigWigSF
-    path("versions.txt"), emit: versions    
+  output:
+  tuple val(prefix), path('*.bigwig'), emit: bigwig
+  path("versions.txt"), emit: versions    
 
-    script:
-    if (params.singleEnd){
-      extend = params.fragmentSize > 0 && !params.noReadExtension ? "--extendReads ${params.fragmentSize}" : ""
-    }else{
-      extend = params.noReadExtension ? "" : "--extendReads"
-    } 
-    blacklistParams = params.blacklist ? "--blackListFileName ${BLbed}" : ""
-    effGsize = params.effGenomeSize ? "--effectiveGenomeSize ${params.effGenomeSize}" : ""
-    """
-    echo \$(bamCoverage --version ) > versions.txt
-    bamCoverage -b ${filteredBams[0]} \\
-                -o ${prefix}_spikenorm.bigwig \\
-                -p ${task.cpus} \\
-                 ${blacklistParams} \\
-                 ${effGsize} \\
-                 ${extend} \\
-                --scaleFactor ${normFactor}
-    """         
-  }
+  script:
+  if (params.singleEnd){
+    extend = params.fragmentSize > 0 && !params.noReadExtension ? "--extendReads ${params.fragmentSize}" : ""
+  }else{
+    extend = params.noReadExtension ? "" : "--extendReads"
+  } 
+  blacklistParams = params.blacklist ? "--blackListFileName ${bed}" : ""
+  effGsize = params.effGenomeSize ? "--effectiveGenomeSize ${params.effGenomeSize}" : ""
+  """
+  echo \$(bamCoverage --version ) > versions.txt
+  bamCoverage -b ${bam} \\
+              -o ${prefix}_spikenorm.bigwig \\
+              -p ${task.cpus} \\
+               ${blacklistParams} \\
+               ${effGsize} \\
+               ${extend} \\
+              --scaleFactor ${normFactor}
+  """         
+}
