@@ -3,3 +3,4 @@ channels:
   - bioconda
 dependencies:
   - bioconda::bowtie2=2.3.5
+  - conda-forge::tbb=2020.2=hc9558a2_0

@@ -1,4 +1,4 @@
-name: chipseq
+B1;5202;0cname: chipseq
 channels:
   - conda-forge
   - bioconda
@@ -12,6 +12,7 @@ dependencies:
   - bioconda::samtools=1.12=h9aed4be_1
   - bioconda::bwa=0.7.17=h5bf99c6_8
   - bioconda::bowtie2=2.4.2=py37h8270d21_1
+  - conda-forge::tbb=2020.2=hc9558a2_0
   - bioconda::star=2.7.6a=0
   - bioconda::picard=2.25.3=hdfd78af_0
   - bioconda::preseq=3.1.2=h06ef8b0_1

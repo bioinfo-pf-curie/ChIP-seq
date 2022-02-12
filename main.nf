@@ -132,19 +132,19 @@ if( params.starIndex && params.aligner == 'star' ){
   Channel
     .fromPath(params.starIndex)
     .ifEmpty { exit 1, "STAR index not found: ${params.starIndex}" }
-    .set {chStarIndex}
+    .set {chMappingIndex}
 }
 else if ( params.bowtie2Index && params.aligner == 'bowtie2' ){
   Channel
     .fromPath("${params.bowtie2Index}")
     .ifEmpty { exit 1, "Bowtie2 index not found: ${params.bowtie2Index}" }
-    .set{chBowtie2Index}
+    .set{chMappingIndex}
 }
 else if ( params.bwaIndex && params.aligner == "bwa-mem" ){
   Channel
     .fromPath("${params.bwaIndex}")
     .ifEmpty { exit 1, "Bwa index not found: ${params.bwaIndex}" }
-    .set{chBwaIndex}
+    .set{chMappingIndex}
 }
 else {
     exit 1, "No genome index specified!"
@@ -154,27 +154,24 @@ else {
  * Spike Indexes
  */
 
+chSpikeIndex = Channel.empty()
 if( params.spikeStarIndex && params.aligner == 'star' ){
   Channel
     .fromPath(params.spikeStarIndex)
     .ifEmpty { exit 1, "STAR index not found: ${params.spikeStarIndex}" }
-    .set {chSpikeStarIndex}
+    .set {chSpikeIndex}
 }
 else if ( params.spikeBowtie2Index && params.aligner == 'bowtie2' ){
   Channel
     .fromPath("${params.spikeBowtie2Index}")
     .ifEmpty { exit 1, "Bowtie2 index not found: ${params.bowtie2Index}" }
-    .set{chSpikeBowtie2Index}
+    .set{chSpikeIndex}
 }
 else if ( params.spikeBwaIndex && params.aligner == "bwa-mem" ){
   Channel
     .fromPath("${params.spikeBwaIndex}")
     .ifEmpty { exit 1, "Bwa index not found: ${params.spikeBwaIndex}" }
-    .set{chSpikeBwaIndex}
-}else{
-  chSpikeStarIndex = Channel.empty()
-  chSpikeBowtie2Index = Channel.empty()
-  chSpikeBwaIndex = Channel.empty()
+    .set{chSpikeIndex}
 }
 
 /*
@@ -293,9 +290,7 @@ if (params.design){
 */ 
 
 // Workflows
-include { mappingBwaMemFlow as mappingBwaMemFlow } from './nf-modules/local/subworkflow/mappingBwaMem'
-include { mappingStarFlow as mappingStarFlow } from './nf-modules/local/subworkflow/mappingStar'
-include { mappingBowtie2Flow as mappingBowtie2Flow } from './nf-modules/local/subworkflow/mappingBowtie2'
+include { mappingFlow as mappingFlow } from './nf-modules/local/subworkflow/mappingFlow'
 include { bamFilteringFlow as bamFilteringFlowRef } from './nf-modules/local/subworkflow/bamFiltering'
 include { bamFilteringFlow as bamFilteringFlowSpike } from './nf-modules/local/subworkflow/bamFiltering'
 
@@ -357,42 +352,17 @@ workflow {
   //*******************************************
   // MAPPING
 
-  // SUBWORKFLOW: STAR mapping
-  if (params.aligner == "star"){
-    mappingStarFlow(
-      chRawReads,
-      chStarIndex,
-      chSpikeStarIndex,
-    )
-    chAlignedBam = mappingStarFlow.out.bam
-    chVersions = chVersions.mix(mappingStarFlow.out.versions)
-  }
-
-  // SUBWORKFLOW: Bowtie2 mapping
-  if (params.aligner == "bowtie2"){
-    mappingBowtie2Flow(
-      chRawReads,
-      chBowtie2Index,
-      chSpikeBowtie2Index,
-    )
-    chAlignedBam = mappingBowtie2Flow.out.bam
-    chVersions = chVersions.mix(mappingBowtie2Flow.out.versions)
-  }
-
-  // SUBWORKFLOW: Bwa mapping
-  if (params.aligner == "bwa-mem"){
-    mappingBwaMemFlow(
-      chRawReads,
-      chBwaIndex.collect(),
-      chSpikeBwaIndex,
-    )
-    chAlignedBam = mappingBwaMemFlow.out.bam
-    chAlignedBamMqc = mappingBwaMemFlow.out.logs
-    chAlignedFlagstat = mappingBwaMemFlow.out.flagstat
-    chAlignedSpikeBam = mappingBwaMemFlow.out.spikeBam
-    chCompareBamsMqc = mappingBwaMemFlow.out.compareBamsMqc
-    chVersions = chVersions.mix(mappingBwaMemFlow.out.versions)
-  }
+  mappingFlow(
+    chRawReads,
+    chMappingIndex.collect(),
+    chSpikeIndex,
+  )
+  chAlignedBam = mappingFlow.out.bam
+  chAlignedBamMqc = mappingFlow.out.logs
+  chAlignedFlagstat = mappingFlow.out.flagstat
+  chAlignedSpikeBam = mappingFlow.out.spikeBam
+  chCompareBamsMqc = mappingFlow.out.compareBamsMqc
+  chVersions = chVersions.mix(mappingFlow.out.versions)
 
   // Remove low mapping rate for spikes
   chCompareBamsMqc.join(chAlignedSpikeBam)
@@ -449,7 +419,7 @@ workflow {
   //*********************************************
   // DOWNSTREAM ANALYSIS (DESIGN IS MANDATORY !)
  
-  if (params.design){
+  if (params.design && !params.skipPeakCalling){
 
     peakCallingFlow(
       bamFilteringFlowRef.out.bam,
@@ -466,11 +436,13 @@ workflow {
     chPeaksQCMqc = peakCallingFlow.out.peaksQCMqc
     chTSSFeatCounts = prepareAnnotation(chGeneBed.collect())
  
-    featureCounts(
-      bamFilteringFlowRef.out.bam.map{it -> it[1]}.collect(),
-      chGeneBed.concat(chTSSFeatCounts)
-    )
-    chVersions = chVersions.mix(featureCounts.out.versions)
+    if (!params.skipFeatCounts){
+      featureCounts(
+        bamFilteringFlowRef.out.bam.map{it -> it[1]}.collect(),
+        chGeneBed.concat(chTSSFeatCounts)
+      )
+      chVersions = chVersions.mix(featureCounts.out.versions)
+    }
   }
 
   //*******************************************

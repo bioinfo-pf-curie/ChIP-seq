@@ -22,26 +22,29 @@ workflow bamFilteringFlow {
     chVersions = chVersions.mix(markDuplicates.out.versions)
 
     // Filter reads
-    samtoolsFilter(
-      markDuplicates.out.bam
-    )
-    chVersions = chVersions.mix(samtoolsFilter.out.versions)
+    if (!params.skipFiltering){
+      samtoolsFilter(
+        markDuplicates.out.bam
+      )
+      chVersions = chVersions.mix(samtoolsFilter.out.versions)
+      chBam = samtoolsFilter.out.bam
+    }else{
+      chBam = markDuplicates.out.bam
+    }
 
     // index
     samtoolsIndex(
-      samtoolsFilter.out.bam
+      chBam
     )
-
+ 
     // flagstat
     samtoolsFlagstat(
-      samtoolsFilter.out.bam
+      chBam
     )
-
-    // idxstats
-    // stats
+    
 
     emit:
-    bam  = samtoolsFilter.out.bam.join(samtoolsIndex.out.bai)
+    bam  = chBam.join(samtoolsIndex.out.bai)
     flagstat  = samtoolsFlagstat.out.stats
     markdupMetrics = markDuplicates.out.metrics
     versions = chVersions

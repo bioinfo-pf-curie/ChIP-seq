@@ -133,28 +133,36 @@ workflow peakCallingFlow {
   /********************************
    * Peaks Annotation
    */       
-
-  annotPeaksHomer(
-    chPeaks,
-    gtf.collect(),
-    fasta.collect()
-  )
+  
+  if (!params.skipPeakAnno){
+    annotPeaksHomer(
+      chPeaks,
+      gtf.collect(),
+      fasta.collect()
+    )
+  }
 
   /*******************************
    * QC
    */
-       
-  peakQC(
-    chPeaks.map{it->it[1]}.collect(),
-    annotPeaksHomer.out.output.map{it->it[1]}.collect(),
-    chPeakAnnotationHeader
-  )
-  chVersions = chVersions.mix(peakQC.out.versions)
+  
+  if (!params.skipPeakQC){
+    peakQC(
+      chPeaks.map{it->it[1]}.collect(),
+      annotPeaksHomer.out.output.map{it->it[1]}.collect(),
+      chPeakAnnotationHeader
+    )
+    chVersions = chVersions.mix(peakQC.out.versions)
+    chPeakQC = peakQC.out.mqc
+  }else{
+    chPeakQC = Channel.empty()
+  }
 
   /*
    * Irreproducible Discovery Rate
    */
-       
+   
+// if (!params.skipIDR){
 //       chPeaks 
 //         .map { it -> [it[0],it[4]] }
 //         .groupTuple()
@@ -164,12 +172,13 @@ workflow peakCallingFlow {
 //       IDR(
 //         chPeaksPerGroup 
 //       )
+//}
 
   emit:
     versions = chVersions    
     peaksCountsMqc = macs2Sharp.out.mqc.concat(macs2Broad.out.mqc, epic2.out.mqc)
     peaksOutput = macs2Sharp.out.outputXls.concat(macs2Broad.out.outputXls, epic2.out.output)
-    peaksQCMqc = peakQC.out.mqc
+    peaksQCMqc = chPeakQC
     fripResults = frip.out.output
 }
 
