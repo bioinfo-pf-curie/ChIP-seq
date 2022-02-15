@@ -18,23 +18,20 @@ process deepToolsFingerprint{
   path("versions.txt"), emit: versions
 
   script:
-  if (params.singleEnd){
-    extend = params.fragmentSize > 0 ? "--extendReads ${params.fragmentSize}" : ""
-  }else{
-    extend = params.noReadExtension ? "" : "--extendReads"
-  }
   allPrefix = allPrefix.toString().replace("[","")
   allPrefix = allPrefix.replace(","," ")
   allPrefix = allPrefix.replace("]","")
+  def args = task.ext.args ?: ''
   """
   echo \$(deeptools --version ) > versions.txt
   plotFingerprint -b $allBams \\
                   -plot bams_fingerprint.pdf \\
                   -p ${task.cpus} \\
                   -l $allPrefix \\
-                  ${extend} \\
-                  --skipZeros \\
+                  ${args} \\
                   --outRawCounts plotFingerprint.raw.txt \\
                   --outQualityMetrics plotFingerprint.qmetrics.txt
   """
 }
+
+

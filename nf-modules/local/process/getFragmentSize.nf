@@ -12,7 +12,7 @@ process getFragmentSize {
   tuple val(prefix), path(bam), path(bai)
 
   output:
-  path("*.{pdf,txt}"), emit: fragmentsSize
+  path("*insert_size*.{pdf,txt}"), emit: results
   path("versions.txt"), emit: versions
 
   script:

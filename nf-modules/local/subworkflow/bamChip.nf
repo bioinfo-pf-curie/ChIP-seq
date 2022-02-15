@@ -34,7 +34,7 @@ workflow bamChipFlow {
         bam
       )
       chVersions = chVersions.mix(getFragmentSize.out.versions)
-      chFragmentSize = getFragmentSize
+      chFragmentSize = getFragmentSize.out.results
     }else{
       chFragmentSize = Channel.empty()
     }

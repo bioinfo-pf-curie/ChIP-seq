@@ -18,6 +18,7 @@ process deepToolsComputeMatrix{
   path("versions.txt"), emit: versions
 
   script:
+  def args = task.ext.args ?: ''
   """
   echo \$(deeptools --version ) > versions.txt
   computeMatrix scale-regions \\
@@ -25,7 +26,7 @@ process deepToolsComputeMatrix{
                 -S ${bigwig} \\
                 -o ${prefix}_matrix.mat.gz \\
                 --outFileNameMatrix ${prefix}.computeMatrix.vals.mat \\
-                --downstream 2000 --upstream 2000 --skipZeros --binSize 100\\
+                ${args} \\
                 -p ${task.cpus}
                 
   plotProfile -m ${prefix}_matrix.mat.gz \\

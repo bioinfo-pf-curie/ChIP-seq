@@ -22,17 +22,18 @@ process deepToolsCorrelationQC{
   path("versions.txt"), emit: versions
 
   script:
-  blacklistParams = params.blacklist ? "--blackListFileName ${BLbed}" : ""
   allPrefix = allPrefix.toString().replace("[","")
   allPrefix = allPrefix.replace(","," ")
   allPrefix = allPrefix.replace("]","")
+  def args = task.ext.args ?: ''
+  blacklist = params.blacklist ? "--blackListFileName ${BLbed}" : ""
   """
   echo \$(deeptools --version ) > versions.txt
   multiBamSummary bins -b $allBams \\
-                       --binSize=50000 \\
-                        -o bams_summary.npz \\
-                        -p ${task.cpus} \\
-                        ${blacklistParams}
+                       ${args} \\
+		       ${blacklist} \\
+                       -o bams_summary.npz \\
+                       -p ${task.cpus}
 
   plotCorrelation -in bams_summary.npz \\
                   -o bams_correlation.pdf \\
