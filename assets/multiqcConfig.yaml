@@ -15,7 +15,7 @@ custom_data:
     my_stats:
         file_format: 'csv'
         section_name: 'General Metrics'
-        description: ' of sequenced data. High-quality ChIP-seq experiment produces significant clustering of enriched DNA sequence tags at locations bound by the protein of interest. Thus, the sequence tag density is expected to accumulate on forward and reverse strands centered around the binding site. Low normalized strand coefficient (<b>NSC < 1.1</b>) and relative strand correlation (<b>RSC < 0.8</b>) values can be due to failed and poor quality ChIP, low read sequence quality and hence lots of mismappings, shallow sequencing depth or a combination of these. Also, datasets with few binding sites (< 200) which could be due to biological reasons (i.e. a factor that truly binds only a few sites in a particular tissue type) or broad histone marks would output lower NSC and RSC scores. The fraction of reads in peaks (<b>FRiP</b>) is also presented. The different thresholds applied here follow the ENCODE Consortium recommandation.'
+        description: ' of sequenced data. High-quality ChIP-seq experiment produces significant clustering of enriched DNA sequence tags at locations bound by the protein of interest. Thus, the sequence tag density is expected to accumulate on forward and reverse strands centered around the binding site. The expected fraction of aligned reads is usually very high. The fraction of reads after filtering represents the number of remaining reads after cleaning (mapping quality, duplicates and singleton removal). Low normalized strand coefficient (<b>NSC < 1.1</b>) and relative strand correlation (<b>RSC < 0.8</b>) values can be due to failed and poor quality ChIP, low read sequence quality and hence lots of mismappings, shallow sequencing depth or a combination of these. Also, datasets with few binding sites (< 200) which could be due to biological reasons (i.e. a factor that truly binds only a few sites in a particular tissue type) or broad histone marks would output lower NSC and RSC scores. The fraction of reads in peaks (<b>FRiP</b>) is also presented. The different thresholds applied here follow the ENCODE Consortium recommandation.'
         plot_type: 'table'
         pconfig:
             namespace: 'stats'
@@ -54,12 +54,13 @@ custom_data:
               format: '{:,.1f}'
               placement: 4000
             Percent_of_spike:
-              title: 'Spike-in Reads (%)'
+              title: 'Spike-in (%)'
               min: 0
               max: 100
               scale: 'RdYlGn'
               suffix: '%'
               format: '{:,.1f}'
+              hidden: true
               placement: 5000
             Number_reads_after_filt:
               title: 'After Filtering'
@@ -67,14 +68,6 @@ custom_data:
               format: '{:,.0f}'
               hidden: true
               placement: 6000
-            Percent_reads_after_filt:
-              title: 'After Filtering (%)'
-              min: 0
-              max: 100
-              scale: 'RdYlVBu'
-              format: '{:,.1f}'
-              suffix: '%'
-              placement: 7000
             Number_of_duplicates:
               title: 'Duplicates'
               scale: 'RdYlGn'
@@ -89,6 +82,14 @@ custom_data:
               format: '{:,.1f}'
               suffix: '%'
               placement: 10000
+            Percent_reads_after_filt:
+              title: 'After Filtering (%)'
+              min: 0
+              max: 100
+              scale: 'RdYlVBu'
+              format: '{:,.1f}'
+              suffix: '%'
+              placement: 10500
             Normalized_strand_correlation:
               title: 'NSC'
               description: 'Normalized Strand Correlation' 
@@ -152,6 +153,13 @@ table_cond_formatting_rules:
           - gt: 80
         warn:
           - lt: 80
+        fail:
+          - lt: 50
+    Percent_reads_after_filt:
+        pass:
+          - gt: 70
+        warn:
+          - lt: 70
         fail:
           - lt: 50
     Percent_of_duplicates:

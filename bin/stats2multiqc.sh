@@ -84,8 +84,13 @@ do
 
     #Mapping stats (always in reads - so must be converted for PE)
     #These statistics are calculated after spike cleaning but before filtering
-    nb_mapped=$(grep "mapped (" mapping/${sample}*.flagstats | awk '{print $1}')
-    nb_filter=$(grep "mapped (" filtering/${sample}*.flagstats | awk '{print $1}')
+    #Note that the mapped line (second) includes both primary+secondary alignment
+    nb_paired_mapped=$(grep "with itself and mate mapped" mapping/${sample}*.flagstats | awk '{print $1}')
+    nb_single_mapped=$(grep "singletons" mapping/${sample}*.flagstats | awk '{print $1}')
+    nb_mapped=$(( $nb_paired_mapped + $nb_single_mapped ))
+    nb_paired_filter=$(grep "with itself and mate mapped" filtering/${sample}*.flagstats | awk '{print $1}')
+    nb_single_filter=$(grep "singletons" filtering/${sample}*.flagstats | awk '{print $1}')
+    nb_filter=$(( $nb_paired_filter + $nb_single_filter ))
     #nb_mapped=$(awk -F, '$1=="Mapped"{print $2}' mapping/${sample}_mappingstats.mqc)
     #nb_mapped_hq=$(awk -F, '$1=="HighQual"{print $2}' mapping/${sample}_mappingstats.mqc)
     #nb_mapped_lq=$(awk -F, '$1=="LowQual"{print $2}' mapping/${sample}_mappingstats.mqc)
@@ -98,14 +103,14 @@ do
     perc_spike='NA'
     if [[ -e mapping/${sample}_ref_bamcomp.mqc ]]; then
 	nb_spike=$(grep spike mapping/${sample}_ref_bamcomp.mqc | awk -F"\t" '{print $2}')
-	perc_spike=$(echo "${nb_spike} ${nb_mapped}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
+	perc_spike=$(echo "${nb_spike} ${nb_frag}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
     fi
 
     #PICARD
-    if [[ -e filtering/${sample}.markDups_metrics.txt ]]; then
-	nb_dups_pair=$(grep -a2 "## METRICS" filtering/${sample}.markDups_metrics.txt | tail -1 | awk -F"\t" '{print $7}')
-	nb_dups_single=$(grep -a2 "## METRICS" filtering/${sample}.markDups_metrics.txt | tail -1 | awk -F"\t" '{print $6}')
-	nb_dups_optical=$(grep -a2 "## METRICS" filtering/${sample}.markDups_metrics.txt | tail -1 | awk -F"\t" '{print $8}')
+    if [[ -e filtering/${sample}_markDups_metrics.txt ]]; then
+	nb_dups_pair=$(grep -a2 "## METRICS" filtering/${sample}_markDups_metrics.txt | tail -1 | awk -F"\t" '{print $7}')
+	nb_dups_single=$(grep -a2 "## METRICS" filtering/${sample}_markDups_metrics.txt | tail -1 | awk -F"\t" '{print $6}')
+	nb_dups_optical=$(grep -a2 "## METRICS" filtering/${sample}_markDups_metrics.txt | tail -1 | awk -F"\t" '{print $8}')
 	nb_dups=$(( $nb_dups_pair * 2 + $nb_dups_single + $nb_dups_optical ))
 	perc_dups=$(echo "${nb_dups} ${nb_mapped}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
     else
@@ -113,9 +118,18 @@ do
 	perc_dups='NA'
     fi
 
+    #Fragment size
+    if [[ -e fragSize/${sample}_insert_size_metrics.txt ]]; then
+	frag_length=$(grep -A2 "## METRIC" fragSize/${sample}_insert_size_metrics.txt | tail -n 1 | awk '{print $1}')
+    else
+	frag_length='NA'
+    fi
+
     #PPQT
     if [[ -e ppqt/${sample}.spp.out && -e ppqt/${sample}_spp_nsc_mqc.tsv ]]; then
-	frag_length=$(awk '{print $3}' ppqt/${sample}.spp.out | sed 's/,.*//')
+	if [[ ${frag_length} == 'NA' ]]; then
+	        frag_length=$(awk '{print $3}' ppqt/${sample}.spp.out | sed 's/,.*//')
+	fi
 	nsc=$(grep "$sample" ppqt/${sample}_spp_nsc_mqc.tsv | awk '{print $2}')  
 	rsc=$(grep "$sample" ppqt/${sample}_spp_rsc_mqc.tsv | awk '{print $2}')
     else

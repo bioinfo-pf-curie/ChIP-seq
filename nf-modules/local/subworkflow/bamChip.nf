@@ -48,11 +48,6 @@ workflow bamChipFlow {
         chPpqtRSCHeader
       )
       chVersions = chVersions.mix(PPQT.out.versions)
-      chPpqtOut = PPQT.out.ppqtCsvMqc
-      chPpqtCsv = PPQT.out.ppqtOutMqc
-    }else{
-      chPpqtOut = Channel.empty()
-      chPpqtCsv = Channel.empty()
     }
 
     bigWig(
@@ -80,16 +75,16 @@ workflow bamChipFlow {
         bam.map{it[1]}.collect(),
         bam.map{it[2]}.collect()
       )
-      chVersions = chVersions.mix(deepToolsFingerprint.out.versions) 
+      chVersions = chVersions.mix(deepToolsFingerprint.out.versions)
     }
 
   emit:
     fragmentsSize           = chFragmentSize
-    ppqtOutMqc              = chPpqtCsv
-    ppqtCsvMqc              = chPpqtOut
-    deeptoolsProfileMqc     = deepToolsComputeMatrix.out.mqc
-    deeptoolsCorrelateMqc   = deepToolsCorrelationQC.out.mqc
-    deeptoolsFingerprintMqc = deepToolsFingerprint.out.mqc
-    versions = chVersions
+    ppqtOutMqc              = !params.skipPPQT ? PPQT.out.ppqtOutMqc : Channel.empty()
+    ppqtCsvMqc              = !params.skipPPQT ? PPQT.out.ppqtCsvMqc : Channel.empty()
+    deeptoolsProfileMqc     = !params.skipDeepTools ? deepToolsComputeMatrix.out.mqc : Channel.empty()
+    deeptoolsCorrelateMqc   = !params.skipDeepTools ? deepToolsCorrelationQC.out.mqc : Channel.empty()
+    deeptoolsFingerprintMqc = !params.skipDeepTools ? deepToolsFingerprint.out.mqc : Channel.empty()
+    versions                = chVersions
 }
 

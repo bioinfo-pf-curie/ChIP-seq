@@ -4,6 +4,9 @@ version-2.0.0
 NEW FEATURES
   - DSL2 version of the ChIP-seq pipeline
   - Update conda env
+  
+SIGNIFICANT USER-VISIBLE CHANGES
+  - The 'design' file template has been updated
 
 ***********************************
 version-1.0.3
