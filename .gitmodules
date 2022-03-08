@@ -1,6 +1,3 @@
 [submodule "geniac"]
 	path = geniac
 	url = ssh://git@gitlab.curie.fr:2222/bioinfo-guidelines/geniac.git
-[submodule "nf-modules/common"]
-	path = nf-modules/common
-	url = ssh://git@gitlab.curie.fr:2222/plarosa/common.git
