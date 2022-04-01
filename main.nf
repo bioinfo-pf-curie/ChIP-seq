@@ -66,8 +66,8 @@ params.effGenomeSize = NFTools.getGenomeAttribute(params, 'effGenomeSize')
 
 // Stage config files
 chMultiqcConfig = Channel.fromPath(params.multiqcConfig)
-chOutputDocs = Channel.fromPath("$baseDir/docs/output.md")
-chOutputDocsImages = file("$baseDir/docs/images/", checkIfExists: true)
+chOutputDocs = Channel.fromPath("$projectDir/docs/output.md")
+chOutputDocsImages = file("$projectDir/docs/images/", checkIfExists: true)
 
 /*
 ==========================
