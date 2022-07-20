@@ -2,7 +2,7 @@
  * Deeptools - multiBamSummary
  */
 
-process deepToolsMultiBamSummary {
+process deeptoolsMultiBamSummary {
   label 'deeptools'
   label 'medCpu'
   label 'medMem'
@@ -12,17 +12,19 @@ process deepToolsMultiBamSummary {
   path(bai)
 
   output:
-  path("readCounts_spike_10kbins.tab"), emit: output
+  path("*readCounts.tab"), emit: output
   path("versions.txt"), emit: versions
 
   script:
+  def args = task.ext.args ?: ''
+  def prefix = task.ext.prefix ?: "${meta.id}"
   """
   echo \$(deeptools --version ) > versions.txt
   multiBamSummary bins \\
                  -b $bams \\
-                 --binSize 10000 \\
+		 ${args} \\
                  -o results.npz \\
-                 --outRawCounts readCounts_spike_10kbins.tab
+                 --outRawCounts ${prefix}_readCounts.tab
   """
 }
 

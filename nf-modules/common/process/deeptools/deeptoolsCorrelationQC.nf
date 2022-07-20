@@ -2,7 +2,7 @@
  * Deeptools - correlatation
  */
 
-process deepToolsCorrelationQC{
+process deeptoolsCorrelationQC{
   label 'deeptools'
   label 'highCpu'
   label 'lowMem'

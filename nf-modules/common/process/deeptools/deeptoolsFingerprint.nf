@@ -2,7 +2,7 @@
  * Deeptools - FingerPrints
  */
 
-process deepToolsFingerprint{
+process deeptoolsFingerprint{
   label 'deeptools'
   label 'highCpu'
   label 'lowMem'
