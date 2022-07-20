@@ -17,9 +17,9 @@ include { deeptoolsFingerprint } from '../../common/process/deeptools/deeptoolsF
  */
 
 // PPQT headers
-chPpqtCorHeader = file("$baseDir/assets/ppqt_cor_header.txt", checkIfExists: true)
-chPpqtNSCHeader = file("$baseDir/assets/ppqt_nsc_header.txt", checkIfExists: true)
-chPpqtRSCHeader = file("$baseDir/assets/ppqt_rsc_header.txt", checkIfExists: true)
+chPpqtCorHeader = file("$projectDir/assets/ppqt_cor_header.txt", checkIfExists: true)
+chPpqtNSCHeader = file("$projectDir/assets/ppqt_nsc_header.txt", checkIfExists: true)
+chPpqtRSCHeader = file("$projectDir/assets/ppqt_rsc_header.txt", checkIfExists: true)
 
 workflow bamChipFlow {
 

@@ -12,13 +12,13 @@ include { peakQC } from '../process/peakQC'
 include { IDR } from '../process/IDR'
 
 Channel
-  .fromPath("$baseDir/assets/peak_count_header.txt")
+  .fromPath("$projectDir/assets/peak_count_header.txt")
   .set { chPeakCountHeader }
 Channel
-  .fromPath("$baseDir/assets/frip_score_header.txt")
+  .fromPath("$projectDir/assets/frip_score_header.txt")
   .set { chFripScoreHeader }
 Channel
-  .fromPath("$baseDir/assets/peak_annotation_header.txt")
+  .fromPath("$projectDir/assets/peak_annotation_header.txt")
   .set{ chPeakAnnotationHeader }
 
 // Create special channel to deal with no input cases
