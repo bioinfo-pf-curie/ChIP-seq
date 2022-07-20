@@ -4,7 +4,7 @@
  * Check mapping percent from falgstat files
  */
 
-def checkAlignmentPercent(prefix, logs) {
+def checkAlignmentPercent(meta, logs) {
   def percentAligned = 0;
   logs.eachLine { line ->
     if ((matcher = line =~ /([\d\.]+) \+ ([\d\.]+) mapped \s*/)) {
@@ -15,11 +15,10 @@ def checkAlignmentPercent(prefix, logs) {
   }
   percentAligned = nbAligned.toFloat() / nbTotal.toFloat() * 100
   if(percentAligned.toFloat() <= '2'.toFloat() ){
-      log.info "###### VERY POOR SPIKE ALIGNMENT RATE! IGNORING FOR FURTHER DOWNSTREAM ANALYSIS! ($prefix)    >> ${percentAligned}% <<"
-      //skippedPoorAlignment << prefix
+      log.info "###### VERY POOR SPIKE ALIGNMENT RATE! IGNORING FOR FURTHER DOWNSTREAM ANALYSIS! ($meta.id)    >> ${percentAligned}% <<"
       return false
   } else {
-      log.info "          Passed alignment > ${prefix} >> ${percentAligned}% <<"
+      log.info "          Passed alignment > ${meta.id} >> ${percentAligned}% <<"
       return true
   }
 }
@@ -30,7 +29,7 @@ def checkAlignmentPercent(prefix, logs) {
  *
  */
 
-def checkSpikeAlignmentPercent(prefix, logs, t) {
+def checkSpikeAlignmentPercent(meta, logs, t) {
   def nbRef = 0;
   def nbSpike = 0;
   def percentSpike = 0;
@@ -44,11 +43,10 @@ def checkSpikeAlignmentPercent(prefix, logs, t) {
   percentSpike = nbSpike.toFloat() / (nbSpike.toFloat() + nbRef.toFloat()) * 100
   percentSpike = percentSpike.round(5)
   if( percentSpike.toFloat() <= t.toFloat() ){
-    log.info("###### TOO LITTLE SPIKES DETECTED! IGNORING FOR FURTHER DOWNSTREAM ANALYSIS! ($prefix) >> ${percentSpike}% <<")
-    //skippedPoorSpikeAlignment << prefix
+    log.info("###### TOO LITTLE SPIKES DETECTED! IGNORING FOR FURTHER DOWNSTREAM ANALYSIS! ($meta.id) >> ${percentSpike}% <<")
     return false
   }else {
-    log.info("###### Passed spike-in alignment ($prefix) >> ${percentSpike}% <<")
+    log.info("###### Passed spike-in alignment ($meta.id) >> ${percentSpike}% <<")
     return true
   }
 }

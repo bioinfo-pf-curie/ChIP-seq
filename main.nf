@@ -52,13 +52,13 @@ if (params.genomes && params.genome && !params.genomes.containsKey(params.genome
 
 params.fasta = NFTools.getGenomeAttribute(params, 'fasta')
 params.chrsize = NFTools.getGenomeAttribute(params, 'chrsize')
-params.spikeFasta = NFTools.getGenomeAttribute(params, 'fasta', genome=params.spike)
+params.spikeFasta = NFTools.getGenomeAttribute(params, 'fasta', params.spike)
 params.bwaIndex = NFTools.getGenomeAttribute(params, 'bwaIndex')
-params.spikeBwaIndex = NFTools.getGenomeAttribute(params, 'bwaIndex', genome=params.spike)
+params.spikeBwaIndex = NFTools.getGenomeAttribute(params, 'bwaIndex', params.spike)
 params.bowtie2Index = NFTools.getGenomeAttribute(params, 'bowtie2Index')
-params.spikeBowtie2Index = NFTools.getGenomeAttribute(params, 'bowtie2Index', genome=params.spike)
+params.spikeBowtie2Index = NFTools.getGenomeAttribute(params, 'bowtie2Index', params.spike)
 params.starIndex = NFTools.getGenomeAttribute(params, 'starIndex')
-params.spikeStarIndex = NFTools.getGenomeAttribute(params, 'starIndex', genome=params.spike)
+params.spikeStarIndex = NFTools.getGenomeAttribute(params, 'starIndex', params.spike)
 params.gtf = NFTools.getGenomeAttribute(params, 'gtf')
 params.geneBed = NFTools.getGenomeAttribute(params, 'geneBed')
 params.blacklist = NFTools.getGenomeAttribute(params, 'blacklist')
@@ -106,123 +106,26 @@ if (!params.effGenomeSize) {
 ==========================
 */
 
-// Genome Fasta file
-if ( params.fasta ){
-  Channel
-    .fromPath(params.fasta, checkIfExists: true)
-    .set{chFasta}
-}
-else{
-  exit 1, "Fasta file not found: ${params.fasta}"
-}
+chFasta              = params.fasta                 ? Channel.fromPath(params.fasta, checkIfExists: true).collect()                  : Channel.empty()
+chFastaSpike         = params.spikeFasta            ? Channel.fromPath(params.spikeFasta, checkIfExists: true).collect()             : Channel.empty()
+chChromSize          = params.chrsize               ? Channel.fromPath(params.chrsize, checkIfExists: true).collect()                : Channel.empty()
+chEffGenomeSize      = params.effGenomeSize         ? Channel.of(params.effGenomeSize)                                               : Channel.empty()
 
-if ( params.spikeFasta ){
-  Channel
-    .fromPath(params.spikeFasta, checkIfExists: true)
-    .set{chFastaSpike}
-}else{
-  chFastaSpike = Channel.empty()
-}
+chStarIndex          = params.starIndex             ? Channel.fromPath(params.starIndex, checkIfExists: true).collect()              : Channel.empty()
+chBowtie2Index       = params.bowtie2Index          ? Channel.fromPath(params.bowtie2Index, checkIfExists: true).collect()           : Channel.empty()
+chBwaIndex           = params.bwaIndex              ? Channel.fromPath(params.bwaIndex, checkIfExists: true).collect()               : Channel.empty()
+chMappingIndex       = params.aligner == 'star'     ? chStarIndex : params.aligner == 'bowtie2' ? chBowtie2Index : chBwaIndex
 
-/*
- * Indexes
- */
+chSpikeStarIndex     = params.spikeStarIndex        ? Channel.fromPath(params.spikeStarIndex, checkIfExists: true).collect()         : Channel.empty()
+chSpikeBowtie2Index  = params.spikeBowtie2Index     ? Channel.fromPath(params.spikeBowtie2Index, checkIfExists: true).collect()      : Channel.empty()
+chSpikeBwaIndex      = params.spikeBwaIndex         ? Channel.fromPath(params.spikeBwaIndex, checkIfExists: true).collect()          : Channel.empty()
+chSpikeIndex         = params.aligner == 'star'     ? chSpikeStarIndex : params.aligner == 'bowtie2' ? chSpikeBowtie2Index : chSpikeBwaIndex
 
-if( params.starIndex && params.aligner == 'star' ){
-  Channel
-    .fromPath(params.starIndex)
-    .ifEmpty { exit 1, "STAR index not found: ${params.starIndex}" }
-    .set {chMappingIndex}
-}
-else if ( params.bowtie2Index && params.aligner == 'bowtie2' ){
-  Channel
-    .fromPath("${params.bowtie2Index}")
-    .ifEmpty { exit 1, "Bowtie2 index not found: ${params.bowtie2Index}" }
-    .set{chMappingIndex}
-}
-else if ( params.bwaIndex && params.aligner == "bwa-mem" ){
-  Channel
-    .fromPath("${params.bwaIndex}")
-    .ifEmpty { exit 1, "Bwa index not found: ${params.bwaIndex}" }
-    .set{chMappingIndex}
-}
-else {
-    exit 1, "No genome index specified!"
-}
-
-/*
- * Spike Indexes
- */
-
-chSpikeIndex = Channel.empty()
-if( params.spikeStarIndex && params.aligner == 'star' ){
-  Channel
-    .fromPath(params.spikeStarIndex)
-    .ifEmpty { exit 1, "STAR index not found: ${params.spikeStarIndex}" }
-    .set {chSpikeIndex}
-}
-else if ( params.spikeBowtie2Index && params.aligner == 'bowtie2' ){
-  Channel
-    .fromPath("${params.spikeBowtie2Index}")
-    .ifEmpty { exit 1, "Bowtie2 index not found: ${params.bowtie2Index}" }
-    .set{chSpikeIndex}
-}
-else if ( params.spikeBwaIndex && params.aligner == "bwa-mem" ){
-  Channel
-    .fromPath("${params.spikeBwaIndex}")
-    .ifEmpty { exit 1, "Bwa index not found: ${params.spikeBwaIndex}" }
-    .set{chSpikeIndex}
-}
-
-/*
- * Annotations
- */
-
-if (params.geneBed) {
-  Channel
-    .fromPath(params.geneBed, checkIfExists: true)
-    .ifEmpty {exit 1, "BED file ${params.geneBed} not found"}
-    .set{chGeneBed}
-}else{
-  chGeneBed = Channel.empty()
-}
-
-if (params.blacklist) { 
-  Channel
-    .fromPath(params.blacklist, checkIfExists: true)
-    .set {chBlacklist} 
-}else{
-  chBlacklist = Channel.empty()
-}
-
-if ( params.chrsize ){
-  Channel
-    .fromPath(params.chrsize, checkIfExists: true)
-    .set{chChromSize}
-}else{
-  exit 1, "Chromosome size file not found: ${params.chrsize}"
-}
-
-if (params.gtf) {
-  Channel
-    .fromPath(params.gtf, checkIfExists: true)
-    .set{chGtf}
-}else {
-  exit 1, "GTF annotation file not specified!"
-}
-
-if (params.effGenomeSize){
-  Channel
-    .of(params.effGenomeSize)
-    .set{ chEffGenomeSize }
-}
-
-if ( params.metadata ){
-  Channel
-    .fromPath( params.metadata )
-    .ifEmpty { exit 1, "Metadata file not found: ${params.metadata}" }
-    .set { chMetadata }
-}
+chGeneBed            = params.geneBed               ? Channel.fromPath(params.geneBed, checkIfExists: true).collect()                : Channel.empty()
+chBlacklist          = params.blacklist             ? Channel.fromPath(params.blacklist, checkIfExists: true).collect()              : Channel.empty()
+chGtf                = params.gtf                   ? Channel.fromPath(params.gtf, checkIfExists: true).collect()                    : Channel.empty()
+chMetadata           = params.metadata              ? Channel.fromPath(params.metadata, checkIfExists: true).collect()               : Channel.empty()
+chDesignFile         = params.design                ? Channel.fromPath(params.design, checkIfExists: true).collect()                 : Channel.empty()
 
 /*
 ===========================
@@ -242,6 +145,7 @@ summary = [
   'GTF Annotation' : params.gtf ?: null,
   'BED Annotation' : params.geneBed ?: null,
   'Blacklist' : params.blacklist ?: null,
+  'EffGenomeSize' : params.effGenomeSize ?: null,
   'Aligner' : params.aligner ?: null,
   'Keep Dups' : params.keepDups ?: null,
   'Min MapQ' : params.mapq ?: null,
@@ -265,23 +169,13 @@ workflowSummaryCh = NFTools.summarize(summary, workflow, params)
 
 // Load raw reads
 chRawReads = NFTools.getInputData(params.samplePlan, params.reads, params.readPaths, params.singleEnd, params)
+chRawReads.view()
 
 // Make samplePlan if not available
 chSplan = NFTools.getSamplePlan(params.samplePlan, params.reads, params.readPaths, params.singleEnd)
 
 // Design
-if (params.design){
-  Channel
-    .fromPath(params.design)
-    .ifEmpty { exit 1, "Design file not found: ${params.design}" }
-    .set { chDesignFile }
-
-  chDesignControl = loadDesign(params.design)
-
-}else{
-  chDesignControl = Channel.empty()
-  chDesignFile = Channel.empty()
-}
+chDesignControl = params.design ? loadDesign(params.design) : Channel.empty()
 
 /*
 ==================================
@@ -290,25 +184,22 @@ if (params.design){
 */ 
 
 // Workflows
+include { prepareAnnotationFlow } from './nf-modules/local/subworkflow/prepareAnnotation'
 include { mappingFlow as mappingFlow } from './nf-modules/local/subworkflow/mappingFlow'
 include { bamFilteringFlow as bamFilteringFlowRef } from './nf-modules/local/subworkflow/bamFiltering'
 include { bamFilteringFlow as bamFilteringFlowSpike } from './nf-modules/local/subworkflow/bamFiltering'
-
-include { bamChipFlow }        from './nf-modules/local/subworkflow/bamChip' 
-include { bamSpikesFlow }      from './nf-modules/local/subworkflow/bamSpikes' 
-
-// Peak calling
-include { peakCallingFlow }     from './nf-modules/local/subworkflow/peakcalling' 
+include { bamChipFlow }      from './nf-modules/local/subworkflow/bamChip' 
+include { bamSpikesFlow }    from './nf-modules/local/subworkflow/bamSpikes' 
+include { peakCallingFlow }  from './nf-modules/local/subworkflow/peakcalling' 
 
 // Processes
 include { checkDesign } from './nf-modules/local/process/checkDesign'
-include { fastqc } from './nf-modules/common/process/fastqc'
-include { prepareAnnotation }   from './nf-modules/local/process/prepareAnnotation'
-include { preseq } from './nf-modules/common/process/preseq'
-
-include { featureCounts }       from './nf-modules/local/process/featureCounts'
-include { getSoftwareVersions } from './nf-modules/common/process/getSoftwareVersions'
-include { outputDocumentation } from './nf-modules/common/process/outputDocumentation'
+include { fastqc }      from './nf-modules/common/process/fastqc/fastqc'
+include { trimGalore }  from './nf-modules/common/process/trimGalore/trimGalore'
+include { preseq }      from './nf-modules/common/process/preseq/preseq'
+include { featureCounts }       from './nf-modules/common/process/featureCounts/featureCounts'
+include { getSoftwareVersions } from './nf-modules/common/process/utils/getSoftwareVersions'
+include { outputDocumentation } from './nf-modules/common/process/utils/outputDocumentation'
 include { multiqc }             from './nf-modules/local/process/multiqc'
 
 
@@ -325,6 +216,7 @@ workflow {
   chPeaksCountsMqc=Channel.empty()
   chFripResults=Channel.empty()
   chPeaksQCMqc=Channel.empty()
+  chTrimmingMqc = Channel.empty()
 
   // subroutines
   outputDocumentation(
@@ -339,14 +231,22 @@ workflow {
       chSplan)
   }
 
-  // PROCESS: fastqc
-  if (!params.skipFastqc){
-    fastqc(
+  // PROCESS: trimming
+  if (params.trimming){
+    trimGalore(
       chRawReads
     )
-    chFastqcMqc = fastqc.out.results.collect()
-    chVersions = chVersions.mix(fastqc.out.versions)
+    chRawReads=trimGalore.out.fastq
+    chTrimmingMqc=trimGalore.out.logs.map{it->it[1]}
+    chVersions = chVersions.mix(trimGalore.out.versions)
   }
+
+  // PROCESS: fastqc
+  fastqc(
+    chRawReads
+  )
+  chFastqcMqc = fastqc.out.results.collect()
+  chVersions = chVersions.mix(fastqc.out.versions)
 
 
   //*******************************************
@@ -394,7 +294,8 @@ workflow {
   bamChipFlow(
     bamFilteringFlowRef.out.bam,
     chBlacklist,
-    chGeneBed
+    chGeneBed,
+    chEffGenomeSize
   )
   chVersions = chVersions.mix(bamChipFlow.out.versions)
 
@@ -411,7 +312,8 @@ workflow {
     bamSpikesFlow(
       bamFilteringFlowRef.out.bam,
       bamFilteringFlowSpike.out.bam,
-      chBlacklist
+      chBlacklist,
+      chEffGenomeSize
     )
     chVersions = chVersions.mix(bamSpikesFlow.out.versions)
   }
@@ -434,15 +336,21 @@ workflow {
     chPeaksCountsMqc = peakCallingFlow.out.peaksCountsMqc
     chFripResults = peakCallingFlow.out.fripResults
     chPeaksQCMqc = peakCallingFlow.out.peaksQCMqc
-    chTSSFeatCounts = prepareAnnotation(chGeneBed.collect())
- 
-    if (!params.skipFeatCounts){
-      featureCounts(
-        bamFilteringFlowRef.out.bam.map{it -> it[1]}.collect(),
-        chGeneBed.concat(chTSSFeatCounts)
-      )
-      chVersions = chVersions.mix(featureCounts.out.versions)
-    }
+  } 
+
+  //*********************************************
+  // COUNTS
+  if (!params.skipFeatCounts){
+
+    //SUB-WORKFLOW : prepare annotation files
+    prepareAnnotationFlow(
+      chGeneBed.collect()
+    )
+
+    featureCounts(
+      bamFilteringFlowRef.out.bam.combine(prepareAnnotationFlow.out.saf)
+    )
+    chVersions = chVersions.mix(featureCounts.out.versions)
   }
 
   //*******************************************
@@ -458,7 +366,7 @@ workflow {
     chAlignedSpikeBam
       .join(chPassedSpikeBam, remainder: true)
       .filter{it -> it[3] == null}
-      .flatMap{ it -> it[0] + ": Poor spike alignment rate. Sample ignored !"}
+      .flatMap{ it -> it[0].id + ": Poor spike alignment rate. Sample ignored !"}
       .set{chWarnMapping}
 
     chWarnMapping
