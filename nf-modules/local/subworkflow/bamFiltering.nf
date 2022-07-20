@@ -2,15 +2,15 @@
  * Filter BAMs file
  */
 
-include { markDuplicates } from '../../common/process/markDuplicates' 
-include { samtoolsFilter } from '../../common/process/samtoolsFilter'
-include { samtoolsFlagstat } from '../../common/process/samtoolsFlagstat'
-include { samtoolsIndex } from '../../common/process/samtoolsIndex'
+include { markDuplicates } from '../../common/process/picard/markDuplicates' 
+include { samtoolsFilter } from '../../common/process/samtools/samtoolsFilter'
+include { samtoolsFlagstat } from '../../common/process/samtools/samtoolsFlagstat'
+include { samtoolsIndex } from '../../common/process/samtools/samtoolsIndex'
 
 workflow bamFilteringFlow {
 
     take:
-    bams // [prefix, bam, bai]
+    bams // [meta, bam, bai]
 
     main:
     chVersions = Channel.empty()

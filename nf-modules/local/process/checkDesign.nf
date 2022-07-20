@@ -1,7 +1,5 @@
 /*
  * Check design and sample plan files
- * External parameters :
- * @ params.singleEnd :	is data	single-end sequencing ?
  */
 
 process checkDesign{
@@ -15,7 +13,7 @@ process checkDesign{
   path samplePlan
 
   script:
-  optSE = params.singleEnd ? "--singleEnd" : ""
+  optSE = meta.singleEnd ? "--singleEnd" : ""
   """
   checkDesign.py -d $design -s $samplePlan ${optSE}
   """

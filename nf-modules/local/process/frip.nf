@@ -6,10 +6,10 @@ process frip{
   label 'macs2'
   label 'medCpu'
   label 'medMem'
-  tag("${prefix}")
+  tag("${meta.id}")
 
   input:
-  tuple val(prefix), path(bam), path(stats), path(peaks)
+  tuple val(meta), path(bam), path(stats), path(peaks)
   path(fripScoreHeader)
 
   output:
@@ -20,7 +20,7 @@ process frip{
   """
   echo "BEDtools"\$(intersectBed 2>&1 | grep "Version" | cut -f2 -d:) > versions.txt
   READS_IN_PEAKS=\$(intersectBed -a ${bam} -b ${peaks} -bed -c -f 0.20 | awk -F '\t' '{sum += \$NF} END {print sum}')
-  grep 'mapped (' $stats | awk -v a="\$READS_IN_PEAKS" '{printf "${prefix}\\t%.2f\\n", a/\$1}' | cat $fripScoreHeader - > ${peaks.baseName}_FRiP.tsv
+  grep 'mapped (' $stats | awk -v a="\$READS_IN_PEAKS" '{printf "${meta.id}\\t%.2f\\n", a/\$1}' | cat $fripScoreHeader - > ${peaks.baseName}_FRiP.tsv
   """
 }
 

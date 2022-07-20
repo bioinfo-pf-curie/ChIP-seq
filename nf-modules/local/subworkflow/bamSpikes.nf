@@ -2,33 +2,31 @@
  * Spikes-in analysis 
  */
 
-/* 
- * include requires tasks 
- */
-include { deepToolsMultiBamSummary } from '../process/deepToolsMultiBamSummary'
+include { deeptoolsMultiBamSummary } from '../../common/process/deeptools/deeptoolsMultiBamSummary'
 include { getSpikeScalingFactor } from '../process/getSpikeScalingFactor'
-include { bigWigSpikeNorm } from '../process/bigWigSpikeNorm'
+include { deeptoolsBamCoverage } from '../../common/process/deeptools/deeptoolsBamCoverage'
 
 workflow bamSpikesFlow {
 
   // required inputs
   take:
-   bamsChip // [prefix,bam,bai]
+   bamsChip // [meta,bam,bai]
    bamsSpikes 
    blacklist
+   effGenomeSize
 
   // workflow implementation
   main:
     chVersions = Channel.empty()
 
-    deepToolsMultiBamSummary(
+    deeptoolsMultiBamSummary(
        bamsSpikes.map{it[1]}.collect(),
        bamsSpikes.map{it[2]}.collect()
     )
-    chVersions = chVersions.mix(deepToolsMultiBamSummary.out.versions)
+    chVersions = chVersions.mix(deeptoolsMultiBamSummary.out.versions)
 
     getSpikeScalingFactor(
-      deepToolsMultiBamSummary.out.output
+      deeptoolsMultiBamSummary.out.output
     )
     chVersions = chVersions.mix(getSpikeScalingFactor.out.versions)
 
@@ -43,14 +41,15 @@ workflow bamSpikesFlow {
       .map { it -> it[0,1,2,4]}
       .set{chBigWigScaleFactor}
 
-    bigWigSpikeNorm(
+    deeptoolsBamCoverage(
        chBigWigScaleFactor,
-       blacklist.collect().ifEmpty([])
+       blacklist.collect().ifEmpty([]),
+       effGenomeSize.collect().ifEmpty([])
     ) 
-    chVersions = chVersions.mix(bigWigSpikeNorm.out.versions)
+    chVersions = chVersions.mix(deeptoolsBamCoverage.out.versions)
 
    emit:
-     bigwig = bigWigSpikeNorm.out.bigwig
+     bigwig = deeptoolsBamCoverage.out.bigwig
      versions = chVersions
 }
 

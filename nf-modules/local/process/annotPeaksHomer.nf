@@ -3,18 +3,18 @@
  */
 
 process annotPeaksHomer {
-  tag "${prefix}"
+  tag "${meta.id}"
   label 'homer'
   label 'medCpu'
   label 'medMem'
 
   input:
-  tuple val(prefix), path(peaks)
+  tuple val(meta), path(peaks)
   path gtf
   path fasta
 
   output:
-  tuple val(prefix), path("*.txt"), emit: output
+  tuple val(meta), path("*.txt"), emit: output
 
   script:
   """

@@ -5,22 +5,22 @@
 
 
 if (params.aligner == "bwa-mem"){
-  include { bwaMem as mappingRef } from '../../common/process/bwaMem'
-  include { bwaMem as mappingSpike } from '../../common/process/bwaMem'
+  include { bwaMem as mappingRef } from '../../common/process/bwa/bwaMem'
+  include { bwaMem as mappingSpike } from '../../common/process/bwa/bwaMem'
 }else if (params.aligner == "bowtie2"){
-  include { bowtie2 as mappingRef } from '../../common/process/bowtie2'
-  include { bowtie2 as mappingSpike } from '../../common/process/bowtie2'
+  include { bowtie2 as mappingRef } from '../../common/process/bowtie2/bowtie2'
+  include { bowtie2 as mappingSpike } from '../../common/process/bowtie2/bowtie2'
 }else if (params.aligner == "star"){
-  include { starAlign as mappingRef } from '../process/starAlign'
-  include { starAlign as mappingSpike } from '../process/starAlign'
+  include { starAlign as mappingRef } from '../../common/process/star/starAlign'
+  include { starAlign as mappingSpike } from '../../common/process/star/starAlign'
 }
 
-include { compareBams } from '../process/compareBams'
-include { samtoolsSort as samtoolsSortRef } from '../../common/process/samtoolsSort'
-include { samtoolsSort as samtoolsSortSpike } from '../../common/process/samtoolsSort'
-include { samtoolsIndex as samtoolsIndexRef } from '../../common/process/samtoolsIndex'
-include { samtoolsIndex as samtoolsIndexSpike } from '../../common/process/samtoolsIndex'
-include { samtoolsFlagstat } from '../../common/process/samtoolsFlagstat'
+include { compareBams } from '../../local/process/compareBams'
+include { samtoolsSort as samtoolsSortRef } from '../../common/process/samtools/samtoolsSort'
+include { samtoolsSort as samtoolsSortSpike } from '../../common/process/samtools/samtoolsSort'
+include { samtoolsIndex as samtoolsIndexRef } from '../../common/process/samtools/samtoolsIndex'
+include { samtoolsIndex as samtoolsIndexSpike } from '../../common/process/samtools/samtoolsIndex'
+include { samtoolsFlagstat } from '../../common/process/samtools/samtoolsFlagstat'
 
 workflow mappingFlow {
 
@@ -34,18 +34,34 @@ workflow mappingFlow {
   
 
   // Align on reference genome
-  mappingRef(
-    reads,
-    indexRef.collect()
-  )
+  if (params.aligner == "star"){
+    mappingRef(
+      reads,
+      indexRef.collect(),
+      Channel.empty().collect().ifEmpty([])
+    )
+  }else{
+    mappingRef(
+      reads,
+      indexRef.collect()
+    )
+  }
   chVersions = chVersions.mix(mappingRef.out.versions)
 
   if (params.spike){
     // Align on spike genome
-    mappingSpike(
-      reads,
-      indexSpike.collect()
-    )
+    if (params.aligner == "star"){
+      mappingSpike(
+        reads,
+        indexSpike.collect(),
+        Channel.empty().collect().ifEmpty([])
+      )
+    }else{
+      mappingSpike(
+        reads,
+        indexSpike.collect()
+      )
+    }
 
     // Compare reference/spike mapping
     compareBams(mappingRef.out.bam.join(mappingSpike.out.bam), params.genome, params.spike)

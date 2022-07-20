@@ -2,12 +2,15 @@
  * all ChIP analysis 
  */
 
-include { getFragmentSize } from '../process/getFragmentSize' 
-include { PPQT } from '../process/PPQT' 
-include { bigWig } from '../process/bigWig'
-include { deepToolsComputeMatrix } from '../process/deepToolsComputeMatrix'
-include { deepToolsCorrelationQC } from '../process/deepToolsCorrelationQC'
-include { deepToolsFingerprint } from '../process/deepToolsFingerprint'
+include { collectInsertSizeMetrics } from '../../common/process/picard/collectInsertSizeMetrics' 
+
+include { PPQT } from '../../local/process/PPQT'
+include { getDepthNormFactor } from '../../local/process/getDepthNormFactor'
+
+include { deeptoolsBamCoverage } from '../../common/process/deeptools/deeptoolsBamCoverage'
+include { deeptoolsComputeMatrix } from '../../common/process/deeptools/deeptoolsComputeMatrix'
+include { deeptoolsCorrelationQC } from '../../common/process/deeptools/deeptoolsCorrelationQC'
+include { deeptoolsFingerprint } from '../../common/process/deeptools/deeptoolsFingerprint'
 
 /***********************
  * Header and conf
@@ -21,20 +24,21 @@ chPpqtRSCHeader = file("$baseDir/assets/ppqt_rsc_header.txt", checkIfExists: tru
 workflow bamChipFlow {
 
   take:
-    bam // [prefix, bam, bai]
+    bam // [meta, bam, bai]
     blacklist
     geneBed
+    effGenomeSize
 
   main:
     chVersions = Channel.empty()
 
     // Fragment size
     if (!params.singleEnd){
-      getFragmentSize(
+      collectInsertSizeMetrics(
         bam
       )
-      chVersions = chVersions.mix(getFragmentSize.out.versions)
-      chFragmentSize = getFragmentSize.out.results
+      chVersions = chVersions.mix(collectInsertSizeMetrics.out.versions)
+      chFragmentSize = collectInsertSizeMetrics.out.results
     }else{
       chFragmentSize = Channel.empty()
     }
@@ -50,41 +54,46 @@ workflow bamChipFlow {
       chVersions = chVersions.mix(PPQT.out.versions)
     }
 
-    bigWig(
-      bam,
-      blacklist.collect().ifEmpty([])
+    getDepthNormFactor(
+      bam
+    )
+
+    deeptoolsBamCoverage(
+      bam.join(getDepthNormFactor.out.sf),
+      blacklist.collect().ifEmpty([]),
+      effGenomeSize.collect().ifEmpty([])
     )
 
     if (!params.skipDeepTools){
-      deepToolsComputeMatrix(
-        bigWig.out.bigWig,
+      deeptoolsComputeMatrix(
+        deeptoolsBamCoverage.out.bigwig,
         geneBed.collect()
       ) 
-      chVersions = chVersions.mix(deepToolsComputeMatrix.out.versions) 
+      chVersions = chVersions.mix(deeptoolsComputeMatrix.out.versions) 
 
-      deepToolsCorrelationQC(
-        bam.map{it[0]}.collect(),
+      deeptoolsCorrelationQC(
+        bam.map{it[0].id}.collect(),
         bam.map{it[1]}.collect(), 
         bam.map{it[2]}.collect(),
         blacklist.ifEmpty([])
       )
-      chVersions = chVersions.mix(deepToolsCorrelationQC.out.versions) 
+      chVersions = chVersions.mix(deeptoolsCorrelationQC.out.versions) 
 
-      deepToolsFingerprint(
-        bam.map{it[0]}.collect(),
+      deeptoolsFingerprint(
+        bam.map{it[0].id}.collect(),
         bam.map{it[1]}.collect(),
         bam.map{it[2]}.collect()
       )
-      chVersions = chVersions.mix(deepToolsFingerprint.out.versions)
+      chVersions = chVersions.mix(deeptoolsFingerprint.out.versions)
     }
 
   emit:
     fragmentsSize           = chFragmentSize
     ppqtOutMqc              = !params.skipPPQT ? PPQT.out.ppqtOutMqc : Channel.empty()
     ppqtCsvMqc              = !params.skipPPQT ? PPQT.out.ppqtCsvMqc : Channel.empty()
-    deeptoolsProfileMqc     = !params.skipDeepTools ? deepToolsComputeMatrix.out.mqc : Channel.empty()
-    deeptoolsCorrelateMqc   = !params.skipDeepTools ? deepToolsCorrelationQC.out.mqc : Channel.empty()
-    deeptoolsFingerprintMqc = !params.skipDeepTools ? deepToolsFingerprint.out.mqc : Channel.empty()
+    deeptoolsProfileMqc     = !params.skipDeepTools ? deeptoolsComputeMatrix.out.mqc : Channel.empty()
+    deeptoolsCorrelateMqc   = !params.skipDeepTools ? deeptoolsCorrelationQC.out.mqc : Channel.empty()
+    deeptoolsFingerprintMqc = !params.skipDeepTools ? deeptoolsFingerprint.out.mqc : Channel.empty()
     versions                = chVersions
 }
 

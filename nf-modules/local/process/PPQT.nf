@@ -3,13 +3,13 @@
  */
 
 process PPQT{
-  tag "${prefix}"
+  tag "${meta.id}"
   label 'ppqt'
   label 'highCpu'
   label 'highMem'
 
   input:
-  tuple val(prefix), path(bam), path(bai)
+  tuple val(meta), path(bam), path(bai)
   path sppCorrelationHeader 
   path sppNSCHeader
   path sppRSCHeader
@@ -24,11 +24,11 @@ process PPQT{
   """
   echo \$(R --version | awk 'NR==1{print \$1,\$3}') > versions.txt
   RUN_SPP=`which run_spp.R`
-  Rscript -e "library(caTools); source(\\"\$RUN_SPP\\")" -c="${bam}" -savp="${prefix}.spp.pdf" -savd="${prefix}.spp.Rdata" -out="${prefix}.spp.out" -p=$task.cpus
-  cp $sppCorrelationHeader ${prefix}_spp_correlation_mqc.tsv
-  Rscript -e "load('${prefix}.spp.Rdata'); write.table(crosscorr\\\$cross.correlation, file=\\"${prefix}_spp_correlation_mqc.tsv\\", sep=",", quote=FALSE, row.names=FALSE, col.names=FALSE,append=TRUE)"
-  awk -v OFS='\t' '{print "${prefix}", \$9}' ${prefix}.spp.out | cat $sppNSCHeader - > ${prefix}_spp_nsc_mqc.tsv
-  awk -v OFS='\t' '{print "${prefix}", \$10}' ${prefix}.spp.out | cat $sppRSCHeader - > ${prefix}_spp_rsc_mqc.tsv
+  Rscript -e "library(caTools); source(\\"\$RUN_SPP\\")" -c="${bam}" -savp="${meta.id}.spp.pdf" -savd="${meta.id}.spp.Rdata" -out="${meta.id}.spp.out" -p=$task.cpus
+  cp $sppCorrelationHeader ${meta.id}_spp_correlation_mqc.tsv
+  Rscript -e "load('${meta.id}.spp.Rdata'); write.table(crosscorr\\\$cross.correlation, file=\\"${meta.id}_spp_correlation_mqc.tsv\\", sep=",", quote=FALSE, row.names=FALSE, col.names=FALSE,append=TRUE)"
+  awk -v OFS='\t' '{print "${meta.id}", \$9}' ${meta.id}.spp.out | cat $sppNSCHeader - > ${meta.id}_spp_nsc_mqc.tsv
+  awk -v OFS='\t' '{print "${meta.id}", \$10}' ${meta.id}.spp.out | cat $sppRSCHeader - > ${meta.id}_spp_rsc_mqc.tsv
   """
 }
 

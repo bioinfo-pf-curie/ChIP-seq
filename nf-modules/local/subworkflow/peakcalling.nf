@@ -2,10 +2,10 @@
  * Peak calling
  */
 
-include { samtoolsFlagstat } from '../../common/process/samtoolsFlagstat'
-include { macs2 as macs2Sharp } from '../process/macs2' 
-include { macs2 as macs2Broad } from '../process/macs2'
-include { epic2 } from '../process/epic2'
+include { samtoolsFlagstat } from '../../common/process/samtools/samtoolsFlagstat'
+include { macs2 as macs2Sharp } from '../../common/process/macs2/macs2'
+include { macs2 as macs2Broad } from '../../common/process/macs2/macs2'
+include { epic2 } from '../../common/process/epic2/epic2'
 include { frip } from '../process/frip'
 include { annotPeaksHomer } from '../process/annotPeaksHomer'
 include { peakQC } from '../process/peakQC'
@@ -50,7 +50,7 @@ workflow peakCallingFlow {
     .combine(chNoInput.concat(bamsChip))
     .set { bamsPairChip }  
 
-  //[group, peakType, prefix1, bam1, bai1, prefix2, bam2, bai2]
+  //[group, peakType, meta1, bam1, bai1, meta2, bam2, bai2]
   design
     .combine(bamsPairChip)
     .filter { it[0] == it[4] && it[1] == it[7] }
@@ -116,7 +116,7 @@ workflow peakCallingFlow {
    * FRIP
    */
 
-  //[prefix, bam, stats, peaks]
+  //[meta, bam, stats, peaks]
   chBamCallPeaks
     .map{ it -> it[2..7] }
     .combine(samtoolsFlagstat.out.stats, by:0)
