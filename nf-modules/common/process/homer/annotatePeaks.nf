@@ -1,8 +1,8 @@
-/************************************
+/*
  * Peaks Annotation with HOMER
  */
 
-process annotPeaksHomer {
+process annotatePeaks {
   tag "${meta.id}"
   label 'homer'
   label 'medCpu'

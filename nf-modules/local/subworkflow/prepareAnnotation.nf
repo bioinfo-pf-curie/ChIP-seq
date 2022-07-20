@@ -3,7 +3,7 @@
  */
 
 include { extractTSS } from '../../local/process/extractTSS' 
-include { bed2saf } from '../../local/process/bed2saf'
+include { bed2saf } from '../../common/process/featureCounts/bed2saf'
 
 workflow prepareAnnotationFlow {
 

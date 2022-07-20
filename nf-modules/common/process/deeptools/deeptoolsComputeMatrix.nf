@@ -14,7 +14,7 @@ process deeptoolsComputeMatrix{
 
   output:
   path("*.{mat,gz,tab,pdf}"), emit: output
-  path("*_mqc.tsv"), emit: mqc
+  path("*.plotProfile.tab"), emit: mqc
   path("versions.txt"), emit: versions
 
   script:
@@ -36,7 +36,7 @@ process deeptoolsComputeMatrix{
               --outFileNameData ${prefix}.plotProfile.tab \\
               ${args2}
  
-  sed -e 's/.0\t/\t/g' ${prefix}.plotProfile.tab | sed -e 's@.0\$@@g' > ${prefix}_plotProfile_mqc.tsv
+  ##sed -e 's/.0\t/\t/g' ${prefix}.plotProfile.tab | sed -e 's@.0\$@@g' > ${prefix}_plotProfile_mqc.tsv
   """
 } 
 

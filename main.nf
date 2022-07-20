@@ -379,6 +379,7 @@ workflow {
       chMetadata.ifEmpty([]),
       chMultiqcConfig, 
       chDesignFile.collect().ifEmpty([]), 
+      chTrimmingMqc.collect().ifEmpty([]),
       chFastqcMqc.collect().ifEmpty([]),
       chAlignedBamMqc.collect().ifEmpty([]),
       chCompareBamsMqc.map{it->it[1]}.collect().ifEmpty([]),

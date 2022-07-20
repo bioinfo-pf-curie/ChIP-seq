@@ -29,7 +29,7 @@ custom_data:
               scale: false
               format: '{:.0f}'
               placement: 1000
-            Number_of_reads:
+            Number_of_frag:
               title: 'Total Fragments'
               scale: 'RdYlGn'
               format: '{:,.0f}'
@@ -190,6 +190,7 @@ table_cond_formatting_rules:
 ## Modules 
 
 module_order:
+   - cutadapt
    - fastqc
    - bowtie2:
       name: 'Bowtie2'
@@ -207,6 +208,8 @@ module_order:
 report_section_order:
   my_stats:
     order: 1000
+  cutadapt:
+    order: 950
   fastqc:
     order: 900
   bwa_logs:

@@ -1,4 +1,4 @@
-/**************************************
+/*
  * Feature counts on BED file
  */
 
@@ -12,7 +12,6 @@ process bed2saf{
 
   output:
   path("*.saf"), emit: saf
-  //path("versions.txt"), emit: versions 
 
   script:
   def prefix = task.ext.prefix ?: "${bed.baseName}"

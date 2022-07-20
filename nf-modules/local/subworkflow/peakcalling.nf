@@ -6,8 +6,9 @@ include { samtoolsFlagstat } from '../../common/process/samtools/samtoolsFlagsta
 include { macs2 as macs2Sharp } from '../../common/process/macs2/macs2'
 include { macs2 as macs2Broad } from '../../common/process/macs2/macs2'
 include { epic2 } from '../../common/process/epic2/epic2'
+include { annotatePeaks } from '../../common/process/homer/annotatePeaks'
+
 include { frip } from '../process/frip'
-include { annotPeaksHomer } from '../process/annotPeaksHomer'
 include { peakQC } from '../process/peakQC'
 include { IDR } from '../process/IDR'
 
@@ -135,7 +136,7 @@ workflow peakCallingFlow {
    */       
   
   if (!params.skipPeakAnno){
-    annotPeaksHomer(
+    annotatePeaks(
       chPeaks,
       gtf.collect(),
       fasta.collect()
@@ -149,7 +150,7 @@ workflow peakCallingFlow {
   if (!params.skipPeakQC){
     peakQC(
       chPeaks.map{it->it[1]}.collect(),
-      annotPeaksHomer.out.output.map{it->it[1]}.collect(),
+      annotatePeaks.out.output.map{it->it[1]}.collect(),
       chPeakAnnotationHeader
     )
     chVersions = chVersions.mix(peakQC.out.versions)

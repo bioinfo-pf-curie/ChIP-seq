@@ -15,8 +15,9 @@ process multiqc {
   path metadata
   path multiqcConfig
   path design
-  path ('fastqc/*') 
-  path ('mapping/*') 
+  path ('trimming/*')
+  path ('fastqc/*')
+  path ('mapping/*')
   path ('mapping/*')
   path ('mapping/*') 
   path ('filtering/*')
@@ -48,7 +49,7 @@ process multiqc {
   metadataOpts = params.metadata ? "--metadata ${metadata}" : ""
   isPE = params.singleEnd ? "" : "-p"
   designOpts= params.design ? "-d ${params.design}" : ""
-  modules_list = "-m custom_content -m fastqc -m bowtie2 -m star -m preseq -m picard -m phantompeakqualtools -m deeptools -m macs2 -m homer"
+  modules_list = "-m custom_content -m cutadapt -m fastqc -m bowtie2 -m star -m preseq -m picard -m phantompeakqualtools -m deeptools -m macs2 -m homer"
   warn = warnings.name == 'warnings.txt' ? "--warn warnings.txt" : ""
   """
   stats2multiqc.sh -s ${splan} ${designOpts} -a ${params.aligner} ${isPE} > mqc.stats

@@ -49,7 +49,7 @@ fi
 
 all_samples=$(awk -F, '{print $1}' $splan)
 
-echo -e "Sample_ID,Sample_name,Number_of_reads,Fragment_length,Number_of_aligned_reads,Percent_of_aligned_reads,Percent_of_spike,Number_reads_after_filt,Percent_reads_after_filt,Number_of_duplicates,Percent_of_duplicates,Normalized_strand_correlation,Relative_strand_correlation,Fraction_of_reads_in_peaks"
+echo -e "Sample_ID,Sample_name,Number_of_frag,Fragment_length,Number_of_aligned_reads,Percent_of_aligned_reads,Percent_of_spike,Number_reads_after_filt,Percent_reads_after_filt,Number_of_duplicates,Percent_of_duplicates,Normalized_strand_correlation,Relative_strand_correlation,Fraction_of_reads_in_peaks"
 
 for sample in $all_samples
 do
@@ -85,19 +85,26 @@ do
     #Mapping stats (always in reads - so must be converted for PE)
     #These statistics are calculated after spike cleaning but before filtering
     #Note that the mapped line (second) includes both primary+secondary alignment
-    nb_paired_mapped=$(grep "with itself and mate mapped" mapping/${sample}*.flagstats | awk '{print $1}')
-    nb_single_mapped=$(grep "singletons" mapping/${sample}*.flagstats | awk '{print $1}')
-    nb_mapped=$(( $nb_paired_mapped + $nb_single_mapped ))
-    nb_paired_filter=$(grep "with itself and mate mapped" filtering/${sample}*.flagstats | awk '{print $1}')
-    nb_single_filter=$(grep "singletons" filtering/${sample}*.flagstats | awk '{print $1}')
-    nb_filter=$(( $nb_paired_filter + $nb_single_filter ))
-    #nb_mapped=$(awk -F, '$1=="Mapped"{print $2}' mapping/${sample}_mappingstats.mqc)
-    #nb_mapped_hq=$(awk -F, '$1=="HighQual"{print $2}' mapping/${sample}_mappingstats.mqc)
-    #nb_mapped_lq=$(awk -F, '$1=="LowQual"{print $2}' mapping/${sample}_mappingstats.mqc)
-    perc_mapped=$(echo "${nb_mapped} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
-    perc_filter=$(echo "${nb_filter} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
-    #perc_mapped_hq=$(echo "${nb_mapped_hq} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
-    #perc_mapped_lq=$(echo "${nb_mapped_lq} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
+    if [[ $is_pe == 1 ]]; then
+	nb_paired_mapped=$(grep "with itself and mate mapped" mapping/${sample}*.flagstats | awk '{print $1}')
+	nb_single_mapped=$(grep "singletons" mapping/${sample}*.flagstats | awk '{print $1}')
+	nb_mapped=$(( $nb_paired_mapped + $nb_single_mapped ))
+	nb_paired_filter=$(grep "with itself and mate mapped" filtering/${sample}*.flagstats | awk '{print $1}')
+	nb_single_filter=$(grep "singletons" filtering/${sample}*.flagstats | awk '{print $1}')
+	nb_filter=$(( $nb_paired_filter + $nb_single_filter ))
+	#nb_mapped=$(awk -F, '$1=="Mapped"{print $2}' mapping/${sample}_mappingstats.mqc)
+	#nb_mapped_hq=$(awk -F, '$1=="HighQual"{print $2}' mapping/${sample}_mappingstats.mqc)
+	#nb_mapped_lq=$(awk -F, '$1=="LowQual"{print $2}' mapping/${sample}_mappingstats.mqc)
+	perc_mapped=$(echo "${nb_mapped} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
+	perc_filter=$(echo "${nb_filter} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
+	#perc_mapped_hq=$(echo "${nb_mapped_hq} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
+	#perc_mapped_lq=$(echo "${nb_mapped_lq} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
+    else
+	nb_mapped=$(grep "mapped (" mapping/${sample}*.flagstats | awk '{print $1}')
+	nb_filter=$(grep "mapped (" filtering/${sample}*.flagstats | awk '{print $1}')
+	perc_mapped=$(echo "${nb_mapped} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
+	perc_filter=$(echo "${nb_filter} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ') 
+    fi
 
     #SPIKE
     perc_spike='NA'
