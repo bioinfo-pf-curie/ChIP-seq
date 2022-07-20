@@ -27,21 +27,6 @@
       "group": "Mandatory arguments"
     },
     {
-      "name": "profile",
-      "label": "Configuration profile(s)",
-      "usage": "Configuration profile to use. Can use multiple (comma separated).",
-      "type": "string",
-      "choices": [
-        "conda", "cluster", "docker", "multiconda", "conda", "path", "multipath", "singularity"
-      ],
-      "nargs": "+",
-      "default_value": null,
-      "pattern": ".*",
-      "render": "textfield",
-      "arity": 0,
-      "group": "Mandatory arguments"
-    },
-    {
       "name": "genome",
       "label": "Reference genome",
       "usage": "Name of the reference genome.",

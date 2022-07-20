@@ -185,7 +185,7 @@ Available Profiles
 
             The typical command for running the pipeline is as follows:
 
-            nextflow run main.nf ${CLIHelpMsg.join(" ")}
+            nextflow run main.nf ${CLIHelpMsg.join(" ")} -profile PROFILES
 
         %s
         %s
