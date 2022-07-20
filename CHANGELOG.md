@@ -8,6 +8,8 @@ NEW FEATURES
 
 SIGNIFICANT USER-VISIBLE CHANGES
   - The 'design' file template has been updated
+  - Calculate insert size with Picard for PE data (#49)
+  - Add spike-in % in general table (hidden by default)(#57)
 
 ***********************************
 version-1.0.3
