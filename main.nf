@@ -165,11 +165,13 @@ workflowSummaryCh = NFTools.summarize(summary, workflow, params)
 ==============================
 */
 
-// TODO - start from BAM files
-
 // Load raw reads
-chRawReads = NFTools.getInputData(params.samplePlan, params.reads, params.readPaths, params.singleEnd, params)
-chRawReads.view()
+if (!params.bam){
+  chRawReads = NFTools.getInputData(params.samplePlan, params.reads, params.readPaths, params.singleEnd, params)
+}else{
+  chRawReads = Channel.empty()
+  chAlignedBam = NFTools.getBamData(params.samplePlan, params)
+}
 
 // Make samplePlan if not available
 chSplan = NFTools.getSamplePlan(params.samplePlan, params.reads, params.readPaths, params.singleEnd)
@@ -188,9 +190,9 @@ include { prepareAnnotationFlow } from './nf-modules/local/subworkflow/prepareAn
 include { mappingFlow as mappingFlow } from './nf-modules/local/subworkflow/mappingFlow'
 include { bamFilteringFlow as bamFilteringFlowRef } from './nf-modules/local/subworkflow/bamFiltering'
 include { bamFilteringFlow as bamFilteringFlowSpike } from './nf-modules/local/subworkflow/bamFiltering'
-include { bamChipFlow }      from './nf-modules/local/subworkflow/bamChip' 
-include { bamSpikesFlow }    from './nf-modules/local/subworkflow/bamSpikes' 
-include { peakCallingFlow }  from './nf-modules/local/subworkflow/peakcalling' 
+include { bamChipFlow }      from './nf-modules/local/subworkflow/bamChip'
+include { bamSpikesFlow }    from './nf-modules/local/subworkflow/bamSpikes'
+include { peakCallingFlow }  from './nf-modules/local/subworkflow/peakcalling'
 
 // Processes
 include { checkDesign } from './nf-modules/local/process/checkDesign'
@@ -198,6 +200,7 @@ include { fastqc }      from './nf-modules/common/process/fastqc/fastqc'
 include { trimGalore }  from './nf-modules/common/process/trimGalore/trimGalore'
 include { preseq }      from './nf-modules/common/process/preseq/preseq'
 include { featureCounts }       from './nf-modules/common/process/featureCounts/featureCounts'
+include { samtoolsIndex }       from './nf-modules/common/process/samtools/samtoolsIndex'
 include { getSoftwareVersions } from './nf-modules/common/process/utils/getSoftwareVersions'
 include { outputDocumentation } from './nf-modules/common/process/utils/outputDocumentation'
 include { multiqc }             from './nf-modules/local/process/multiqc'
@@ -209,8 +212,6 @@ workflow {
   main:
   // Init MultiQC Channels
   chFastqcMqc = Channel.empty()
-  chAlignedBamMqc = Channel.empty()
-  chCompareBamsMqc = Channel.empty()
   chPreseqMqc = Channel.empty()
   chPeaksOutput=Channel.empty()
   chPeaksCountsMqc=Channel.empty()
@@ -252,38 +253,47 @@ workflow {
   //*******************************************
   // MAPPING
 
-  mappingFlow(
-    chRawReads,
-    chMappingIndex.collect(),
-    chSpikeIndex,
-  )
-  chAlignedBam = mappingFlow.out.bam
-  chAlignedBamMqc = mappingFlow.out.logs
-  chAlignedFlagstat = mappingFlow.out.flagstat
-  chAlignedSpikeBam = mappingFlow.out.spikeBam
-  chCompareBamsMqc = mappingFlow.out.compareBamsMqc
-  chVersions = chVersions.mix(mappingFlow.out.versions)
+  if (!params.bam){
+    mappingFlow(
+      chRawReads,
+      chMappingIndex.collect(),
+      chSpikeIndex,
+    )
+    chAlignedBam = mappingFlow.out.bam
+    chAlignedBamMqc = mappingFlow.out.logs
+    chAlignedFlagstat = mappingFlow.out.flagstat
+    chAlignedSpikeBam = mappingFlow.out.spikeBam
+    chCompareBamsMqc = mappingFlow.out.compareBamsMqc
+    chVersions = chVersions.mix(mappingFlow.out.versions)
 
-  // Remove low mapping rate for spikes
-  chCompareBamsMqc.join(chAlignedSpikeBam)
-    .filter { prefix, logs, bam, bai -> checkSpikeAlignmentPercent(prefix, logs, params.spikePercentFilter) }
-    .map { prefix, logs, bam, bai -> [ prefix, bam, bai ] }
-    .set { chPassedSpikeBam }
+    // Remove low mapping rate for spikes
+    chCompareBamsMqc.join(chAlignedSpikeBam)
+      .filter { prefix, logs, bam, bai -> checkSpikeAlignmentPercent(prefix, logs, params.spikePercentFilter) }
+      .map { prefix, logs, bam, bai -> [ prefix, bam, bai ] }
+      .set { chPassedSpikeBam }
+  }else{
+    chAlignedBamMqc = Channel.empty()
+    chAlignedFlagstat = Channel.empty()
+    chAlignedSpikeBam = Channel.empty()
+    chCompareBamsMqc = Channel.empty()
+    chPassedSpikeBam = Channel.empty()
 
+    samtoolsIndex(
+      chAlignedBam
+    )
+    chAlignedBam = chAlignedBam.join(samtoolsIndex.out.bai)
+  }
 
   //*******************************************
   // CHIP WORFLOW
 
-  //if (params.inputBam){
-  //  qcFlow.out.chFastqcMqc = Channel.empty()
-  //  mappingFlow.out.chMappingMqc = Channel.empty()
-  //}
+  chAlignedBam.view()
 
   if (!params.skipSaturation){ 
     preseq(
       chAlignedBam
     )
-   chPreseqMqc = preseq.out.results.collect()
+    chPreseqMqc = preseq.out.results.collect()
   }
 
   bamFilteringFlowRef(
@@ -298,7 +308,6 @@ workflow {
     chEffGenomeSize
   )
   chVersions = chVersions.mix(bamChipFlow.out.versions)
-
 
   //*******************************************
   // SPIKE WORKFLOW

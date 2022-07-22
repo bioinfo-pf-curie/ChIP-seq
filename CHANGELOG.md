@@ -5,6 +5,8 @@ NEW FEATURES
   - DSL2 version of the ChIP-seq pipeline
   - Update conda env
   - Add `--mac2Opts` and `--epic2Opts` to change on-the-fly the peak calling options (#59)
+  - Support BAM files as inputs (#13)
+  - Add `--trimming` option to remove adapter sequences (#42)
 
 SIGNIFICANT USER-VISIBLE CHANGES
   - The 'design' file template has been updated

@@ -366,9 +366,8 @@ Available Profiles
       }
 
       /**
-       * Channeling the input file containing FASTQ or BAM
+       * Channeling the input file containing FASTQ
        * Format is: "idSample,sampleName,pathToFastq1,[pathToFastq2]"
-       * or: "sampleID,sampleName,pathToBam"
        *
        * @param samplePlan
        * @return
@@ -392,13 +391,11 @@ Available Profiles
                   checkNumberOfItem(row, 4, params)
                   inputFile2 = returnFile(row[3], params)
                   if (!hasExtension(inputFile2, 'fastq.gz') && !hasExtension(inputFile2, 'fq.gz') && !hasExtension(inputFile2, 'fastq')) {
-                    Nextflow.exit(1, "File: ${inputFile2} has an unexpected extension. See --help for more information")
+                    Nextflow.exit(1, "File: ${inputFile2} is not a FASTQ file (.fastq.gz, .fq.gz). See --help for more information")
                   }
       		}
-              } else if (hasExtension(inputFile1, 'bam')) {
-                checkNumberOfItem(row, 3, params)
               } else {
-                Nextflow.exit(1, "File: ${inputFile1} has an unexpected extension. See --help for more information")
+                Nextflow.exit(1, "File: ${inputFile1} is not a FASTQ file (.fastq.gz, .fq.gz). See --help for more information")
               }
 	      
 	      if (singleEnd) {
@@ -444,7 +441,35 @@ Available Profiles
       }
 
 
-      /**
+      /*
+       * Channeling the input file containing BAMs
+       * Format is: "sampleID,sampleName,pathToBam"
+       *
+       * @param samplePlan
+       * @return
+       */
+
+      public static Object getBamData(samplePlan, params) {
+          return Channel
+            .fromPath(samplePlan)
+            .splitCsv(header: false)
+            .map { row ->
+	          def meta = [:]
+              meta.id = row[0]
+              meta.name = row[1]
+	      def inputFile1 = returnFile(row[2], params)
+
+              if (hasExtension(inputFile1, 'bam')){
+                  checkNumberOfItem(row, 3, params)
+		  return [meta, [inputFile1]]
+              } else {
+                Nextflow.exit(1, "File: ${inputFile1} is not a BAM file. See --help for more information")
+              }
+	    }
+      }
+ 
+
+      /*
        * Channeling the samplePlan and create a file is no samplePlan is provided
        * 
        * @param samplePlan

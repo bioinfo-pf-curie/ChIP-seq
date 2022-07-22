@@ -67,6 +67,19 @@
       "group": "Inputs"
     },
     {
+      "name": "bam",
+      "label": "Input files",
+      "usage": "For aligned (BAM) input data",
+      "type": "boolean",
+      "nargs": 0,
+      "choices": [],
+      "default_value": false,
+      "pattern": "",
+      "render": "check-box",
+      "arity": 0,
+      "group": "Inputs"
+    },
+    {
       "name": "fragmentSize",
       "label": "Fragment size",
       "usage": "Estimated fragment length used to extend single-end reads",
@@ -89,6 +102,20 @@
       "render": "textfield",
       "arity": 0,
       "group": "Inputs"
+    },
+
+    {
+      "name": "trimming",
+      "label": "Trimming",
+      "usage": "Trim adapters with TrimGalore",
+      "type": "boolean",
+      "nargs": 0,
+      "choices": [],
+      "default_value": false,
+      "pattern": "",
+      "render": "check-box",
+      "arity": 0,
+      "group": "Preprocessing"
     },
 
     {
@@ -183,9 +210,9 @@
       "group": "Alignment"
     },
     {
-      "name": "saveAlignedIntermediates",
-      "label": "Save aligned intermediates",
-      "usage": "Save intermediates alignment files",
+      "name": "saveIntermediates",
+      "label": "Save intermediates files",
+      "usage": "Save intermediates files",
       "type": "boolean",
       "nargs": 0,
       "choices": [],
@@ -193,7 +220,7 @@
       "pattern": "",
       "render": "check-box",
       "arity": 0,
-      "group": "Alignment"
+      "group": "Other options"
     },
     {
       "name": "starIndex",

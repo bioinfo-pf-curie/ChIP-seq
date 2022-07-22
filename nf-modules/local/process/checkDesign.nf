@@ -12,9 +12,12 @@ process checkDesign{
   path design
   path samplePlan
 
+  when:
+  task.ext.when == null || task.ext.when
+
   script:
-  optSE = meta.singleEnd ? "--singleEnd" : ""
+  def args   = task.ext.args ?: ''
   """
-  checkDesign.py -d $design -s $samplePlan ${optSE}
+  checkDesign.py -d $design -s $samplePlan ${args}
   """
 }
