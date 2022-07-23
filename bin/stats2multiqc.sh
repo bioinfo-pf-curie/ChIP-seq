@@ -57,14 +57,14 @@ do
     sname=$(grep "$sample," $splan | awk -F, '{print $2}')
 
     #ALIGNMENT
-    if [ $aligner == "bowtie2" ]; then
+    if [[ $aligner == "bowtie2" && -e mapping/${sample}_bowtie2.log ]]; then
 	nb_frag=$(grep "reads;" mapping/${sample}_bowtie2.log | sed 's/ .*//')
 	if [[ $is_pe == 1 ]]; then
             nb_reads=$(( $nb_frag * 2 ))
 	else
             nb_reads=$nb_frag
 	fi
-    elif [ $aligner == "bwa-mem" ]; then
+    elif [[ $aligner == "bwa-mem" && -e mapping/${sample}_bwa.log ]]; then
 	# bwa.log file is in reads number (not pairs)
 	nb_reads=$(grep 'Total' mapping/${sample}_bwa.log | awk -F "\t" '{print $2}')
 	if [[ $is_pe == 1 ]]; then
@@ -73,12 +73,19 @@ do
 	    nb_frag=$nb_reads
 	fi
 	tail -n +3 mapping/${sample}_bwa.log > mapping/${sample}_bwa.mqc
-    elif [ $aligner == "star" ]; then
+    elif [[ $aligner == "star" && -e mapping/${sample}Log.final.out ]]; then
 	nb_frag=$(grep "Number of input reads" mapping/${sample}Log.final.out | cut -d"|" -f 2 | sed -e 's/\t//g')
 	if [[ $is_pe == 1 ]]; then
             nb_reads=$(( $nb_frag * 2 ))
 	else
             nb_reads=$nb_frag
+	fi
+    else
+        nb_reads=$(grep "total" mapping/${sample}*.flagstats | awk '{print $1}')
+	if [[ $is_pe == 1 ]]; then
+	    nb_frag=$(( $nb_reads / 2 ))
+	else
+	    nb_frag=$nb_reads
 	fi
     fi
 

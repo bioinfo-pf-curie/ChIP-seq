@@ -170,7 +170,7 @@ if (!params.bam){
   chRawReads = NFTools.getInputData(params.samplePlan, params.reads, params.readPaths, params.singleEnd, params)
 }else{
   chRawReads = Channel.empty()
-  chAlignedBam = NFTools.getBamData(params.samplePlan, params)
+  chInputBam = NFTools.getBamData(params.samplePlan, params)
 }
 
 // Make samplePlan if not available
@@ -187,7 +187,8 @@ chDesignControl = params.design ? loadDesign(params.design) : Channel.empty()
 
 // Workflows
 include { prepareAnnotationFlow } from './nf-modules/local/subworkflow/prepareAnnotation'
-include { mappingFlow as mappingFlow } from './nf-modules/local/subworkflow/mappingFlow'
+include { mappingFlow } from './nf-modules/local/subworkflow/mapping'
+include { loadBamFlow } from './nf-modules/local/subworkflow/loadBam'
 include { bamFilteringFlow as bamFilteringFlowRef } from './nf-modules/local/subworkflow/bamFiltering'
 include { bamFilteringFlow as bamFilteringFlowSpike } from './nf-modules/local/subworkflow/bamFiltering'
 include { bamChipFlow }      from './nf-modules/local/subworkflow/bamChip'
@@ -272,16 +273,18 @@ workflow {
       .map { prefix, logs, bam, bai -> [ prefix, bam, bai ] }
       .set { chPassedSpikeBam }
   }else{
+ 
+    loadBamFlow(
+      chInputBam
+    )
+
+    chVersions = chVersions.mix(loadBamFlow.out.versions)
+    chAlignedBam = loadBamFlow.out.bam
+    chAlignedFlagstat = loadBamFlow.out.flagstat
     chAlignedBamMqc = Channel.empty()
-    chAlignedFlagstat = Channel.empty()
     chAlignedSpikeBam = Channel.empty()
     chCompareBamsMqc = Channel.empty()
-    chPassedSpikeBam = Channel.empty()
-
-    samtoolsIndex(
-      chAlignedBam
-    )
-    chAlignedBam = chAlignedBam.join(samtoolsIndex.out.bai)
+    chPassedSpikeBam = Channel.empty()     
   }
 
   //*******************************************
