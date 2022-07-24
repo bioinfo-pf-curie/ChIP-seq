@@ -290,8 +290,6 @@ workflow {
   //*******************************************
   // CHIP WORFLOW
 
-  chAlignedBam.view()
-
   if (!params.skipSaturation){ 
     preseq(
       chAlignedBam

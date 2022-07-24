@@ -24,7 +24,7 @@ Channel
 
 // Create special channel to deal with no input cases
 Channel
-  .from( ["NO_INPUT", file("NO_FILE_BAM"), file("NO_FILE_BAI")] )
+  .from( [[id:"NO_INPUT"], file("NO_FILE_BAM"), file("NO_FILE_BAI")] )
   .toList()
   .set{ chNoInput }
 
@@ -51,21 +51,21 @@ workflow peakCallingFlow {
     .combine(chNoInput.concat(bamsChip))
     .set { bamsPairChip }  
 
-  //[group, peakType, meta1, bam1, bai1, meta2, bam2, bai2]
+  //[meta, bam1, bai1, bam2, bai2]
   design
     .combine(bamsPairChip)
-    .filter { it[0] == it[4] && it[1] == it[7] }
-    .map { it ->  it[2..-1] }
-    .set { chBamCallPeaks }  
-
+    .filter { it[4].id == it[0] && it[7].id == it[1]}
+    .map{ it ->
+      meta = [id:it[4].id, control:it[7].id, singleEnd:it[4].singleEnd, group:it[2], peakType:it[3] ]
+      return [meta, it[5], it[6], it[8], it[9] ]
+    }.set { chBamCallPeaks }  
 
   /*********************************
    * Macs2 - sharp mode
    */ 
 
   chBamCallPeaks
-    .filter { it[1] == 'sharp' }
-    .map{ it -> it[2..7] }
+    .filter { it[0].peakType == 'sharp' }
     .set { chBamMacs2Sharp }
 
   macs2Sharp(
@@ -80,8 +80,7 @@ workflow peakCallingFlow {
    */
 
   chBamCallPeaks
-    .filter { it[1] == 'broad' }
-    .map{ it -> it[2..7] }
+    .filter { it[0].peakType == 'broad' }
     .set { chBamMacs2Broad }
 
   macs2Broad(
@@ -96,8 +95,7 @@ workflow peakCallingFlow {
    */       
 
   chBamCallPeaks
-    .filter { it[1] == 'very-broad' }
-    .map{ it -> it[2..7] }
+    .filter { it[0].peakType == 'very-broad' }
     .set { chBamEpic }
 
   epic2(
@@ -119,10 +117,10 @@ workflow peakCallingFlow {
 
   //[meta, bam, stats, peaks]
   chBamCallPeaks
-    .map{ it -> it[2..7] }
-    .combine(samtoolsFlagstat.out.stats, by:0)
+    .combine(samtoolsFlagstat.out.stats)
+    .filter { it[0].id == it[5].id }
+    .map{ it -> [it[0], it[1], it[6]] }
     .join(chPeaks)
-    .map{it -> [it[0], it[1], it[6], it[7]]}
     .set{ chFrip }
 
   frip(
