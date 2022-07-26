@@ -62,18 +62,12 @@ custom_data:
               format: '{:,.1f}'
               hidden: true
               placement: 5000
-            Number_reads_after_filt:
-              title: 'After Filtering'
-              scale: 'RdYlGn'
-              format: '{:,.0f}'
-              hidden: true
-              placement: 6000
             Number_of_duplicates:
               title: 'Duplicates'
               scale: 'RdYlGn'
               format: '{:,.0f}'
               hidden: true
-              placement: 9000
+              placement: 6000
             Percent_of_duplicates:
               title: 'Duplicates (%)'
               min: 0
@@ -81,7 +75,13 @@ custom_data:
               scale: 'RdYlVBu'
               format: '{:,.1f}'
               suffix: '%'
-              placement: 10000
+              placement: 7000
+            Number_reads_after_filt:
+              title: 'After Filtering'
+              scale: 'RdYlGn'
+              format: '{:,.0f}'
+              hidden: true
+              placement: 8000
             Percent_reads_after_filt:
               title: 'After Filtering (%)'
               min: 0
@@ -89,7 +89,7 @@ custom_data:
               scale: 'RdYlVBu'
               format: '{:,.1f}'
               suffix: '%'
-              placement: 10500
+              placement: 10000
             Normalized_strand_correlation:
               title: 'NSC'
               description: 'Normalized Strand Correlation' 

@@ -170,7 +170,7 @@ if (!params.bam){
   chRawReads = NFTools.getInputData(params.samplePlan, params.reads, params.readPaths, params.singleEnd, params)
 }else{
   chRawReads = Channel.empty()
-  chInputBam = NFTools.getBamData(params.samplePlan, params)
+  chInputBam = NFTools.getIntermediatesData(params.samplePlan, '.bam', params)
 }
 
 // Make samplePlan if not available
@@ -295,6 +295,7 @@ workflow {
       chAlignedBam
     )
     chPreseqMqc = preseq.out.results.collect()
+    chVersions = chVersions.mix(preseq.out.versions)
   }
 
   bamFilteringFlowRef(

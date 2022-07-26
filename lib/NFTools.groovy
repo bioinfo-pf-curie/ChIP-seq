@@ -442,14 +442,14 @@ Available Profiles
 
 
       /*
-       * Channeling the input file containing BAMs
-       * Format is: "sampleID,sampleName,pathToBam"
+       * Channeling the input file containing intermediates files
+       * Format is: "sampleID,sampleName,pathToIntermediates"
        *
        * @param samplePlan
        * @return
        */
 
-      public static Object getBamData(samplePlan, params) {
+      public static Object getIntermediatesData(samplePlan, extension, params) {
           return Channel
             .fromPath(samplePlan)
             .splitCsv(header: false)
@@ -459,11 +459,11 @@ Available Profiles
               meta.name = row[1]
 	      def inputFile1 = returnFile(row[2], params)
 
-              if (hasExtension(inputFile1, 'bam')){
+              if (hasExtension(inputFile1, extension)){
                   checkNumberOfItem(row, 3, params)
 		  return [meta, [inputFile1]]
               } else {
-                Nextflow.exit(1, "File: ${inputFile1} is not a BAM file. See --help for more information")
+                Nextflow.exit(1, "File: ${inputFile1} is not a ${extension} file. See --help for more information")
               }
 	    }
       }

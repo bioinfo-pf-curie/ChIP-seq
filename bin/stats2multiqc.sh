@@ -125,7 +125,7 @@ do
 	nb_dups_pair=$(grep -a2 "## METRICS" filtering/${sample}_markDups_metrics.txt | tail -1 | awk -F"\t" '{print $7}')
 	nb_dups_single=$(grep -a2 "## METRICS" filtering/${sample}_markDups_metrics.txt | tail -1 | awk -F"\t" '{print $6}')
 	nb_dups_optical=$(grep -a2 "## METRICS" filtering/${sample}_markDups_metrics.txt | tail -1 | awk -F"\t" '{print $8}')
-	nb_dups=$(( $nb_dups_pair * 2 + $nb_dups_single + $nb_dups_optical ))
+	nb_dups=$(( $nb_dups_pair * 2 + $nb_dups_single + $nb_dups_optical * 2 ))
 	perc_dups=$(echo "${nb_dups} ${nb_mapped}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
     else
 	nb_dups='NA'
