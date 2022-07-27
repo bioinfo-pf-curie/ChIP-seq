@@ -170,7 +170,7 @@ if (!params.bam){
   chRawReads = NFTools.getInputData(params.samplePlan, params.reads, params.readPaths, params.singleEnd, params)
 }else{
   chRawReads = Channel.empty()
-  chInputBam = NFTools.getIntermediatesData(params.samplePlan, '.bam', params)
+  chInputBam = NFTools.getIntermediatesData(params.samplePlan, ['.bam'], params)
 }
 
 // Make samplePlan if not available
