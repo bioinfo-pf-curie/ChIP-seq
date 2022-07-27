@@ -3,7 +3,7 @@
  */
 
 process epic2{
-  tag "${meta.id} - ${meta.control}"
+  tag "${prefix}"
   label 'epic2'
   label 'medCpu'
   label 'medMem'
@@ -21,9 +21,9 @@ process epic2{
   path("versions.txt"), emit: versions
 
   script:
-  ctrl = meta.control != 'NO_INPUT' ? "-c ${controlBam[0]}" : ''
+  ctrl = controlBam ? "-c ${controlBam[0]}" : ''
   def args = task.ext.args ?: ''
-  def prefix = task.ext.prefix ?: "${meta.id}_${meta.control}"
+  prefix = task.ext.prefix ?: "${meta.id}"
   """
   echo "epic2 "\$(epic2 --version) &> versions.txt
   epic2 -t ${bam} \\

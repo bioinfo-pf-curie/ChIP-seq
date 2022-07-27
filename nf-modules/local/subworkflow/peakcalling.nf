@@ -24,7 +24,8 @@ Channel
 
 // Create special channel to deal with no input cases
 Channel
-  .from( [[id:"NO_INPUT"], file("NO_FILE_BAM"), file("NO_FILE_BAI")] )
+  //.from( [[id:"NO_INPUT"], file("NO_FILE_BAM"), file("NO_FILE_BAI")] )
+  .from( [ [id:'NO_INPUT'], [], [] ] )
   .toList()
   .set{ chNoInput }
 
@@ -58,7 +59,9 @@ workflow peakCallingFlow {
     .map{ it ->
       meta = [id:it[4].id, control:it[7].id, singleEnd:it[4].singleEnd, group:it[2], peakType:it[3] ]
       return [meta, it[5], it[6], it[8], it[9] ]
-    }.set { chBamCallPeaks }  
+    }.set { chBamCallPeaks }
+  
+  chBamCallPeaks.view()
 
   /*********************************
    * Macs2 - sharp mode
