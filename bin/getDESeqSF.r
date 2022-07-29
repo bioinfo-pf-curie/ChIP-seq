@@ -14,7 +14,7 @@ if (length(args)==0) {
 stopifnot(require(DESeq2))
 count.table <- args[1]
 d <- read.table(count.table, comment.char="", header=TRUE, sep="\t", check.names=FALSE)
-d <- d[,-c(1:3), drop=FALSE]
+d <- d[,-c(1:3)]
 colnames(d) = sub("\\_.*", "", colnames(d))
 dds <- DESeqDataSetFromMatrix(d, colData=DataFrame(type=rep("chip", ncol(d))), design=~ 1)
 dds <- estimateSizeFactors(dds)
