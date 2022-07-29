@@ -37,7 +37,7 @@ workflow bamSpikesFlow {
     
     bamsChip
       .combine(chScaleFactor)
-      .filter{it[0] == it[3]}
+      .filter{it[0].id == it[3]}
       .map { it -> it[0,1,2,4]}
       .set{chBigWigScaleFactor}
 
