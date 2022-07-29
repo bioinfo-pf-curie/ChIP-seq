@@ -115,7 +115,7 @@ def checkColumnsMatch(col1, col2, exclusive=False):
 
 if __name__ == '__main__':
 
-    designHeader=['SAMPLEID', 'CONTROLID', 'GROUP', 'PEAKTYPE']
+    designHeader=['SAMPLEID', 'CONTROLID', 'SAMPLENAME', 'GROUP', 'PEAKTYPE']
 
     ## Get args
     inputDesign, inputSamplePlan, isSingleEnd = argsParse()
