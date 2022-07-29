@@ -1,8 +1,8 @@
-***************************************
-version-1.0.7
+version-1.0.6
 
 NEW FEATURES
-   - Add Human chm13 annotation
+   - Add Mouse mm39 annotation
+   - Add Human hg19/hg38 base annotation
 
 *************************************
 version-1.0.5
