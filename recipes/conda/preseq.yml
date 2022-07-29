@@ -2,4 +2,4 @@ name: preseq
 channels:
   - bioconda
 dependencies:
-  - bioconda::preseq=2.0.3=h26b358d_2
+  - bioconda::preseq=2.0.3

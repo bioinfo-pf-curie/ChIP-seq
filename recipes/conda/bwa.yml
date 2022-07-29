@@ -2,5 +2,5 @@ name: bwa
 channels:
   - bioconda
 dependencies:
-  - bioconda::bwa=0.7.17=hed695b0_7
-  - bioconda::samtools=1.9=h10a08f8_12
+  - bioconda::bwa=0.7.17
+  - bioconda::samtools=1.9
