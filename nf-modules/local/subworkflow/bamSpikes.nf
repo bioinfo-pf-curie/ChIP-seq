@@ -43,8 +43,8 @@ workflow bamSpikesFlow {
 
     deeptoolsBamCoverage(
        chBigWigScaleFactor,
-       blacklist.collect().ifEmpty([]),
-       effGenomeSize.collect().ifEmpty([])
+       blacklist,
+       effGenomeSize
     ) 
     chVersions = chVersions.mix(deeptoolsBamCoverage.out.versions)
 

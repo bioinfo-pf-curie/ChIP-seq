@@ -60,8 +60,8 @@ workflow bamChipFlow {
 
     deeptoolsBamCoverage(
       bam.join(getDepthNormFactor.out.sf),
-      blacklist.collect().ifEmpty([]),
-      effGenomeSize.collect().ifEmpty([])
+      blacklist,
+      effGenomeSize,
     )
 
     if (!params.skipDeepTools){
@@ -75,7 +75,7 @@ workflow bamChipFlow {
         bam.map{it[0].id}.collect(),
         bam.map{it[1]}.collect(), 
         bam.map{it[2]}.collect(),
-        blacklist.ifEmpty([])
+        blacklist
       )
       chVersions = chVersions.mix(deeptoolsCorrelationQC.out.versions) 
 

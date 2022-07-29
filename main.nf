@@ -109,7 +109,7 @@ if (!params.effGenomeSize) {
 chFasta              = params.fasta                 ? Channel.fromPath(params.fasta, checkIfExists: true).collect()                  : Channel.empty()
 chFastaSpike         = params.spikeFasta            ? Channel.fromPath(params.spikeFasta, checkIfExists: true).collect()             : Channel.empty()
 chChromSize          = params.chrsize               ? Channel.fromPath(params.chrsize, checkIfExists: true).collect()                : Channel.empty()
-chEffGenomeSize      = params.effGenomeSize         ? Channel.of(params.effGenomeSize)                                               : Channel.empty()
+chEffGenomeSize      = params.effGenomeSize         ? Channel.of(params.effGenomeSize)                                               : Channel.value([])
 
 chStarIndex          = params.starIndex             ? Channel.fromPath(params.starIndex, checkIfExists: true).collect()              : Channel.empty()
 chBowtie2Index       = params.bowtie2Index          ? Channel.fromPath(params.bowtie2Index, checkIfExists: true).collect()           : Channel.empty()
@@ -121,8 +121,8 @@ chSpikeBowtie2Index  = params.spikeBowtie2Index     ? Channel.fromPath(params.sp
 chSpikeBwaIndex      = params.spikeBwaIndex         ? Channel.fromPath(params.spikeBwaIndex, checkIfExists: true).collect()          : Channel.empty()
 chSpikeIndex         = params.aligner == 'star'     ? chSpikeStarIndex : params.aligner == 'bowtie2' ? chSpikeBowtie2Index : chSpikeBwaIndex
 
-chGeneBed            = params.geneBed               ? Channel.fromPath(params.geneBed, checkIfExists: true).collect()                : Channel.empty()
-chBlacklist          = params.blacklist             ? Channel.fromPath(params.blacklist, checkIfExists: true).collect()              : Channel.empty()
+chGeneBed            = params.geneBed               ? Channel.fromPath(params.geneBed, checkIfExists: true).collect()                : channel.empty()
+chBlacklist          = params.blacklist             ? Channel.fromPath(params.blacklist, checkIfExists: true).collect()              : Channel.value([])
 chGtf                = params.gtf                   ? Channel.fromPath(params.gtf, checkIfExists: true).collect()                    : Channel.empty()
 chMetadata           = params.metadata              ? Channel.fromPath(params.metadata, checkIfExists: true).collect()               : Channel.empty()
 chDesignFile         = params.design                ? Channel.fromPath(params.design, checkIfExists: true).collect()                 : Channel.empty()
