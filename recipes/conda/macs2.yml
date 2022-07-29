@@ -2,5 +2,5 @@ name: macs2
 channels:
   - bioconda
 dependencies:
-  - bioconda::macs2=2.2.6=py37h516909a_0
-  - bioconda::bedtools=2.27.1=he860b03_3
+  - bioconda::macs2=2.2.6
+  - bioconda::bedtools=2.27.1

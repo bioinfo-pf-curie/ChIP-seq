@@ -15,7 +15,7 @@ custom_data:
     my_stats:
         file_format: 'csv'
         section_name: 'General Metrics'
-        description: ' of sequenced data. High-quality ChIP-seq experiment produces significant clustering of enriched DNA sequence tags at locations bound by the protein of interest. Thus, the sequence tag density is expected to accumulate on forward and reverse strands centered around the binding site. Low normalized strand coefficient (<b>NSC < 1.1</b>) and relative strand correlation (<b>RSC < 0.8</b>) values can be due to failed and poor quality ChIP, low read sequence quality and hence lots of mismappings, shallow sequencing depth or a combination of these. Also, datasets with few binding sites (< 200) which could be due to biological reasons (i.e. a factor that truly binds only a few sites in a particular tissue type) or broad histone marks would output lower NSC and RSC scores. The fraction of reads in peaks (<b>FRiP</b>) is also presented. The different thresholds applied here follow the ENCODE Consortium recommandation.'
+        description: ' of sequenced data. High-quality ChIP-seq experiment produces significant clustering of enriched DNA sequence tags at locations bound by the protein of interest. Thus, the sequence tag density is expected to accumulate on forward and reverse strands centered around the binding site. The expected fraction of aligned reads is usually very high. The fraction of reads after filtering represents the number of remaining reads after cleaning (mapping quality, duplicates and singleton removal). Low normalized strand coefficient (<b>NSC < 1.1</b>) and relative strand correlation (<b>RSC < 0.8</b>) values can be due to failed and poor quality ChIP, low read sequence quality and hence lots of mismappings, shallow sequencing depth or a combination of these. Also, datasets with few binding sites (< 200) which could be due to biological reasons (i.e. a factor that truly binds only a few sites in a particular tissue type) or broad histone marks would output lower NSC and RSC scores. The fraction of reads in peaks (<b>FRiP</b>) is also presented. The different thresholds applied here follow the ENCODE Consortium recommandation.'
         plot_type: 'table'
         pconfig:
             namespace: 'stats'
@@ -29,14 +29,13 @@ custom_data:
               scale: false
               format: '{:.0f}'
               placement: 1000
-            Number_of_reads:
+            Number_of_frag:
               title: 'Total Fragments'
               scale: 'RdYlGn'
               format: '{:,.0f}'
               placement: 2000
             Fragment_length:
               title: 'Fragment Length'
-              description: 'Estimated fragment length'
               scale: 'YlGnGn'
               format: '{:,.0f}'
               placement: 3000
@@ -54,46 +53,37 @@ custom_data:
               suffix: '%'
               format: '{:,.1f}'
               placement: 4000
-            Number_of_hq_mapped_reads:
-              title: 'High-Quality Alignment'
-              description: 'High-Quality Mapped Reads (mapQ > 10)'
+            Percent_of_spike:
+              title: 'Spike-in (%)'
+              min: 0
+              max: 100
               scale: 'RdYlGn'
-              format: '{:,.0f}'
+              suffix: '%'
+              format: '{:,.1f}'
               hidden: true
               placement: 5000
-            Percent_of_hq_mapped_reads:
-              title: 'High-Quality Alignment (%)'
-              description: 'High-Quality Mapped Reads (mapQ > 10)'
-              min: 0
-              max: 100
-              scale: 'RdYlGn'
-              format: '{:,.1f}'
-              suffix: '%'
-              placement: 6000
-            Number_of_lq_mapped_reads:
-              title: 'Low-Quality Alignment'
-              description: 'Low-Quality Mapped Reads (mapQ < 10)'
-              scale: 'RdYlGn'
-              format: '{:,.0f}'
-              hidden: true
-              placement: 7000
-            Percent_of_lq_mapped_reads:
-              title: 'Low-Quality Alignment (%)'
-              description: 'Low-Quality Mapped Reads (mapQ < 10)'
-              min: 0
-              max: 100
-              scale: 'RdYlGn'
-              format: '{:,.1f}'
-              suffix: '%'
-              placement: 8000
             Number_of_duplicates:
               title: 'Duplicates'
               scale: 'RdYlGn'
               format: '{:,.0f}'
               hidden: true
-              placement: 9000
+              placement: 6000
             Percent_of_duplicates:
               title: 'Duplicates (%)'
+              min: 0
+              max: 100
+              scale: 'RdYlVBu'
+              format: '{:,.1f}'
+              suffix: '%'
+              placement: 7000
+            Number_reads_after_filt:
+              title: 'After Filtering'
+              scale: 'RdYlGn'
+              format: '{:,.0f}'
+              hidden: true
+              placement: 8000
+            Percent_reads_after_filt:
+              title: 'After Filtering (%)'
               min: 0
               max: 100
               scale: 'RdYlVBu'
@@ -165,6 +155,13 @@ table_cond_formatting_rules:
           - lt: 80
         fail:
           - lt: 50
+    Percent_reads_after_filt:
+        pass:
+          - gt: 70
+        warn:
+          - lt: 70
+        fail:
+          - lt: 50
     Percent_of_duplicates:
         pass:
           - lt: 25
@@ -193,6 +190,7 @@ table_cond_formatting_rules:
 ## Modules 
 
 module_order:
+   - cutadapt
    - fastqc
    - bowtie2:
       name: 'Bowtie2'
@@ -210,6 +208,8 @@ module_order:
 report_section_order:
   my_stats:
     order: 1000
+  cutadapt:
+    order: 950
   fastqc:
     order: 900
   bwa_logs:

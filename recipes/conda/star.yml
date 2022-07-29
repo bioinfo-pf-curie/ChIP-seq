@@ -1,5 +1,5 @@
-name: star_2.7.6a
+name: star
 channels:
   - bioconda
 dependencies:
-  - bioconda::star=2.7.6a=0
+  - bioconda::star=2.6.1b

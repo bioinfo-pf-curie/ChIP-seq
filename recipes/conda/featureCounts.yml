@@ -2,4 +2,4 @@ name: featureCounts
 channels:
   - bioconda
 dependencies:
-  - bioconda::subread=2.0.0=hed695b0_0
+  - bioconda::subread=2.0.0

@@ -1,0 +1,63 @@
+package colorlog
+
+
+class PolyChrome extends Presets {
+    String getReset() { Colors.RESET }
+    String getDim() { Colors.DIM }
+    String getBlack() { Colors.BLACK }
+    String getBlackBold() { Colors.BLACK_BOLD }
+    String getBlackBackground() { Colors.BLACK_BACKGROUND }
+    String getBlackBright() { Colors.BLACK_BRIGHT }
+    String getBlackUnderlined() { Colors.BLACK_UNDERLINED }
+    String getBlackBoldBright() { Colors.BLACK_BOLD_BRIGHT }
+    String getBlackBackgroundBright() { Colors.BLACK_BACKGROUND_BRIGHT }
+    String getGreen() { Colors.GREEN }
+    String getGreenBold() { Colors.GREEN_BOLD }
+    String getGreenBackground() { Colors.GREEN_BACKGROUND }
+    String getGreenBright() { Colors.GREEN_BRIGHT }
+    String getGreenUnderlined() { Colors.GREEN_UNDERLINED }
+    String getGreenBoldBright() { Colors.GREEN_BOLD_BRIGHT }
+    String getGreenBackgroundBright() { Colors.GREEN_BACKGROUND_BRIGHT }
+    String getYellow() { Colors.YELLOW }
+    String getYellowBold() { Colors.YELLOW_BOLD }
+    String getYellowBackground() { Colors.YELLOW_BACKGROUND }
+    String getYellowBright() { Colors.YELLOW_BRIGHT }
+    String getYellowUnderlined() { Colors.YELLOW_UNDERLINED }
+    String getYellowBoldBright() { Colors.YELLOW_BOLD_BRIGHT }
+    String getYellowBackgroundBright() { Colors.YELLOW_BACKGROUND_BRIGHT }
+    String getBlue() { Colors.BLUE }
+    String getBlueBold() { Colors.BLUE_BOLD }
+    String getBlueBackground() { Colors.BLUE_BACKGROUND }
+    String getBlueBright() { Colors.BLUE_BRIGHT }
+    String getBlueUnderlined() { Colors.BLUE_UNDERLINED }
+    String getBlueBoldBright() { Colors.BLUE_BOLD_BRIGHT }
+    String getBlueBackgroundBright() { Colors.BLUE_BACKGROUND_BRIGHT }
+    String getPurple() { Colors.PURPLE }
+    String getPurpleBold() { Colors.PURPLE_BOLD }
+    String getPurpleBackground() { Colors.PURPLE_BACKGROUND }
+    String getPurpleBright() { Colors.PURPLE_BRIGHT }
+    String getPurpleUnderlined() { Colors.PURPLE_UNDERLINED }
+    String getPurpleBoldBright() { Colors.PURPLE_BOLD_BRIGHT }
+    String getPurpleBackgroundBright() { Colors.PURPLE_BACKGROUND_BRIGHT }
+    String getCyan() { Colors.CYAN }
+    String getCyanBold() { Colors.CYAN_BOLD }
+    String getCyanBackground() { Colors.CYAN_BACKGROUND }
+    String getCyanBright() { Colors.CYAN_BRIGHT }
+    String getCyanUnderlined() { Colors.CYAN_UNDERLINED }
+    String getCyanBoldBright() { Colors.CYAN_BOLD_BRIGHT }
+    String getCyanBackgroundBright() { Colors.CYAN_BACKGROUND_BRIGHT }
+    String getWhite() { Colors.WHITE }
+    String getWhiteBold() { Colors.WHITE_BOLD }
+    String getWhiteBackground() { Colors.WHITE_BACKGROUND }
+    String getWhiteBright() { Colors.WHITE_BRIGHT }
+    String getWhiteUnderlined() { Colors.WHITE_UNDERLINED }
+    String getWhiteBoldBright() { Colors.WHITE_BOLD_BRIGHT }
+    String getWhiteBackgroundBright() { Colors.WHITE_BACKGROUND_BRIGHT }
+    String getRed() { Colors.RED }
+    String getRedBold() { Colors.RED_BOLD }
+    String getRedBackground() { Colors.RED_BACKGROUND }
+    String getRedBright() { Colors.RED_BRIGHT }
+    String getRedUnderlined() { Colors.RED_UNDERLINED }
+    String getRedBoldBright() { Colors.RED_BOLD_BRIGHT }
+    String getRedBackgroundBright() { Colors.RED_BACKGROUND_BRIGHT }
+}
