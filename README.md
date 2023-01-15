@@ -57,7 +57,7 @@ Launching `main.nf` [tender_stallman] - revision: fcda6ad7de
                                              | |
                                              |_|
 																								   
-                   v2.0.0dev
+                   v2.0.0
 ------------------------------------------------------------------------
 																																  
 Usage:
@@ -210,8 +210,6 @@ If the `design` file is not specified, the pipeline will run until the alignment
 3. [Running the pipeline](docs/usage.md)
 4. [Output and how to interpret the results](docs/output.md)
 5. [Troubleshooting](docs/troubleshooting.md)
-6. [DSL2:arborescence](docs/arbo.md)
-7. [DSL2:arbreAppels](docs/tree.md)
 
 #### Credits
 
