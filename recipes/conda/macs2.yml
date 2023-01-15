@@ -1,6 +1,8 @@
 name: macs2
 channels:
   - bioconda
+  - conda-forge
+  - defaults
 dependencies:
-  - bioconda::macs2=2.2.6
-  - bioconda::bedtools=2.27.1
+  - bioconda::macs2=2.2.7.1=py37h8902056_5
+  - bioconda::bedtools=2.30.0=h468198e_3

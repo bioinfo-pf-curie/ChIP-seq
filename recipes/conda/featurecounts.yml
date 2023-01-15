@@ -1,7 +1,8 @@
-name: preseq
+name: featureCounts
 channels:
   - conda-forge
   - bioconda
   - defaults
 dependencies:
-  - bioconda::preseq=3.1.2=h06ef8b0_1
+  - bioconda::subread=2.0.1=h5bf99c6_1
+
