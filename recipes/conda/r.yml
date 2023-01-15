@@ -4,9 +4,9 @@ channels:
   - bioconda
   - defaults
 dependencies:
-  - conda-forge::r-base=4.0.3=h349a78a_8
-  - r-optparse
-  - r-ggplot2
-  - r-reshape2
-  - r-scales
-  - bioconda::bioconductor-deseq2=1.30.1=r40h399db7b_0
+  - conda-forge::r-base=4.2.1=ha8c3e7c_1
+  - bioconda::bioconductor-deseq2=1.38.0=r42hc247a5b_0
+  - conda-forge::r-ggplot2=3.4.0=r42hc72bb7e_1
+  - conda-forge::r-optparse=1.7.3=r42hc72bb7e_1
+  - conda-forge::r-reshape2=1.4.4=r42h7525677_2
+  - conda-forge::r-scales=1.2.1=r42hc72bb7e_1
