@@ -53,7 +53,7 @@ if args.warn is not None:
 multiqc_list += [report_comment]
 
 multiqc_list += ["custom_logo: '{}'".format(os.sep.join([
-    os.path.dirname(os.path.realpath(__file__)), '../assets/institutCurieLogo.png']))]
+    os.path.dirname(os.path.realpath(__file__)), '../assets/Curie-CUBIC.png']))]
 multiqc_list += ["custom_logo_title: Institut Curie"]
 multiqc_list += ["custom_logo_url: https://science.curie.fr/plateformes/sequencage-adn-haut-debit-ngs/"]
 

@@ -7,7 +7,7 @@ process samtoolsFlagstat {
   label 'samtools'
   label 'minCpu'
   label 'lowMem'
- 
+
   input:
   tuple val(meta), path (bam)
 
@@ -25,4 +25,3 @@ process samtoolsFlagstat {
   samtools flagstat ${bam} > ${prefix}.flagstats
   """
 }
-    
