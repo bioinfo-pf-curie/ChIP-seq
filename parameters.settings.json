@@ -288,7 +288,7 @@
       "group": "Alignment"
     },
     {
-      "name": "SpikeBwaIndex",
+      "name": "spikeBwaIndex",
       "label": "Spike-in Bwa-mem indexes",
       "usage": "Spike-in Index for Bwa-mem aligner",
       "type": "path",

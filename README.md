@@ -92,7 +92,7 @@ REFERENCES:
   --spikeFasta           PATH      Path to Fasta reference for spike-in
 				
 ALIGNMENT:
-  --SpikeBwaIndex     PATH                             Spike-in Index for Bwa-mem aligner
+  --spikeBwaIndex     PATH                             Spike-in Index for Bwa-mem aligner
   --aligner           STRING [bwa-mem, star, bowtie2]  Tool for reads alignment
   --bowtie2Index      PATH                             Indexes for Bowtie2 aligner
   --bwaIndex          PATH                             Path to Bwa-mem indexes
