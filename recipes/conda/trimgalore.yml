@@ -1,8 +1,7 @@
-name: preseq
+name: trimgalore
 channels:
   - conda-forge
   - bioconda
   - defaults
 dependencies:
-  - bioconda::preseq=3.2.0=h867801b_3
-
+  - bioconda::trim-galore=0.6.7=hdfd78af_0

@@ -30,4 +30,3 @@ process preseq {
   preseq lc_extrap -seed 1 -v -B ${bam} ${peOpts} ${defectMode} -o ${prefix}_extrap_ccurve.txt ${args}
   """
 }
-

@@ -27,4 +27,4 @@ process samtoolsFilter {
     ${args} \\
     -b ${bam} > ${prefix}_filtered.bam
   """
-} 
+}

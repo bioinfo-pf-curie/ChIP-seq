@@ -60,8 +60,6 @@ workflow peakCallingFlow {
       meta = [id:it[4].id, control:it[7].id, singleEnd:it[4].singleEnd, group:it[2], peakType:it[3] ]
       return [meta, it[5], it[6], it[8], it[9] ]
     }.set { chBamCallPeaks }
-  
-  chBamCallPeaks.view()
 
   /*********************************
    * Macs2 - sharp mode

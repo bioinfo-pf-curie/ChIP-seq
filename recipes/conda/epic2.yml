@@ -1,6 +1,8 @@
 name: epic2
 channels:
+  - conda-forge
   - bioconda
+  - defaults
 dependencies:
-  - bioconda::epic2=0.0.40
-  - bioconda::bedtools=2.27.1
+  - bioconda::epic2=0.0.52=py39hbec504a_4
+  - bioconda::bedtools=2.30.0=h468198e_3

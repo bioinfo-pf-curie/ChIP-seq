@@ -1,35 +1,35 @@
-B1;5202;0cname: chipseq
+name: chipseq
 channels:
   - conda-forge
   - bioconda
   - defaults
 dependencies:
-  # Add required software dependencies here
-  - python=3.7.10=hffdb5ce_100_cpython
-  - conda-forge::pymdown-extensions=7.1
-  - bioconda::fastqc=0.11.9=hdfd78af_1
-  - bioconda::multiqc=1.11=pyhdfd78af_0
-  - bioconda::samtools=1.12=h9aed4be_1
-  - bioconda::bwa=0.7.17=h5bf99c6_8
-  - bioconda::bowtie2=2.4.2=py37h8270d21_1
+  - bioconda::bedtools=2.30.0=h468198e_3
+  - bioconda::bowtie2=2.4.2=py39hc9c6fcd_2
   - conda-forge::tbb=2020.2=hc9558a2_0
-  - bioconda::star=2.7.6a=0
-  - bioconda::picard=2.25.3=hdfd78af_0
-  - bioconda::preseq=3.1.2=h06ef8b0_1
-  - bioconda::pysam=0.16.0.1=py37h45aed0b_3
-  - bioconda::phantompeakqualtools=1.2.2=hdfd78af_1
-  - bioconda::bedtools=2.30.0=h7d7f7ad_2
+  - bioconda::bwa=0.7.17=h7132678_9
   - bioconda::deeptools=3.5.1=py_0
-  - bioconda::macs2=2.2.7.1=py37h73a75cf_3
-  - bioconda::epic2=0.0.52=py37hbdbb45e_0
+  - conda-forge::numpy=1.23.1=py39hba7629e_0
+  - bioconda::epic2=0.0.52=py39hbec504a_4
+  - bioconda::fastqc=0.11.9=hdfd78af_1
+  - bioconda::trim-galore=0.6.7=hdfd78af_0
+  - bioconda::homer=4.11=pl5321h9f5acd7_7
+  - bioconda::idr=2.0.4.2=py39h5371cbf_7
+  - bioconda::macs2=2.2.7.1=py39hbf8eff0_5
+  - bioconda::multiqc=1.11=pyhdfd78af_0
+  - bioconda::picard=2.27.4=hdfd78af_0
+  - bioconda::preseq=3.2.0=h867801b_3
+  - bioconda::pysam=0.20.0=py39h9abd093_0
+  - bioconda::samtools=1.15.1=h6899075_1
+  - bioconda::star=2.7.6a=0
   - bioconda::subread=2.0.1=h5bf99c6_1
-  - bioconda::homer=4.11=pl5321h7d875b9_6
-  - bioconda::idr=2.0.4.2=py37h77a2a36_5
-
-  # R-packages
-  - conda-forge::r-base=4.0.3=h349a78a_8
-  - conda-forge::r-optparse=1.7.1=r40hc72bb7e_0
-  - conda-forge::r-ggplot2=3.3.5=r40hc72bb7e_0
-  - conda-forge::r-reshape2=1.4.4=r40h03ef668_1
-  - conda-forge::r-scales=1.1.1=r40hc72bb7e_0
-  - bioconda::bioconductor-deseq2=1.30.1=r40h399db7b_0
+  - bioconda::phantompeakqualtools=1.2.2=hdfd78af_1
+  - conda-forge::gawk=5.1.0=h516909a_0
+  - conda-forge::pymdown-extensions=7.1=pyh9f0ad1d_0
+  - conda-forge::python=3.9.15=h47a2c10_0_cpython
+  - conda-forge::r-base=4.2.1=ha8c3e7c_1
+  - bioconda::bioconductor-deseq2=1.38.0=r42hc247a5b_0
+  - conda-forge::r-ggplot2=3.4.0=r42hc72bb7e_1
+  - conda-forge::r-optparse=1.7.3=r42hc72bb7e_1
+  - conda-forge::r-reshape2=1.4.4=r42h7525677_2
+  - conda-forge::r-scales=1.2.1=r42hc72bb7e_1

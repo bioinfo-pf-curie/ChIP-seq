@@ -4,7 +4,6 @@ channels:
   - bioconda
   - defaults
 dependencies:
-  # Add required software dependencies here
-  - python=3.7
-  - bioconda::samtools=1.9
-  - bioconda::pysam=0.15.2
+  - conda-forge::python=3.9.15=h47a2c10_0_cpython
+  - bioconda::samtools=1.15.1=h6899075_1
+  - bioconda::pysam=0.20.0=py39h9abd093_0

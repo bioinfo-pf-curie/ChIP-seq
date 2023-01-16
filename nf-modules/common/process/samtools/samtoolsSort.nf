@@ -7,7 +7,7 @@ process samtoolsSort {
   label 'samtools'
   label 'medCpu'
   label 'medMem'
- 
+
   input:
   tuple val(meta), path (bam)
 
@@ -30,4 +30,3 @@ process samtoolsSort {
     ${bam}
   """
 }
-    

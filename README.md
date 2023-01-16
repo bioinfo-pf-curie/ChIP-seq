@@ -4,9 +4,11 @@
 
 [![Nextflow](https://img.shields.io/badge/nextflow-%E2%89%A50.32.0-brightgreen.svg)](https://www.nextflow.io/)
 [![MultiQC](https://img.shields.io/badge/MultiQC-1.11-blue.svg)](https://multiqc.info/)
-[![Install with](https://anaconda.org/anaconda/conda-build/badges/installer/conda.svg)](https://conda.anaconda.org/anaconda)
+[![Install with conda](https://img.shields.io/badge/install%20with-conda-brightgreen.svg)](https://conda.anaconda.org/anaconda)
 [![Singularity Container available](https://img.shields.io/badge/singularity-available-7E4C74.svg)](https://singularity.lbl.gov/)
 [![Docker Container available](https://img.shields.io/badge/docker-available-003399.svg)](https://www.docker.com/)
+
+[![DOI](https://zenodo.org/badge/269415034.svg)](https://zenodo.org/badge/latestdoi/269415034)
 
 ### Introduction
 
@@ -55,7 +57,7 @@ Launching `main.nf` [tender_stallman] - revision: fcda6ad7de
                                              | |
                                              |_|
 																								   
-                   v2.0.0dev
+                   v2.0.0
 ------------------------------------------------------------------------
 																																  
 Usage:
@@ -208,12 +210,15 @@ If the `design` file is not specified, the pipeline will run until the alignment
 3. [Running the pipeline](docs/usage.md)
 4. [Output and how to interpret the results](docs/output.md)
 5. [Troubleshooting](docs/troubleshooting.md)
-6. [DSL2:arborescence](docs/arbo.md)
-7. [DSL2:arbreAppels](docs/tree.md)
 
 #### Credits
 
 This pipeline has been written by the bioinformatics platform of the Institut Curie (Valentin Laroche, Nicolas Servant)
+
+#### Citation
+
+If you use this pipeline for your project, please cite it using the following doi: [10.5281/zenodo.7443721](https://doi.org/10.5281/zenodo.7443721)
+Do not hesitate to use the Zenodo doi corresponding to the version you used !
 
 #### Contacts
 
