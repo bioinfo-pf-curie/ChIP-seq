@@ -9,8 +9,10 @@ dependencies:
   - conda-forge::tbb=2020.2=hc9558a2_0
   - bioconda::bwa=0.7.17=h7132678_9
   - bioconda::deeptools=3.5.1=py_0
+  - conda-forge::numpy=1.23.1=py39hba7629e_0
   - bioconda::epic2=0.0.52=py39hbec504a_4
   - bioconda::fastqc=0.11.9=hdfd78af_1
+  - bioconda::trim-galore=0.6.7=hdfd78af_0
   - bioconda::homer=4.11=pl5321h9f5acd7_7
   - bioconda::idr=2.0.4.2=py39h5371cbf_7
   - bioconda::macs2=2.2.7.1=py39hbf8eff0_5
