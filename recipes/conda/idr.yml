@@ -1,5 +1,7 @@
 name: idr
 channels:
+  - conda-forge
   - bioconda
+  - defaults
 dependencies:
   - bioconda::idr=2.0.4.2=py39h5371cbf_7
