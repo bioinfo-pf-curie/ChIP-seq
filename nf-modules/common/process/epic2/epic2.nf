@@ -29,7 +29,7 @@ process epic2{
   epic2 -t ${bam} \\
     ${ctrl} \\
     --chromsizes ${chromsize} \\
-    --effective-genome-fraction ${effGenomeSize} \\
+    --effective-genome-fraction ${effGenomeSize[0]} \\
     -o ${prefix}_epic.out \\
     ${args}
 
