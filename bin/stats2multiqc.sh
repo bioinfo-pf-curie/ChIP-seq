@@ -48,45 +48,65 @@ if  [[ -z $splan ]]; then
 fi
 
 all_samples=$(awk -F, '{print $1}' $splan)
-
-echo -e "Sample_ID,Sample_name,Number_of_frag,Fragment_length,Number_of_aligned_reads,Percent_of_aligned_reads,Percent_of_spike,Number_reads_after_filt,Percent_reads_after_filt,Number_of_duplicates,Percent_of_duplicates,Normalized_strand_correlation,Relative_strand_correlation,Fraction_of_reads_in_peaks"
-
+n_header=0
 for sample in $all_samples
 do
     #SAMPLE NAME
     sname=$(grep "$sample," $splan | awk -F, '{print $2}')
+    header="Sample_id,Sample_name"
+    output="${sample},${sname}"
 
-    #ALIGNMENT
-    if [[ $aligner == "bowtie2" && -e mapping/${sample}_bowtie2.log ]]; then
-	nb_frag=$(grep "reads;" mapping/${sample}_bowtie2.log | sed 's/ .*//')
-	if [[ $is_pe == 1 ]]; then
+    ##trimming
+    if [[ -e trimming/${sample}.fastq.gz_trimming_report.txt ]]; then
+        nb_frag=$(grep "Total reads processed" trimming/${sample}.fastq.gz_trimming_report.txt | awk '{print $NF}' | sed -e 's/,//g')
+        nb_reads=$nb_frag
+        nb_trimmed=$(grep "Reads with adapters" trimming/${sample}.fastq.gz_trimming_report.txt | awk '{print $4}' | sed -e 's/,//g')
+        perc_trimmed=$(echo "${nb_trimmed} ${nb_frag}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
+        header+=",Number_of_frag,Percent_trimmed"
+        output+=",${nb_frag},${perc_trimmed}"
+    elif [[ -e trimming/${sample}_1.fastq.gz_trimming_report.txt && -e trimming/${sample}_2.fastq.gz_trimming_report.txt ]]; then
+        nb_frag=$(grep "Total reads processed" trimming/${sample}_1.fastq.gz_trimming_report.txt | awk '{print $NF}' | sed -e 's/,//g')
+        nb_reads=$(( $nb_frag * 2 ))
+        nb_trimmed_r1=$(grep "Reads with adapters" trimming/${sample}_1.fastq.gz_trimming_report.txt | awk '{print $4}' | sed -e 's/,//g')
+        nb_trimmed_r2=$(grep "Reads with adapters" trimming/${sample}_2.fastq.gz_trimming_report.txt | awk '{print $4}' | sed -e 's/,//g')
+        perc_trimmed=$(echo "${nb_trimmed_r1} ${nb_trimmed_r2} ${nb_frag}" | awk ' { printf "%.*f",2,($1+$2)*100/($3*2) } ')
+        header+=",Number_of_frag,Percent_trimmed"
+        output+=",${nb_frag},${perc_trimmed}"
+    else
+      #ALIGNMENT
+      if [[ $aligner == "bowtie2" && -e mapping/${sample}_bowtie2.log ]]; then
+        nb_frag=$(grep "reads;" mapping/${sample}_bowtie2.log | sed 's/ .*//')
+	  if [[ $is_pe == 1 ]]; then
             nb_reads=$(( $nb_frag * 2 ))
-	else
+	  else
             nb_reads=$nb_frag
-	fi
-    elif [[ $aligner == "bwa-mem" && -e mapping/${sample}_bwa.log ]]; then
+	  fi
+      elif [[ $aligner == "bwa-mem" && -e mapping/${sample}_bwa.log ]]; then
 	# bwa.log file is in reads number (not pairs)
-	nb_reads=$(grep 'Total' mapping/${sample}_bwa.log | awk -F "\t" '{print $2}')
+        nb_reads=$(grep 'Total' mapping/${sample}_bwa.log | awk -F "\t" '{print $2}')
 	if [[ $is_pe == 1 ]]; then
 	    nb_frag=$(( $nb_reads / 2 ))
 	else
 	    nb_frag=$nb_reads
 	fi
 	tail -n +3 mapping/${sample}_bwa.log > mapping/${sample}_bwa.mqc
-    elif [[ $aligner == "star" && -e mapping/${sample}Log.final.out ]]; then
+      elif [[ $aligner == "star" && -e mapping/${sample}Log.final.out ]]; then
 	nb_frag=$(grep "Number of input reads" mapping/${sample}Log.final.out | cut -d"|" -f 2 | sed -e 's/\t//g')
 	if [[ $is_pe == 1 ]]; then
             nb_reads=$(( $nb_frag * 2 ))
 	else
             nb_reads=$nb_frag
 	fi
-    else
+      else
         nb_reads=$(grep "total" mapping/${sample}*.flagstats | awk '{print $1}')
 	if [[ $is_pe == 1 ]]; then
 	    nb_frag=$(( $nb_reads / 2 ))
 	else
 	    nb_frag=$nb_reads
 	fi
+      fi
+      header+=",Number_of_frag"
+      output+=",${n_frag}"
     fi
 
     #Mapping stats (always in reads - so must be converted for PE)
@@ -99,18 +119,17 @@ do
 	nb_paired_filter=$(grep "with itself and mate mapped" filtering/${sample}*.flagstats | awk '{print $1}')
 	nb_single_filter=$(grep "singletons" filtering/${sample}*.flagstats | awk '{print $1}')
 	nb_filter=$(( $nb_paired_filter + $nb_single_filter ))
-	#nb_mapped=$(awk -F, '$1=="Mapped"{print $2}' mapping/${sample}_mappingstats.mqc)
-	#nb_mapped_hq=$(awk -F, '$1=="HighQual"{print $2}' mapping/${sample}_mappingstats.mqc)
-	#nb_mapped_lq=$(awk -F, '$1=="LowQual"{print $2}' mapping/${sample}_mappingstats.mqc)
 	perc_mapped=$(echo "${nb_mapped} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
 	perc_filter=$(echo "${nb_filter} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
-	#perc_mapped_hq=$(echo "${nb_mapped_hq} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
-	#perc_mapped_lq=$(echo "${nb_mapped_lq} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
+        header+=",Number_of_aligned_reads,Percent_of_aligned_reads,Number_reads_after_filt,Percent_reads_after_filt"
+	output+=",${nb_mapped},${perc_mapped},${nb_filter},${perc_filter}"
     else
 	nb_mapped=$(grep "mapped (" mapping/${sample}*.flagstats | awk '{print $1}')
 	nb_filter=$(grep "mapped (" filtering/${sample}*.flagstats | awk '{print $1}')
 	perc_mapped=$(echo "${nb_mapped} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
-	perc_filter=$(echo "${nb_filter} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ') 
+	perc_filter=$(echo "${nb_filter} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
+        header+=",Number_of_aligned_reads,Percent_of_aligned_reads,Number_reads_after_filt,Percent_reads_after_filt"
+        output+=",${nb_mapped},${perc_mapped},${nb_filter},${perc_filter}"
     fi
 
     #SPIKE
@@ -118,6 +137,8 @@ do
     if [[ -e mapping/${sample}_ref_bamcomp.mqc ]]; then
 	nb_spike=$(grep spike mapping/${sample}_ref_bamcomp.mqc | awk -F"\t" '{print $2}')
 	perc_spike=$(echo "${nb_spike} ${nb_frag}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
+        header+=",Number_of_spike,Percent_of_spike"
+        output+=",${nb_spike},${perc_spike}"
     fi
 
     #PICARD
@@ -127,48 +148,49 @@ do
 	nb_dups_optical=$(grep -a2 "## METRICS" filtering/${sample}_markDups_metrics.txt | tail -1 | awk -F"\t" '{print $8}')
 	nb_dups=$(( $nb_dups_pair * 2 + $nb_dups_single + $nb_dups_optical * 2 ))
 	perc_dups=$(echo "${nb_dups} ${nb_mapped}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
-    else
-	nb_dups='NA'
-	perc_dups='NA'
+        header+=",Number_of_duplicates,Percent_of_duplicates"
+        output+=",${nb_dups},${perc_dups}"
     fi
 
     #Fragment size
     if [[ -e fragSize/${sample}_insert_size_metrics.txt ]]; then
-	frag_length=$(grep -A2 "## METRIC" fragSize/${sample}_insert_size_metrics.txt | tail -n 1 | awk '{print $1}')
-    else
-	frag_length='NA'
+      frag_length=$(grep -A2 "## METRIC" fragSize/${sample}_insert_size_metrics.txt | tail -n 1 | awk '{print $1}')
+      header+=",Fragment_length"
+      output+=",${frag_length}"
     fi
 
     #PPQT
     if [[ -e ppqt/${sample}.spp.out && -e ppqt/${sample}_spp_nsc_mqc.tsv ]]; then
 	if [[ ${frag_length} == 'NA' ]]; then
-	        frag_length=$(awk '{print $3}' ppqt/${sample}.spp.out | sed 's/,.*//')
+	  frag_length=$(awk '{print $3}' ppqt/${sample}.spp.out | sed 's/,.*//')
+          header+=",Fragment_length"
+          output+=",${frag_length}"
 	fi
 	nsc=$(grep "$sample" ppqt/${sample}_spp_nsc_mqc.tsv | awk '{print $2}')  
 	rsc=$(grep "$sample" ppqt/${sample}_spp_rsc_mqc.tsv | awk '{print $2}')
-    else
-	frag_length='NA'
-	nsc='NA'
-	rsc='NA'
+        header+=",Normalized_strand_correlation,Relative_strand_correlation"
+        output+=",${nsc},${rsc}"
     fi
 
     #PeakCalling 
     if [[ ! -z $design ]];
     then
-	if [ $(ls peakCalling/${sample}*FRiP.tsv 2>/dev/null | wc -l) -gt 0 ]; then
-	    frip=''
-	    for i in $(ls peakCalling/${sample}*FRiP.tsv); do
-		frip=$(grep "$sample" $i | awk '{print $2}')"|${frip}"
-	    done
-	    frip=$(echo $frip | sed -e 's/|$//')
-	else
-	    frip='NA'
-	fi
-    else
-	frip='NA'
+      frip='NA'
+      if [ $(ls peakCalling/${sample}*FRiP.tsv 2>/dev/null | wc -l) -gt 0 ]; then
+        frip=''
+        for i in $(ls peakCalling/${sample}*FRiP.tsv); do
+          frip=$(grep "$sample" $i | awk '{print $2}')"|${frip}"
+        done
+        frip=$(echo $frip | sed -e 's/|$//')
+      fi
+      header+=",Fraction_of_reads_in_peaks"
+      output+=",${frip}"
     fi
 
-    #To file
-    echo -e ${sample},${sname},${nb_frag},${frag_length},${nb_mapped},${perc_mapped},${perc_spike},${nb_filter},${perc_filter},${nb_dups},${perc_dups},${nsc},${rsc},${frip}
+    if [ $n_header == 0 ]; then
+        echo -e $header
+        n_header=1
+    fi
+    echo -e $output
 done
 
