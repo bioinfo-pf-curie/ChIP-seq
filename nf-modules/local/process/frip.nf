@@ -20,7 +20,7 @@ process frip{
   """
   echo "BEDtools"\$(intersectBed 2>&1 | grep "Version" | cut -f2 -d:) > versions.txt
   READS_IN_PEAKS=\$(intersectBed -a ${bam} -b ${peaks} -bed -c -f 0.20 | awk -F '\t' '{sum += \$NF} END {print sum}')
-  grep 'mapped (' $stats | awk -v a="\$READS_IN_PEAKS" '{printf "${meta.id}\\t%.2f\\n", a/\$1}' | cat $fripScoreHeader - > ${peaks.baseName}_FRiP.tsv
+  grep 'primary mapped (' $stats | awk -v a="\$READS_IN_PEAKS" '{printf "${meta.id}\\t%.2f\\n", a/\$1}' | cat $fripScoreHeader - > ${peaks.baseName}_FRiP.tsv
   """
 }
 

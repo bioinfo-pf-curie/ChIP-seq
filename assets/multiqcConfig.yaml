@@ -34,6 +34,14 @@ custom_data:
               scale: 'RdYlGn'
               format: '{:,.0f}'
               placement: 2000
+            Percent_trimmed:
+              title: 'Trimmed (%)'
+              min: 0
+              max: 100
+              scale: 'RdYlGn'
+              suffix: '%'
+              format: '{:,.1f}'
+              placement: 2500              
             Fragment_length:
               title: 'Fragment Length'
               scale: 'YlGnGn'

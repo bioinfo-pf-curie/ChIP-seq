@@ -109,7 +109,7 @@ if (!params.effGenomeSize) {
 chFasta              = params.fasta                 ? Channel.fromPath(params.fasta, checkIfExists: true).collect()                  : Channel.empty()
 chFastaSpike         = params.spikeFasta            ? Channel.fromPath(params.spikeFasta, checkIfExists: true).collect()             : Channel.empty()
 chChromSize          = params.chrsize               ? Channel.fromPath(params.chrsize, checkIfExists: true).collect()                : Channel.empty()
-chEffGenomeSize      = params.effGenomeSize         ? Channel.of(params.effGenomeSize)                                               : Channel.value([])
+chEffGenomeSize      = params.effGenomeSize         ? Channel.of(params.effGenomeSize).collect()                                     : Channel.value([])
 
 chStarIndex          = params.starIndex             ? Channel.fromPath(params.starIndex, checkIfExists: true).collect()              : Channel.empty()
 chBowtie2Index       = params.bowtie2Index          ? Channel.fromPath(params.bowtie2Index, checkIfExists: true).collect()           : Channel.empty()
