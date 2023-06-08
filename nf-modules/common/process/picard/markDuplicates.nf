@@ -24,7 +24,7 @@ process markDuplicates {
   def javaArgs = task.ext.args ?: ''
   markdupMemOption = "\"-Xms" +  (task.memory.toGiga() / 2).trunc() + "g -Xmx" + (task.memory.toGiga() - 1) + "g\""
   """
-  echo \$(picard MarkDuplicates --version 2>&1 | sed -e 's/.*Version:/picard /') > versions.txt
+  echo $(picard CollectInsertSizeMetrics --version 2>&1 | grep Version | sed -e 's/.*Version:/picard /') > versions.txt
   picard ${markdupMemOption} ${javaArgs} MarkDuplicates \\
       MAX_RECORDS_IN_RAM=50000 \\
       INPUT=${bam} \\
