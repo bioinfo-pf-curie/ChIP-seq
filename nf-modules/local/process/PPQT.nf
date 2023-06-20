@@ -6,7 +6,7 @@ process PPQT{
   tag "${meta.id}"
   label 'ppqt'
   label 'highCpu'
-  label 'highMem'
+  label 'extraMem'
 
   input:
   tuple val(meta), path(bam), path(bai)
