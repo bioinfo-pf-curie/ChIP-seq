@@ -106,7 +106,7 @@ do
 	fi
       fi
       header+=",Number_of_frag"
-      output+=",${n_frag}"
+      output+=",${nb_frag}"
     fi
 
     #Mapping stats (always in reads - so must be converted for PE)
@@ -124,8 +124,8 @@ do
         header+=",Number_of_aligned_reads,Percent_of_aligned_reads,Number_reads_after_filt,Percent_reads_after_filt"
 	output+=",${nb_mapped},${perc_mapped},${nb_filter},${perc_filter}"
     else
-	nb_mapped=$(grep "mapped (" mapping/${sample}*.flagstats | awk '{print $1}')
-	nb_filter=$(grep "mapped (" filtering/${sample}*.flagstats | awk '{print $1}')
+	nb_mapped=$(grep "primary mapped (" mapping/${sample}*.flagstats | awk '{print $1}')
+	nb_filter=$(grep "primary mapped (" filtering/${sample}*.flagstats | awk '{print $1}')
 	perc_mapped=$(echo "${nb_mapped} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
 	perc_filter=$(echo "${nb_filter} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
         header+=",Number_of_aligned_reads,Percent_of_aligned_reads,Number_reads_after_filt,Percent_reads_after_filt"
