@@ -1,0 +1,32 @@
+Bootstrap: docker
+From: 4geniac/almalinux:8.7_conda-py39_4.12.0
+
+%labels
+    gitUrl ssh://git@gitlab.curie.fr:2222/data-analysis/chip-seq.git
+    gitCommit ece8b380ba424fd6c011777d1626780446fa9fa2 / devel
+
+%environment
+    export R_LIBS_USER="-"
+    export R_PROFILE_USER="-"
+    export R_ENVIRON_USER="-"
+    export PYTHONNOUSERSITE=1
+    export PATH=$PATH
+    export LC_ALL=en_US.utf-8
+    export LANG=en_US.utf-8
+    source /opt/etc/bashrc
+
+
+# real path from projectDir: python.yml
+%files
+    python.yml /opt/python.yml
+
+%post
+    dnf clean all \
+    && conda env create -f /opt/python.yml \
+    && mkdir -p /opt/etc \
+    && echo -e "#! /bin/bash\n\n# script to activate the conda environment python" > ~/.bashrc \
+    && conda init bash \
+    && echo "conda activate python" >> ~/.bashrc \
+    && cp ~/.bashrc /opt/etc/bashrc \
+    && conda clean -a 
+

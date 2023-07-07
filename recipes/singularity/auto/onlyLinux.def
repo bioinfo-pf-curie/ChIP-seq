@@ -1,0 +1,14 @@
+Bootstrap: docker
+From: 4geniac/almalinux:8.7
+
+%labels
+    gitUrl ssh://git@gitlab.curie.fr:2222/data-analysis/chip-seq.git
+    gitCommit ece8b380ba424fd6c011777d1626780446fa9fa2 / devel
+
+%environment
+    export R_LIBS_USER="-"
+    export R_PROFILE_USER="-"
+    export R_ENVIRON_USER="-"
+    export PYTHONNOUSERSITE=1
+    export LC_ALL=en_US.utf-8
+    export LANG=en_US.utf-8
