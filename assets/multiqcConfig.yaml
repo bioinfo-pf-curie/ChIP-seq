@@ -68,7 +68,6 @@ custom_data:
               scale: 'RdYlGn'
               suffix: '%'
               format: '{:,.1f}'
-              hidden: true
               placement: 5000
             Number_of_duplicates:
               title: 'Duplicates'
