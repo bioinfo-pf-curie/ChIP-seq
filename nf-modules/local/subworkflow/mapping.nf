@@ -5,20 +5,20 @@
 
 
 if (params.aligner == "bwa-mem"){
-  include { bwaMem as mappingRef } from '../../common/process/bwa/bwaMem'
+  include { bwaMem as mapping } from '../../common/process/bwa/bwaMem'
   include { bwaMem as mappingSpike } from '../../common/process/bwa/bwaMem'
 }else if (params.aligner == "bowtie2"){
-  include { bowtie2 as mappingRef } from '../../common/process/bowtie2/bowtie2'
+  include { bowtie2 as mapping } from '../../common/process/bowtie2/bowtie2'
   include { bowtie2 as mappingSpike } from '../../common/process/bowtie2/bowtie2'
 }else if (params.aligner == "star"){
-  include { starAlign as mappingRef } from '../../common/process/star/starAlign'
+  include { starAlign as mapping } from '../../common/process/star/starAlign'
   include { starAlign as mappingSpike } from '../../common/process/star/starAlign'
 }
 
 include { compareBams } from '../../local/process/compareBams'
-include { samtoolsSort as samtoolsSortRef } from '../../common/process/samtools/samtoolsSort'
+include { samtoolsSort as samtoolsSort } from '../../common/process/samtools/samtoolsSort'
 include { samtoolsSort as samtoolsSortSpike } from '../../common/process/samtools/samtoolsSort'
-include { samtoolsIndex as samtoolsIndexRef } from '../../common/process/samtools/samtoolsIndex'
+include { samtoolsIndex as samtoolsIndex } from '../../common/process/samtools/samtoolsIndex'
 include { samtoolsIndex as samtoolsIndexSpike } from '../../common/process/samtools/samtoolsIndex'
 include { samtoolsFlagstat } from '../../common/process/samtools/samtoolsFlagstat'
 
@@ -32,21 +32,20 @@ workflow mappingFlow {
   main:
   chVersions = Channel.empty()
   
-
   // Align on reference genome
   if (params.aligner == "star"){
-    mappingRef(
+    mapping(
       reads,
       indexRef.collect(),
       Channel.empty().collect().ifEmpty([])
     )
   }else{
-    mappingRef(
+    mapping(
       reads,
       indexRef.collect()
     )
   }
-  chVersions = chVersions.mix(mappingRef.out.versions)
+  chVersions = chVersions.mix(mapping.out.versions)
 
   if (params.spike){
     // Align on spike genome
@@ -64,32 +63,31 @@ workflow mappingFlow {
     }
 
     // Compare reference/spike mapping
-    compareBams(mappingRef.out.bam.join(mappingSpike.out.bam), params.genome, params.spike)
-
-    chRefBam = compareBams.out.refBam
+    compareBams(mapping.out.bam.join(mappingSpike.out.bam), params.genome, params.spike)
+    chBam = compareBams.out.refBam
     chSpikeBam = compareBams.out.spikeBam
     chCompareBamsMqc = compareBams.out.mqc
     chSpikeLogs = mappingSpike.out.logs
   }else{
-    chRefBam = mappingRef.out.bam
+    chBam = mapping.out.bam
     chSpikeBam = Channel.empty()
     chCompareBamsMqc = Channel.empty()
     chSpikeLogs = Channel.empty()
   }
  
   // Process reference bams
-  samtoolsSortRef(
-    chRefBam
+  samtoolsSort(
+    chBam
   )
-  chVersions = chVersions.mix(samtoolsSortRef.out.versions)
+  chVersions = chVersions.mix(samtoolsSort.out.versions)
 
-  samtoolsIndexRef(
-    samtoolsSortRef.out.bam
+  samtoolsIndex(
+    samtoolsSort.out.bam
   )
-  chVersions = chVersions.mix(samtoolsIndexRef.out.versions)
+  chVersions = chVersions.mix(samtoolsIndex.out.versions)
 
   samtoolsFlagstat(
-   samtoolsSortRef.out.bam
+   samtoolsSort.out.bam
   )
   chVersions = chVersions.mix(samtoolsFlagstat.out.versions)
 
@@ -108,8 +106,8 @@ workflow mappingFlow {
   }
 
   emit:
-  bam = samtoolsSortRef.out.bam.join(samtoolsIndexRef.out.bai)
-  logs = mappingRef.out.logs
+  bam = samtoolsSort.out.bam.join(samtoolsIndex.out.bai)
+  logs = mapping.out.logs
   flagstat = samtoolsFlagstat.out.stats
   spikeBam = chSpikeBamOutput
   spikeLogs = chSpikeLogs

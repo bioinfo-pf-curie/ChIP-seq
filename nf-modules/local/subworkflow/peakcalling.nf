@@ -71,7 +71,7 @@ workflow peakCallingFlow {
 
   macs2Sharp(
     chBamMacs2Sharp,
-    effgsize.first(),
+    effgsize,
     chPeakCountHeader.collect()
   )
   chVersions = chVersions.mix(macs2Sharp.out.versions)
@@ -86,7 +86,7 @@ workflow peakCallingFlow {
 
   macs2Broad(
    chBamMacs2Broad,
-   effgsize.first(),
+   effgsize,
    chPeakCountHeader.collect()
   )
   chVersions = chVersions.mix(macs2Broad.out.versions)
@@ -101,7 +101,7 @@ workflow peakCallingFlow {
 
   epic2(
     chBamEpic,
-    effgsize.first(),
+    effgsize,
     chrsize.collect(),
     chPeakCountHeader.collect()
   )

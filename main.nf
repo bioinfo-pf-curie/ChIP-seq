@@ -191,7 +191,7 @@ chDesignControl = params.design ? loadDesign(params.design) : Channel.empty()
 include { prepareAnnotationFlow } from './nf-modules/local/subworkflow/prepareAnnotation'
 include { mappingFlow } from './nf-modules/local/subworkflow/mapping'
 include { loadBamFlow } from './nf-modules/local/subworkflow/loadBam'
-include { bamFilteringFlow as bamFilteringFlowRef } from './nf-modules/local/subworkflow/bamFiltering'
+include { bamFilteringFlow as bamFilteringFlow } from './nf-modules/local/subworkflow/bamFiltering'
 include { bamFilteringFlow as bamFilteringFlowSpike } from './nf-modules/local/subworkflow/bamFiltering'
 include { bamChipFlow }      from './nf-modules/local/subworkflow/bamChip'
 include { bamSpikesFlow }    from './nf-modules/local/subworkflow/bamSpikes'
@@ -271,9 +271,10 @@ workflow {
 
     // Remove low mapping rate for spikes
     chCompareBamsMqc.join(chAlignedSpikeBam)
-      .filter { prefix, logs, bam, bai -> checkSpikeAlignmentPercent(prefix, logs, params.spikePercentFilter) }
-      .map { prefix, logs, bam, bai -> [ prefix, bam, bai ] }
+      .filter { meta, logs, bam, bai -> checkSpikeAlignmentPercent(meta, logs, params.spikePercentFilter) }
+      .map { meta, logs, bam, bai -> [ meta, bam, bai ] }
       .set { chPassedSpikeBam }
+
   }else{
  
     loadBamFlow(
@@ -300,13 +301,19 @@ workflow {
     chVersions = chVersions.mix(preseq.out.versions)
   }
 
-  bamFilteringFlowRef(
+  // Add genome information for output file names
+  chAlignedBam = chAlignedBam.map{ meta, bam, bai ->
+    def newMeta = [ id: meta.id, name: meta.name, singleEnd: meta.singleEnd, genome: params.genome ]
+    [newMeta, bam, bai]
+  }
+
+  bamFilteringFlow(
     chAlignedBam
   )
-  chVersions = chVersions.mix(bamFilteringFlowRef.out.versions)
+  chVersions = chVersions.mix(bamFilteringFlow.out.versions)
 
   bamChipFlow(
-    bamFilteringFlowRef.out.bam,
+    bamFilteringFlow.out.bam,
     chBlacklist,
     chGeneBed,
     chEffGenomeSize
@@ -317,13 +324,20 @@ workflow {
   // SPIKE WORKFLOW
 
   if (params.spike){
+
+    // Add genome information for output file names
+    chPassedSpikeBam = chPassedSpikeBam.map{ meta, bam, bai ->
+      def newMeta = [ id: meta.id, name: meta.name, singleEnd: meta.singleEnd, genome: params.spike ]
+      [newMeta, bam, bai]
+    }
+
     bamFilteringFlowSpike(
       chPassedSpikeBam
     )
     chVersions = chVersions.mix(bamFilteringFlowSpike.out.versions)
    
     bamSpikesFlow(
-      bamFilteringFlowRef.out.bam,
+      bamFilteringFlow.out.bam,
       bamFilteringFlowSpike.out.bam,
       chBlacklist,
       chEffGenomeSize
@@ -337,7 +351,7 @@ workflow {
   if (params.design && !params.skipPeakCalling){
 
     peakCallingFlow(
-      bamFilteringFlowRef.out.bam,
+      bamFilteringFlow.out.bam,
       chDesignControl,
       chEffGenomeSize,
       chChromSize,
@@ -361,7 +375,7 @@ workflow {
     )
 
     featureCounts(
-      bamFilteringFlowRef.out.bam.combine(prepareAnnotationFlow.out.saf)
+      bamFilteringFlow.out.bam.combine(prepareAnnotationFlow.out.saf)
     )
     chVersions = chVersions.mix(featureCounts.out.versions)
   }
@@ -397,8 +411,8 @@ workflow {
       chAlignedBamMqc.collect().ifEmpty([]),
       chCompareBamsMqc.map{it->it[1]}.collect().ifEmpty([]),
       chAlignedFlagstat.map{it->it[1]}.collect().ifEmpty([]),
-      bamFilteringFlowRef.out.markdupMetrics.collect().ifEmpty([]),
-      bamFilteringFlowRef.out.flagstat.map{it->it[1]}.collect().ifEmpty([]),
+      bamFilteringFlow.out.markdupMetrics.collect().ifEmpty([]),
+      bamFilteringFlow.out.flagstat.map{it->it[1]}.collect().ifEmpty([]),
       chPreseqMqc.collect().ifEmpty([]),
        //  sortingFlow.out.chStatsMqc.collect().ifEmpty([]),
       bamChipFlow.out.fragmentsSize.collect().ifEmpty([]),

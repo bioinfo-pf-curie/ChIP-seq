@@ -17,6 +17,7 @@ process compareBams{
   output:
   tuple val(meta), path("*${refSuffix}"), emit: refBam
   tuple val(meta), path("*${spikeSuffix}"), emit: spikeBam
+  tuple val(meta), path("*.log"), emit: log
   tuple val(meta), path("*mqc"), emit: mqc
 
   script:
