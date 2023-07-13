@@ -302,13 +302,13 @@ workflow {
   }
 
   // Add genome information for output file names
-  chAlignedBam = chAlignedBam.map{ meta, bam, bai ->
+  chAlignedBamToFilter = chAlignedBam.map{ meta, bam, bai ->
     def newMeta = [ id: meta.id, name: meta.name, singleEnd: meta.singleEnd, genome: params.genome ]
     [newMeta, bam, bai]
   }
 
   bamFilteringFlow(
-    chAlignedBam
+    chAlignedBamToFilter
   )
   chVersions = chVersions.mix(bamFilteringFlow.out.versions)
 
@@ -326,13 +326,13 @@ workflow {
   if (params.spike){
 
     // Add genome information for output file names
-    chPassedSpikeBam = chPassedSpikeBam.map{ meta, bam, bai ->
+    chPassedSpikeBamToFilter = chPassedSpikeBam.map{ meta, bam, bai ->
       def newMeta = [ id: meta.id, name: meta.name, singleEnd: meta.singleEnd, genome: params.spike ]
       [newMeta, bam, bai]
     }
 
     bamFilteringFlowSpike(
-      chPassedSpikeBam
+      chPassedSpikeBamToFilter
     )
     chVersions = chVersions.mix(bamFilteringFlowSpike.out.versions)
    
@@ -391,7 +391,7 @@ workflow {
 
     // Warnings
     chAlignedSpikeBam
-      .join(chPassedSpikeBam, remainder: true)
+      .join(chSpikeBam, remainder: true)
       .filter{it -> it[3] == null}
       .flatMap{ it -> it[0].id + ": Poor spike alignment rate. Sample ignored !"}
       .set{chWarnMapping}
@@ -414,7 +414,6 @@ workflow {
       bamFilteringFlow.out.markdupMetrics.collect().ifEmpty([]),
       bamFilteringFlow.out.flagstat.map{it->it[1]}.collect().ifEmpty([]),
       chPreseqMqc.collect().ifEmpty([]),
-       //  sortingFlow.out.chStatsMqc.collect().ifEmpty([]),
       bamChipFlow.out.fragmentsSize.collect().ifEmpty([]),
       bamChipFlow.out.ppqtOutMqc.collect().ifEmpty([]), 
       bamChipFlow.out.ppqtCsvMqc.collect().ifEmpty([]),
