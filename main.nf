@@ -391,9 +391,9 @@ workflow {
 
     // Warnings
     chAlignedSpikeBam
-      .join(chSpikeBam, remainder: true)
+      .join(chPassedSpikeBam, remainder: true)
       .filter{it -> it[3] == null}
-      .flatMap{ it -> it[0].id + ": Poor spike alignment rate. Sample ignored !"}
+      .flatMap{ it -> it[0].id + ": Poor spike alignment rate ! Spike processing stopped"}
       .set{chWarnMapping}
 
     chWarnMapping
