@@ -8,7 +8,7 @@ process featureCounts{
   label 'lowMem'
 
   input:
-  tuple val(meta), path(bams), path(bai), path(annot)
+  tuple val(meta), path(bams), path(annot)
 
   output:
   tuple val(meta), path("*csv"), emit: counts

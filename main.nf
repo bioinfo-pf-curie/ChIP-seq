@@ -373,9 +373,11 @@ workflow {
     prepareAnnotationFlow(
       chGeneBed.collect()
     )
-
+  
+    chInputFcounts = bamFilteringFlow.out.bam.map{items->items[1]}.collect()
+    chInputFcounts = chInputFcounts.map{it->def meta=[:];[meta, it]}.combine(prepareAnnotationFlow.out.saf)
     featureCounts(
-      bamFilteringFlow.out.bam.combine(prepareAnnotationFlow.out.saf)
+      chInputFcounts
     )
     chVersions = chVersions.mix(featureCounts.out.versions)
   }
