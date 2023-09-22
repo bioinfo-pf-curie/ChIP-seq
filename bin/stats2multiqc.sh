@@ -15,18 +15,20 @@ function help {
     echo "   -s SAMPLE_PLAN"
     echo "   -d DESIGN"
     echo "   -a ALIGNER"
+    echo "   -g GENOME"
     echo "   [-p]: paired-end mode"
     echo "   [-h]: help"
     exit;
 }
 
 is_pe=0
-while getopts "s:d:a:ph" OPT
+while getopts "s:d:a:g:ph" OPT
 do
     case $OPT in
         s) splan=$OPTARG;;
 	d) design=$OPTARG;;
 	a) aligner=$OPTARG;;
+        g) genome=$OPTARG;
 	p) is_pe=1;;
 	h) help ;;
 	\?)
@@ -113,19 +115,19 @@ do
     #These statistics are calculated after spike cleaning but before filtering
     #Note that the mapped line (second) includes both primary+secondary alignment
     if [[ $is_pe == 1 ]]; then
-	nb_paired_mapped=$(grep "with itself and mate mapped" mapping/${sample}*.flagstats | awk '{print $1}')
-	nb_single_mapped=$(grep "singletons" mapping/${sample}*.flagstats | awk '{print $1}')
+	nb_paired_mapped=$(grep "with itself and mate mapped" mapping/${sample}_${genome}_sorted.flagstats | awk '{print $1}')
+	nb_single_mapped=$(grep "singletons" mapping/${sample}_${genome}_sorted.flagstats | awk '{print $1}')
 	nb_mapped=$(( $nb_paired_mapped + $nb_single_mapped ))
-	nb_paired_filter=$(grep "with itself and mate mapped" filtering/${sample}*.flagstats | awk '{print $1}')
-	nb_single_filter=$(grep "singletons" filtering/${sample}*.flagstats | awk '{print $1}')
+	nb_paired_filter=$(grep "with itself and mate mapped" filtering/${sample}_${genome}_filtered.flagstats | awk '{print $1}')
+	nb_single_filter=$(grep "singletons" filtering/${sample}_${genome}_filtered.flagstats | awk '{print $1}')
 	nb_filter=$(( $nb_paired_filter + $nb_single_filter ))
 	perc_mapped=$(echo "${nb_mapped} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
 	perc_filter=$(echo "${nb_filter} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
         header+=",Number_of_aligned_reads,Percent_of_aligned_reads,Number_reads_after_filt,Percent_reads_after_filt"
 	output+=",${nb_mapped},${perc_mapped},${nb_filter},${perc_filter}"
     else
-	nb_mapped=$(grep "primary mapped (" mapping/${sample}*.flagstats | awk '{print $1}')
-	nb_filter=$(grep "primary mapped (" filtering/${sample}*.flagstats | awk '{print $1}')
+	nb_mapped=$(grep "primary mapped (" mapping/${sample}_${genome}_sorted.flagstats | awk '{print $1}')
+	nb_filter=$(grep "primary mapped (" filtering/${sample}_${genome}_filtered.flagstats | awk '{print $1}')
 	perc_mapped=$(echo "${nb_mapped} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
 	perc_filter=$(echo "${nb_filter} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
         header+=",Number_of_aligned_reads,Percent_of_aligned_reads,Number_reads_after_filt,Percent_reads_after_filt"
@@ -142,10 +144,10 @@ do
     fi
 
     #PICARD
-    if [[ -e filtering/${sample}_markDups_metrics.txt ]]; then
-	nb_dups_pair=$(grep -a2 "## METRICS" filtering/${sample}_markDups_metrics.txt | tail -1 | awk -F"\t" '{print $7}')
-	nb_dups_single=$(grep -a2 "## METRICS" filtering/${sample}_markDups_metrics.txt | tail -1 | awk -F"\t" '{print $6}')
-	nb_dups_optical=$(grep -a2 "## METRICS" filtering/${sample}_markDups_metrics.txt | tail -1 | awk -F"\t" '{print $8}')
+    if [[ -e filtering/${sample}_${genome}_markDups_metrics.txt ]]; then
+	nb_dups_pair=$(grep -a2 "## METRICS" filtering/${sample}_${genome}_markDups_metrics.txt | tail -1 | awk -F"\t" '{print $7}')
+	nb_dups_single=$(grep -a2 "## METRICS" filtering/${sample}_${genome}_markDups_metrics.txt | tail -1 | awk -F"\t" '{print $6}')
+	nb_dups_optical=$(grep -a2 "## METRICS" filtering/${sample}_${genome}_markDups_metrics.txt | tail -1 | awk -F"\t" '{print $8}')
 	nb_dups=$(( $nb_dups_pair * 2 + $nb_dups_single + $nb_dups_optical * 2 ))
 	perc_dups=$(echo "${nb_dups} ${nb_mapped}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
         header+=",Number_of_duplicates,Percent_of_duplicates"
