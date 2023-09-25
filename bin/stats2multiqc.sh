@@ -28,7 +28,7 @@ do
         s) splan=$OPTARG;;
 	d) design=$OPTARG;;
 	a) aligner=$OPTARG;;
-        g) genome=$OPTARG;
+        g) genome=$OPTARG;;
 	p) is_pe=1;;
 	h) help ;;
 	\?)
