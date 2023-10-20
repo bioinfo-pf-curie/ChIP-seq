@@ -301,14 +301,8 @@ workflow {
     chVersions = chVersions.mix(preseq.out.versions)
   }
 
-  // Add genome information for output file names
-  chAlignedBamToFilter = chAlignedBam.map{ meta, bam, bai ->
-    def newMeta = [ id: meta.id, name: meta.name, singleEnd: meta.singleEnd, genome: params.genome ]
-    [newMeta, bam, bai]
-  }
-
   bamFilteringFlow(
-    chAlignedBamToFilter
+    chAlignedBam
   )
   chVersions = chVersions.mix(bamFilteringFlow.out.versions)
 
@@ -325,14 +319,8 @@ workflow {
 
   if (params.spike){
 
-    // Add genome information for output file names
-    chPassedSpikeBamToFilter = chPassedSpikeBam.map{ meta, bam, bai ->
-      def newMeta = [ id: meta.id, name: meta.name, singleEnd: meta.singleEnd, genome: params.spike ]
-      [newMeta, bam, bai]
-    }
-
     bamFilteringFlowSpike(
-      chPassedSpikeBamToFilter
+      chPassedSpikeBam
     )
     chVersions = chVersions.mix(bamFilteringFlowSpike.out.versions)
    

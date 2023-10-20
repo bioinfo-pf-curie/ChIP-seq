@@ -25,16 +25,15 @@ process bwaMem{
   def prefix = task.ext.prefix ?: "${meta.id}"
   """
   localIndex=`find -L ./ -name "*.amb" | sed 's/.amb//'`
-  refName=`basename \${localIndex}`
 
   bwa \
     mem \
     $args \
     -t $task.cpus \
     \${localIndex} \
-    $reads | samtools view -bS -@ $task.cpus -o ${prefix}_\${refName}.bam -
+    $reads | samtools view -bS -@ $task.cpus -o ${prefix}.bam -
 
-  getBWAstats.sh -i ${prefix}_\${refName}.bam -p ${task.cpus} > ${prefix}_bwa.log
+  getBWAstats.sh -i ${prefix}.bam -p ${task.cpus} > ${prefix}_bwa.log
   echo "Bwa-mem "\$(bwa 2>&1 | grep Version | cut -d" " -f2) &> versions.txt
 
   """

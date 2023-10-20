@@ -26,12 +26,11 @@ process bowtie2{
   inputOpts = meta.singleEnd ? "-U ${reads[0]}" : "-1 ${reads[0]} -2 ${reads[1]}"
   """
   localIndex=`find -L ./ -name "*.rev.1.bt2" | sed 's/.rev.1.bt2//'`
-  refName=`basename \${localIndex}`
   echo \$(bowtie2 --version | awk 'NR==1{print "bowtie2 "\$3}') > versions.txt
   bowtie2 -p ${task.cpus} \
           ${args} \
            -x \${localIndex} \
-          $inputOpts > ${prefix}_\${refName}.bam 2> ${prefix}_bowtie2.log
+          $inputOpts > ${prefix}.bam 2> ${prefix}_bowtie2.log
   """
 }
 

@@ -76,31 +76,31 @@ do
         output+=",${nb_frag},${perc_trimmed}"
     else
       #ALIGNMENT
-      if [[ $aligner == "bowtie2" && -e mapping/${sample}_bowtie2.log ]]; then
-        nb_frag=$(grep "reads;" mapping/${sample}_bowtie2.log | sed 's/ .*//')
+      if [[ $aligner == "bowtie2" && -e mapping/${sample}_${genome}_bowtie2.log ]]; then
+        nb_frag=$(grep "reads;" mapping/${sample}_${genome}_bowtie2.log | sed 's/ .*//')
 	  if [[ $is_pe == 1 ]]; then
             nb_reads=$(( $nb_frag * 2 ))
 	  else
             nb_reads=$nb_frag
 	  fi
-      elif [[ $aligner == "bwa-mem" && -e mapping/${sample}_bwa.log ]]; then
+      elif [[ $aligner == "bwa-mem" && -e mapping/${sample}_${genome}_bwa.log ]]; then
 	# bwa.log file is in reads number (not pairs)
-        nb_reads=$(grep 'Total' mapping/${sample}_bwa.log | awk -F "\t" '{print $2}')
+        nb_reads=$(grep 'Total' mapping/${sample}_${genome}_bwa.log | awk -F "\t" '{print $2}')
 	if [[ $is_pe == 1 ]]; then
 	    nb_frag=$(( $nb_reads / 2 ))
 	else
 	    nb_frag=$nb_reads
 	fi
-	tail -n +3 mapping/${sample}_bwa.log > mapping/${sample}_bwa.mqc
-      elif [[ $aligner == "star" && -e mapping/${sample}Log.final.out ]]; then
-	nb_frag=$(grep "Number of input reads" mapping/${sample}Log.final.out | cut -d"|" -f 2 | sed -e 's/\t//g')
+	tail -n +3 mapping/${sample}_${genome}_bwa.log > mapping/${sample}_bwa.mqc
+      elif [[ $aligner == "star" && -e mapping/${sample}_${genome}Log.final.out ]]; then
+	nb_frag=$(grep "Number of input reads" mapping/${sample}_${genome}Log.final.out | cut -d"|" -f 2 | sed -e 's/\t//g')
 	if [[ $is_pe == 1 ]]; then
             nb_reads=$(( $nb_frag * 2 ))
 	else
             nb_reads=$nb_frag
 	fi
       else
-        nb_reads=$(grep "total" mapping/${sample}*.flagstats | awk '{print $1}')
+        nb_reads=$(grep "total" mapping/${sample}_${genome}.flagstats | awk '{print $1}')
 	if [[ $is_pe == 1 ]]; then
 	    nb_frag=$(( $nb_reads / 2 ))
 	else
@@ -115,8 +115,8 @@ do
     #These statistics are calculated after spike cleaning but before filtering
     #Note that the mapped line (second) includes both primary+secondary alignment
     if [[ $is_pe == 1 ]]; then
-	nb_paired_mapped=$(grep "with itself and mate mapped" mapping/${sample}_${genome}_sorted.flagstats | awk '{print $1}')
-	nb_single_mapped=$(grep "singletons" mapping/${sample}_${genome}_sorted.flagstats | awk '{print $1}')
+	nb_paired_mapped=$(grep "with itself and mate mapped" mapping/${sample}_${genome}.flagstats | awk '{print $1}')
+	nb_single_mapped=$(grep "singletons" mapping/${sample}_${genome}.flagstats | awk '{print $1}')
 	nb_mapped=$(( $nb_paired_mapped + $nb_single_mapped ))
 	nb_paired_filter=$(grep "with itself and mate mapped" filtering/${sample}_${genome}_filtered.flagstats | awk '{print $1}')
 	nb_single_filter=$(grep "singletons" filtering/${sample}_${genome}_filtered.flagstats | awk '{print $1}')
@@ -126,8 +126,8 @@ do
         header+=",Number_of_aligned_reads,Percent_of_aligned_reads,Number_reads_after_filt,Percent_reads_after_filt"
 	output+=",${nb_mapped},${perc_mapped},${nb_filter},${perc_filter}"
     else
-	nb_mapped=$(grep "primary mapped (" mapping/${sample}_${genome}_sorted.flagstats | awk '{print $1}')
-	nb_filter=$(grep "primary mapped (" filtering/${sample}_${genome}_filtered.flagstats | awk '{print $1}')
+	nb_mapped=$(grep "primary mapped (" mapping/${sample}_${genome}.flagstats | awk '{print $1}')
+	nb_filter=$(grep "primary mapped (" filtering/${sample}_${genome}.flagstats | awk '{print $1}')
 	perc_mapped=$(echo "${nb_mapped} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
 	perc_filter=$(echo "${nb_filter} ${nb_reads}" | awk ' { printf "%.*f",2,$1*100/$2 } ')
         header+=",Number_of_aligned_reads,Percent_of_aligned_reads,Number_reads_after_filt,Percent_reads_after_filt"

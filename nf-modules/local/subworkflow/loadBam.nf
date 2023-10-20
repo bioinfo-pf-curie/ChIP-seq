@@ -13,6 +13,12 @@ workflow loadBamFlow {
 
   main:
   chVersions = Channel.empty()
+
+  // Add genome information
+  bam = bam.map{ meta, bam ->
+    def newMeta = [ id: meta.id, name: meta.name, singleEnd: meta.singleEnd, genome: params.genome ]
+    [newMeta, bam]
+  }
   
   // Process reference bams
   samtoolsSort(

@@ -75,6 +75,17 @@ workflow mappingFlow {
     chSpikeLogs = Channel.empty()
   }
  
+  // Add genome information
+  chBam = chBam.map{ meta, bam ->
+    def newMeta = [ id: meta.id, name: meta.name, singleEnd: meta.singleEnd, genome: params.genome ]
+    [newMeta, bam]
+  }
+
+  chSpikeBam = chSpikeBam.map{ meta, bam ->
+    def newMeta = [ id: meta.id, name: meta.name, singleEnd: meta.singleEnd, genome: params.spike ]
+    [newMeta, bam]
+  }
+
   // Process reference bams
   samtoolsSort(
     chBam
