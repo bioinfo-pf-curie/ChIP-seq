@@ -14,6 +14,42 @@ SIGNIFICANT USER-VISIBLE CHANGES
   - Add spike-in % in general table (hidden by default)(#57)
 
 ***********************************
+version-1.0.6
+
+NEW FEATURES
+   - Add Mouse mm39 annotation
+   - Add Human hg19/hg38 base annotation
+	  
+*************************************
+version-1.0.5
+	  
+NEW FEATURES
+   - Add Bombyx_v4 genome annotation
+   - Add dmel6.28 genome annotation
+			
+SIGNIFICANT USER-VISIBLE CHANGES
+	
+   - Use picard for insert size distribution for paired-end data (#49)
+   - Calculate SF over 1M reads instead of 10M for bigwig
+				  
+BUG FIXES
+				  
+   - Bug in mapping Channel for Bombyx (#53)
+   - Effective size of Bombyx updated (#53)
+						
+************************************
+version-1.0.4
+						
+NEW FEATURES
+						
+   - update STAR to 2.7.6a
+   - add S. mikatae annotation for spikes
+							  
+BUG FIXES
+							  
+   - Fix bug when there are no blacklist regions
+								 
+***********************************
 version-1.0.3
 
 NEW FEATURES
